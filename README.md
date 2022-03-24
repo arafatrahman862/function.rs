@@ -13,3 +13,5 @@ There should be only one things, Just `Function`!
 Most modern languages has some sort of type information... So Let's create a tool that take those type definition and generate client side code!!!
 
 Those are called `RPC`, Such tools already exist! (For example `tRPC`)   
+
+

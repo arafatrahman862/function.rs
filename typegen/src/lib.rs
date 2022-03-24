@@ -1,45 +1,62 @@
 #![allow(warnings)]
+use std::fmt::{Debug, Formatter, Result};
 mod typescript;
 
-use std::fmt;
+#[derive(Clone)]
+pub struct Enum {
+    name: String,
+    entries: Vec<(String, String)>,
+}
 
-#[derive(Debug, Clone)]
+// -----------------------------------------------------------------------------
+
+#[derive(Clone)]
 pub struct Field {
     name: String,
     ty: Type,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
+pub struct Struct {
+    name: String,
+    fields: Vec<Field>,
+}
+
+// -----------------------------------------------------------------------------
+
+#[derive(Clone)]
+pub struct Func {
+    name: String,
+    args: Vec<Field>,
+    ret: Type,
+}
+
+// -----------------------------------------------------------------------------
+
+#[derive(Clone)]
 pub enum Variant {
     Unit(String),
     Tuple(String, Vec<Type>),
     Named(String, Vec<Field>),
 }
 
+#[derive(Clone)]
+pub struct Union {
+    name: String,
+    /// Rust supports algebraic data types, Support (Unit, Tuple, Named)
+    /// It doesn't support Enum though. Use `Type::Enum` instade
+    variants: Vec<Variant>,
+}
+
+// -----------------------------------------------------------------------------
+
 #[non_exhaustive]
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Type {
-    Struct {
-        name: String,
-        fields: Vec<Field>,
-    },
-    Fn {
-        name: String,
-        args: Vec<Field>,
-        ret: Box<Type>,
-    },
-    Union {
-        name: String,
-        /// Rust supports algebraic data types, Support (Unit, Tuple, Named)
-        /// It doesn't support Enum though. Use `Type::Enum` instade
-        variants: Vec<Variant>,
-    },
-    Enum {
-        /// Name of the enum, and numeric type (i8, u32 ..)
-        field: Box<Field>,
-        /// Key, Value pairs
-        entries: Vec<(String, isize)>,
-    },
+    Struct(Struct),
+    Func(Box<Func>),
+    Union(Union),
+    Enum(Enum),
 
     U8,
     U16,
@@ -65,5 +82,5 @@ pub enum Type {
     Null,
 
     Option(Box<Type>),
-    Result(Box<Type>, Box<Type>),
+    Result(Box<(Type, Type)>),
 }

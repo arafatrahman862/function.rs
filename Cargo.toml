@@ -9,3 +9,6 @@ edition = "2021"
 
 typegen = { path = "./typegen", version = "0.1" }
 
+[workspace]
+members = ["typegen"]
+
