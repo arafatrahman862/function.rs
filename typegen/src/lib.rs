@@ -1,6 +1,6 @@
-#![allow(warnings)]
-use std::fmt::{Debug, Formatter, Result};
 mod typescript;
+
+use std::fmt::{Debug, Formatter, Result};
 
 #[derive(Clone)]
 pub struct Enum {
@@ -43,7 +43,6 @@ pub enum Variant {
 #[derive(Clone)]
 pub struct Union {
     name: String,
-    /// Rust supports algebraic data types, Support (Unit, Tuple, Named)
     /// It doesn't support Enum though. Use `Type::Enum` instade
     variants: Vec<Variant>,
 }

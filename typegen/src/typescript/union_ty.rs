@@ -7,7 +7,7 @@ impl Union {
             variants: vec![],
         }
     }
-    pub fn variant(&mut self, name: impl Into<String>, variant: Variant) -> &mut Self {
+    pub fn variant(&mut self, variant: Variant) -> &mut Self {
         self.variants.push(variant);
         self
     }
@@ -50,25 +50,21 @@ impl Debug for Union {
 fn test() {
     let mut union_ty = Union::new("Union");
     union_ty
-        .variant("Unit", Variant::Unit("Unit".into()))
-        .variant("Tuple", Variant::Tuple("Tuple".into(), vec![Type::I32]))
-        .variant(
-            "Named",
-            Variant::Named(
-                "Named".into(),
-                vec![
-                    Field {
-                        name: "f".into(),
-                        ty: Type::I32,
-                    },
-                    Field {
-                        name: "g".into(),
-                        ty: Type::String,
-                    },
-                ],
-            ),
-        );
-
+        .variant(Variant::Unit("Unit".into()))
+        .variant(Variant::Tuple("Tuple".into(), vec![Type::I32]))
+        .variant(Variant::Named(
+            "Named".into(),
+            vec![
+                Field {
+                    name: "f".into(),
+                    ty: Type::I32,
+                },
+                Field {
+                    name: "g".into(),
+                    ty: Type::String,
+                },
+            ],
+        ));
     let out = r#"type Union = { type: "Unit" } | { type: "Tuple", value: [number] } | { type: "Named", value: { f: number, g: string } }"#;
     assert_eq!(format!("{:?}", union_ty), out);
 }

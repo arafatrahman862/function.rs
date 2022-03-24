@@ -1,13 +1,13 @@
 use crate::*;
 
 impl Enum {
-    fn new(name: impl Into<String>) -> Self {
+    pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
             entries: vec![],
         }
     }
-    fn entry(&mut self, name: impl Into<String>, value: impl ToString) -> &mut Self {
+    pub fn entry(&mut self, name: impl Into<String>, value: impl ToString) -> &mut Self {
         self.entries.push((name.into(), value.to_string()));
         self
     }
