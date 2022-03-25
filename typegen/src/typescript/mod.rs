@@ -29,7 +29,10 @@ impl Debug for TypeOf<'_> {
             Enum(e) => f.write_str(&e.name),
 
             Any => f.write_str("any"),
-            Null => f.write_str("null"),
+            Tuple(tys) => match tys.is_empty() {
+                true => f.write_str("null"),
+                false => f.debug_list().entries(tys).finish(),
+            },
             Bool => f.write_str("boolean"),
             String => f.write_str("string"),
             U8 | U16 | U32 | I8 | I16 | I32 | F32 | F64 => f.write_str("number"),

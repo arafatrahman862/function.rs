@@ -5,7 +5,7 @@ impl Func {
         Self {
             name: name.into(),
             args: vec![],
-            ret: Type::Null,
+            ret: Type::Tuple(Vec::new()),
         }
     }
     pub fn arg(&mut self, name: impl Into<String>, ty: Type) -> &mut Self {
@@ -42,11 +42,14 @@ impl Debug for Func {
             .collect();
 
         fmt_args.reverse();
-        write!(f, "{})", fmt_args.join(", "))?;
+        write!(f, "{}): ", fmt_args.join(", "))?;
 
         match &self.ret {
-            Type::Null => write!(f, ": void"),
-            ty => write!(f, ": {:?}", TypeOf(ty)),
+            Type::Tuple(tys) => match tys.is_empty() {
+                true => write!(f, "void"),
+                false => f.debug_list().entries(tys).finish(),
+            },
+            ty => write!(f, "{:?}", TypeOf(ty)),
         }
     }
 }
@@ -55,9 +58,9 @@ impl Debug for Func {
 fn test() {
     let mut fn_ty = Func::new("foo");
     fn_ty
-        .arg("a", Type::Option(Box::new(Type::U8)))
+        .arg("a", Type::U8.optional())
         .arg("b", Type::U16)
-        .arg("c", Type::Option(Box::new(Type::U32)))
+        .arg("c", Type::U32.optional())
         .ret(Type::Any);
 
     assert_eq!(

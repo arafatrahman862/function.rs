@@ -1,6 +1,5 @@
 use super::*;
 
-
 impl Struct {
     pub fn new(name: impl Into<String>) -> Self {
         Self {
@@ -40,7 +39,7 @@ fn test() {
 
     struct_ty
         .field("a", Type::U16)
-        .field("b", Type::Option(Box::new(Type::U16)));
+        .field("b", Type::U16.optional());
 
     assert_eq!(
         format!("{:?}", struct_ty),

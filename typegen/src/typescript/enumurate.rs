@@ -41,11 +41,10 @@ fn test() {
     enum_ty
         .entry("A", 1)
         .entry("B", "")
-        .entry("C", 3)
-        .entry("D", "\"Hello, World!\"");
+        .entry("C", "\"Hello, World!\"");
 
     assert_eq!(
         format!("{:?}", enum_ty),
-        r#"enum MyEnum {A = 1, B, C = 3, D = "Hello, World!"}"#
+        r#"enum MyEnum {A = 1, B, C = "Hello, World!"}"#
     );
 }
