@@ -1,26 +1,5 @@
 use super::*;
 
-impl Func {
-    pub fn new(name: impl Into<String>) -> Self {
-        Self {
-            name: name.into(),
-            args: vec![],
-            ret: Type::Tuple(Vec::new()),
-        }
-    }
-    pub fn arg(&mut self, name: impl Into<String>, ty: Type) -> &mut Self {
-        self.args.push(Field {
-            name: name.into(),
-            ty,
-        });
-        self
-    }
-    pub fn ret(&mut self, ty: Type) -> &mut Self {
-        self.ret = ty;
-        self
-    }
-}
-
 impl Debug for Func {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         write!(f, "function {}(", self.name)?;

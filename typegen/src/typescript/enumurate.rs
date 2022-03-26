@@ -1,18 +1,5 @@
 use crate::*;
 
-impl Enum {
-    pub fn new(name: impl Into<String>) -> Self {
-        Self {
-            name: name.into(),
-            entries: vec![],
-        }
-    }
-    pub fn entry(&mut self, name: impl Into<String>, value: impl ToString) -> &mut Self {
-        self.entries.push((name.into(), value.to_string()));
-        self
-    }
-}
-
 struct FmtEnumItem((String, String));
 impl Debug for FmtEnumItem {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {

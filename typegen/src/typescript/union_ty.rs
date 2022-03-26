@@ -1,18 +1,5 @@
 use super::*;
 
-impl Union {
-    pub fn new(name: impl Into<String>) -> Self {
-        Self {
-            name: name.into(),
-            variants: vec![],
-        }
-    }
-    pub fn variant(&mut self, variant: Variant) -> &mut Self {
-        self.variants.push(variant);
-        self
-    }
-}
-
 struct FmtUnionNamed<'a> {
     name: &'a String,
     fields: &'a Vec<Field>,

@@ -1,16 +1,27 @@
+mod ty;
 mod typescript;
-mod utils;
 
-use std::{
-    any::type_name,
-    fmt::{Debug, Formatter, Result},
-    result,
-};
+use std::fmt::{Debug, Formatter, Result};
+
+// -------------------------------------------------------------------------------
 
 #[derive(Clone, PartialEq)]
 pub struct Enum {
     name: String,
     entries: Vec<(String, String)>,
+}
+
+impl Enum {
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            entries: vec![],
+        }
+    }
+    pub fn entry(&mut self, name: impl Into<String>, value: impl ToString) -> &mut Self {
+        self.entries.push((name.into(), value.to_string()));
+        self
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -27,6 +38,22 @@ pub struct Struct {
     fields: Vec<Field>,
 }
 
+impl Struct {
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            fields: vec![],
+        }
+    }
+    pub fn field(&mut self, name: impl Into<String>, ty: Type) -> &mut Self {
+        self.fields.push(Field {
+            name: name.into(),
+            ty,
+        });
+        self
+    }
+}
+
 // -----------------------------------------------------------------------------
 
 #[derive(Clone, PartialEq)]
@@ -34,6 +61,27 @@ pub struct Func {
     name: String,
     args: Vec<Field>,
     ret: Type,
+}
+
+impl Func {
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            args: vec![],
+            ret: Type::Tuple(Vec::new()),
+        }
+    }
+    pub fn arg(&mut self, name: impl Into<String>, ty: Type) -> &mut Self {
+        self.args.push(Field {
+            name: name.into(),
+            ty,
+        });
+        self
+    }
+    pub fn ret(&mut self, ty: Type) -> &mut Self {
+        self.ret = ty;
+        self
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -52,13 +100,26 @@ pub struct Union {
     variants: Vec<Variant>,
 }
 
+impl Union {
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            variants: vec![],
+        }
+    }
+    pub fn variant(&mut self, variant: Variant) -> &mut Self {
+        self.variants.push(variant);
+        self
+    }
+}
+
 // -----------------------------------------------------------------------------
 
 #[non_exhaustive]
 #[derive(Clone, PartialEq)]
 pub enum Type {
-    Struct(Struct),
     Func(Box<Func>),
+    Struct(Struct),
     Union(Union),
     Enum(Enum),
 
@@ -103,91 +164,4 @@ impl Type {
     pub fn result(ok: Type, err: Type) -> Self {
         Self::Result(Box::new((ok, err)))
     }
-}
-
-impl Type {
-    pub fn from<T: ?Sized>(_: &T) -> result::Result<Type, String> {
-        Self::from_ty::<T>()
-    }
-    pub fn from_ty<T: ?Sized>() -> result::Result<Self, String> {
-        Self::from_str(type_name::<T>())
-    }
-    pub fn from_str(string: &str) -> result::Result<Self, String> {
-        let ty = match string {
-            "u8" => Type::U8,
-            "u16" => Type::U16,
-            "u32" => Type::U32,
-            "u64" => Type::U64,
-            "u128" => Type::U128,
-            "i8" => Type::I8,
-            "i16" => Type::I16,
-            "i32" => Type::I32,
-            "i64" => Type::I64,
-            "i128" => Type::I128,
-            "f32" => Type::F32,
-            "f64" => Type::F64,
-            "bool" => Type::Bool,
-            "&str" => Type::String,
-            "alloc::string::String" => Type::String,
-            "()" => Type::Tuple(Vec::new()),
-
-            ty if ty.starts_with("(") => Type::Tuple(
-                utils::split_items_outside_group(utils::parse_angle_bracket_inner(ty, '(', ')'))
-                    .iter()
-                    .map(|item| Type::from_str(item.trim()))
-                    .collect::<result::Result<Vec<_>, _>>()?,
-            ),
-            ty if ty.starts_with("alloc::vec::Vec") => {
-                let ty_str = utils::parse_angle_bracket_inner(ty, '<', '>');
-                Type::Vec(Box::new(Type::from_str(&ty_str)?))
-            }
-            ty if ty.starts_with("core::option::Option") => {
-                let ty_str = utils::parse_angle_bracket_inner(ty, '<', '>');
-                Type::Option(Box::new(Type::from_str(&ty_str)?))
-            }
-            ty if ty.starts_with("core::result::Result") => {
-                let ty_str = utils::parse_angle_bracket_inner(ty, '<', '>');
-                let result_ty = utils::split_items_outside_group(ty_str);
-                Type::Result(Box::new((
-                    Type::from_str(&result_ty[0])?,
-                    Type::from_str(&result_ty[1])?,
-                )))
-            }
-            ty => return Err(format!("Unknown type: `{ty}`")),
-        };
-        Ok(ty)
-    }
-}
-
-#[test]
-#[cfg(test)]
-fn from_ty_name() {
-    assert_eq!(Type::from_ty::<u8>(), Ok(Type::U8));
-    assert_eq!(Type::from_ty::<u16>(), Ok(Type::U16));
-    assert_eq!(Type::from_ty::<u32>(), Ok(Type::U32));
-    assert_eq!(Type::from_ty::<u64>(), Ok(Type::U64));
-    assert_eq!(Type::from_ty::<u128>(), Ok(Type::U128));
-    assert_eq!(Type::from_ty::<i8>(), Ok(Type::I8));
-    assert_eq!(Type::from_ty::<i16>(), Ok(Type::I16));
-    assert_eq!(Type::from_ty::<i32>(), Ok(Type::I32));
-    assert_eq!(Type::from_ty::<i64>(), Ok(Type::I64));
-    assert_eq!(Type::from_ty::<i128>(), Ok(Type::I128));
-    assert_eq!(Type::from_ty::<f32>(), Ok(Type::F32));
-    assert_eq!(Type::from_ty::<f64>(), Ok(Type::F64));
-    assert_eq!(Type::from_ty::<bool>(), Ok(Type::Bool));
-    assert_eq!(Type::from_ty::<String>(), Ok(Type::String));
-    assert_eq!(Type::from_ty::<()>(), Ok(Type::Tuple(Vec::new())));
-    assert_eq!(Type::from_ty::<Option<u8>>(), Ok(Type::U8.optional()));
-    assert_eq!(
-        Type::from_ty::<(u8, u16)>(),
-        Ok(Type::Tuple(vec![Type::U8, Type::U16]))
-    );
-    assert_eq!(
-        Type::from_ty::<Vec<String>>(),
-        Ok(Type::Vec(Box::new(Type::String)))
-    );
-    assert_eq!(
-        Type::from_ty::<result::Result<u8, u16>>(),
-        Ok(Type::result(Type::U8, Type::U16))
-    );
 }
