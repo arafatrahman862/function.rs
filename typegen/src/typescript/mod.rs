@@ -16,31 +16,45 @@ impl Debug for Type {
         }
     }
 }
-
 pub struct TypeOf<'a>(pub &'a Type);
 
 impl Debug for TypeOf<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         use Type::*;
-        match self.0 {
-            Struct(s) => f.write_str(&s.name),
-            Func(func) => f.write_str(&func.name),
-            Union(u) => f.write_str(&u.name),
-            Enum(e) => f.write_str(&e.name),
+        f.write_str(match self.0 {
+            Enum(e) => &e.name,
+            Union(u) => &u.name,
+            Struct(s) => &s.name,
+            Func(fc) => &fc.name,
 
-            Any => f.write_str("any"),
+            Any => "any",
+            Bool => "boolean",
+            String => "string",
+            I64 | U64 | I128 | U128 => "bigint",
+            U8 | U16 | U32 | I8 | I16 | I32 | F32 | F64 => "number",
+
+            Vec(ty) => return write!(f, "Array<{:?}>", TypeOf(ty)),
+            Option(ty) => return write!(f, "{:?} | undefined", TypeOf(ty)),
+            Result(ty) => return  TypeOf(&ty.0).fmt(f),
             Tuple(tys) => match tys.is_empty() {
-                true => f.write_str("null"),
-                false => f.debug_list().entries(tys).finish(),
+                true => "null",
+                false => return  f.debug_list().entries(tys).finish(),
             },
-            Bool => f.write_str("boolean"),
-            String => f.write_str("string"),
-            U8 | U16 | U32 | I8 | I16 | I32 | F32 | F64 => f.write_str("number"),
-            I64 | U64 | I128 | U128 => f.write_str("bigint"),
+            Array(ty, _len) => match ty.as_ref() {
+                U8 => "Uint8Array",
+                U16 => "Uint16Array",
+                U32 => "Uint32Array",
+                U64 => "BigUint64Array",
 
-            Vec(ty) => write!(f, "Array<{:?}>", TypeOf(ty)),
-            Option(ty) => write!(f, "{:?} | undefined", TypeOf(ty)),
-            Result(ty) => TypeOf(&ty.0).fmt(f),
-        }
+                I8 => "Int8Array",
+                I16 => "Int16Array",
+                I32 => "Int32Array",
+                I64 => "BigInt64Array",
+
+                F32 => "Float32Array",
+                F64 => "Float64Array",
+                ty => panic!("Invalid number type: `{:?}`", ty)
+            },
+        })
     }
 }

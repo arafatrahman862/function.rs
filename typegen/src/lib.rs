@@ -81,6 +81,7 @@ pub enum Type {
 
     String,
     Vec(Box<Type>),
+    Array(Box<Type>, usize),
 
     Any,
     Tuple(Vec<Type>),
@@ -90,6 +91,9 @@ pub enum Type {
 }
 
 impl Type {
+    pub fn arr(self, len: usize) -> Self {
+        Type::Array(Box::new(self), len)
+    }
     pub fn list(self) -> Self {
         Type::Vec(Box::new(self))
     }

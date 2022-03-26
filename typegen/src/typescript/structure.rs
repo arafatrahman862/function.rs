@@ -28,7 +28,11 @@ impl Debug for Struct {
                 _ => obj.field(&field.name, &TypeOf(&field.ty)),
             };
         }
-        obj.finish()
+        obj.finish()?;
+        if self.fields.is_empty() {
+            f.write_str(" {}")?;
+        }
+        Ok(())
     }
 }
 
@@ -45,4 +49,5 @@ fn test() {
         format!("{:?}", struct_ty),
         "interface Test { a: number, b?: number }"
     );
+    assert_eq!(format!("{:?}", Struct::new("Test")), "interface Test {}"); 
 }
