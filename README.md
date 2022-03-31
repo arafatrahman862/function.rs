@@ -15,3 +15,18 @@ Most modern languages has some sort of type information... So Let's create a too
 Those are called `RPC`, Such tools already exist! (For example `tRPC`)   
 
 
+
+```rust
+fn hello() -> String {
+    "Hello World".to_string()
+}
+
+ctx! {
+   DB {
+       hello,
+       world,
+   }
+   
+}
+```
+
