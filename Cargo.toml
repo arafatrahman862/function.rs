@@ -4,13 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-# hyper = "0.14"
-# tokio = { version = "1", features = ["full"] }
-# typegen = { path = "./typegen", version = "0.1" }
-
-server = { path = "./server", version = "0.1" }
+websocket = { path = "./websocket", version = "0.1" }
 
 [workspace]
-# members = ["typegen", "codegen"]
-members = ["server"]
+members = ["websocket"]
+
+# members = ["typegen", "codegen", "websocket"]
 

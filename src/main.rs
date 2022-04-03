@@ -1,15 +1,12 @@
 #![allow(warnings)]
-
-mod client;
-pub mod proto;
-pub mod utils;
-
-use utils::*;
+mod utils;
+use websocket;
 
 use std::{
     io::{Read, Result, Write},
     net::{TcpListener, TcpStream},
 };
+use utils::*;
 
 fn main() -> Result<()> {
     let listener = TcpListener::bind("127.0.0.1:80")?;
@@ -29,20 +26,8 @@ fn main() -> Result<()> {
             stream.write_all(&html("../index.html"))?;
         }
         if buf.starts_with(b"GET /chat") {
-            println!("{:#?}", sec_web_socket_key(&data));
-            // println!("{}", String::from_utf8_lossy(&data));
+            println!("{:#?}", websocket::utils::sec_web_socket_key(&data));
         }
     }
     Ok(())
 }
-
-
-#[test]
-fn test() {
-    println!("{:?}", main());
-}
-
-
-fn websocket_conn_update() {}
-
-

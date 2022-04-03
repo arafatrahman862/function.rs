@@ -1,0 +1,969 @@
+Synthesizing 9/10 solutions
+
+=======
+
+struct Header {
+    pub fin: bool,
+    pub rsv1: bool,
+    pub rsv2: bool,
+    pub rsv3: bool,
+    pub opcode: u8,
+    pub mask: bool,
+    pub len: u64,
+}
+
+impl Header {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Header> {
+        if bytes.len() != 2 {
+            return Err(Error::new(ErrorKind::InvalidData, "Invalid header length"));
+        }
+
+        let fin = (bytes[0] & 0x80) != 0;
+        let rsv1 = (bytes[0] & 0x40) != 0;
+        let rsv2 = (bytes[0] & 0x20) != 0;
+        let rsv3 = (bytes[0] & 0x10) != 0;
+        let opcode = bytes[0] & 0x0f;
+        let mask = (bytes[1] & 0x80) != 0;
+        let len = bytes[1] & 0x7f;
+
+        Ok(Header {
+            fin,
+            rsv1,
+            rsv2,
+            rsv3,
+            opcode,
+            mask,
+            len,
+        })
+    }
+
+    pub fn to_bytes(&self) -> Result<Vec<u8>> {
+        let mut bytes = vec![0; 2];
+        bytes[0] = (self.fin as u8) << 7
+            | (self.rsv1 as u8) << 6
+            | (self.rsv2 as u8) << 5
+            | (self.rsv3 as u8) << 4
+            | self.opcode;
+        bytes[1] = (self.mask as u8) << 7 | self.len;
+        Ok(bytes)
+    }
+}
+
+pub struct Frame {
+    pub header: Header,
+    pub mask: [u8; 4],
+    pub data: Vec<u8>,
+}
+
+impl Frame {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Frame> {
+        let header = Header::
+
+=======
+
+struct Header {
+    pub fin: bool,
+    pub rsv1: bool,
+    pub rsv2: bool,
+    pub rsv3: bool,
+    pub opcode: Opcode,
+    pub mask: bool,
+    pub payload_len: u64,
+    pub masking_key: [u8; 4],
+}
+
+pub enum Opcode {
+    Continuation = 0x0,
+    Text = 0x1,
+    Binary = 0x2,
+    Close = 0x8,
+    Ping = 0x9,
+    Pong = 0xA,
+}
+
+pub struct WebSocket {
+    stream: TcpStream,
+    header: Header,
+    buf: Vec<u8>,
+}
+
+impl WebSocket {
+    pub fn new(stream: TcpStream) -> WebSocket {
+        WebSocket {
+            stream,
+            header: Header {
+                fin: false,
+                rsv1: false,
+                rsv2: false,
+                rsv3: false,
+                opcode: Opcode::Continuation,
+                mask: false,
+                payload_len: 0,
+                masking_key: [0; 4],
+            },
+            buf: Vec::new(),
+        }
+    }
+
+    pub fn send_text(&mut self, text: &str) -> Result<()> {
+        let mut buf = vec![0; 2 + text.len()];
+        buf[0] = 0x81;
+        buf[1] = text.len() as u8;
+        buf[2..].copy_from_slice(text.as_bytes());
+        self.stream.write_all(&buf)
+    }
+
+    pub fn recv_text(&mut self) -> Result<String> {
+        let mut buf = [0; 1];
+        self.stream.read_exact(&mut buf)?;
+        let len = (buf[0] & 0x7F) as usize;
+        let mut buf = vec![0; len];
+        self.stream.read_exact(&mut buf)?;
+        Ok(String::from_utf8(buf)?)
+    }
+
+=======
+
+struct Header {
+    pub fin: bool,
+    pub rsv1: bool,
+    pub rsv2: bool,
+    pub rsv3: bool,
+    pub opcode: Opcode,
+    pub mask: bool,
+    pub len: u64,
+}
+
+pub struct Frame {
+    pub data: Vec<u8>,
+    pub header: Header,
+}
+
+impl Frame {
+    pub fn from_bytes(bytes: &[u8]) -> Frame {
+        let header = Header {
+            fin: bytes[0] & 0x80 == 0x80,
+            rsv1: bytes[0] & 0x40 == 0x40,
+            rsv2: bytes[0] & 0x20 == 0x20,
+            rsv3: bytes[0] & 0x10 == 0x10,
+            opcode: Opcode::from_u8(bytes[0] & 0x0f).unwrap(),
+            mask: bytes[1] & 0x80 == 0x80,
+            len: if bytes[1] & 0x7f == 126 {
+                ((bytes[2] as u64) << 8) | (bytes[3] as u64)
+            } else if bytes[1] & 0x7f == 127 {
+                ((bytes[2] as u64) << 56) | ((bytes[3] as u64) << 48)
+                    | ((bytes[4] as u64) << 40)
+                    | ((bytes[5] as u64) << 32)
+                    | ((bytes[6] as u64) << 24)
+                    | ((bytes[7] as u64) << 16)
+                    | ((bytes[8] as u64) << 8)
+                    | (bytes[9] as u64)
+            } else {
+                bytes[1] & 0x7f
+            },
+        };
+
+        let mut data = Vec::new();
+        if header.mask {
+            for i in 0..header.len {
+                let mask_byte = bytes[i + 2];
+                data.push(bytes[i + 3] ^ mask_byte);
+            }
+        } else {
+            data.extend_
+
+=======
+
+struct Header {
+    name: String,
+    value: String,
+}
+
+impl Header {
+    pub fn new(name: &str, value: &str) -> Self {
+        Self {
+            name: name.to_owned(),
+            value: value.to_owned(),
+        }
+    }
+}
+
+pub struct Request {
+    headers: Vec<Header>,
+}
+
+impl Request {
+    pub fn new(headers: Vec<Header>) -> Self {
+        Self { headers }
+    }
+
+    pub fn headers(&self) -> &Vec<Header> {
+        &self.headers
+    }
+}
+
+pub struct Response {
+    status: String,
+    headers: Vec<Header>,
+    body: Vec<u8>,
+}
+
+impl Response {
+    pub fn new(status: &str, headers: Vec<Header>, body: Vec<u8>) -> Self {
+        Self {
+            status: status.to_owned(),
+            headers,
+            body,
+        }
+    }
+
+    pub fn status(&self) -> &str {
+        &self.status
+    }
+
+    pub fn headers(&self) -> &Vec<Header> {
+        &self.headers
+    }
+
+    pub fn body(&self) -> &Vec<u8> {
+        &self.body
+    }
+}
+
+pub trait Handler {
+    fn handle(&self, request: &Request) -> Response;
+}
+
+pub struct Server {
+    handler: Box<dyn Handler>,
+}
+
+impl Server {
+    pub fn new(handler: Box<dyn Handler>) -> Self {
+        Self { handler }
+    }
+
+    pub fn listen(self, port: u16) {
+        let listener = TcpListener::bind(format!("
+
+=======
+
+struct Header {
+    key: String,
+    value: String,
+}
+
+impl Header {
+    fn new(key: &str, value: &str) -> Header {
+        Header {
+            key: key.to_string(),
+            value: value.to_string(),
+        }
+    }
+}
+
+struct Headers {
+    headers: Vec<Header>,
+}
+
+impl Headers {
+    fn new() -> Headers {
+        Headers { headers: Vec::new() }
+    }
+
+    fn add(&mut self, key: &str, value: &str) {
+        self.headers.push(Header::new(key, value));
+    }
+
+    fn to_string(&self) -> String {
+        let mut s = String::new();
+        for header in &self.headers {
+            s.push_str(&format!("{}: {}\r\n", header.key, header.value));
+        }
+        s.push_str("\r\n");
+        s
+    }
+}
+
+struct Response {
+    status: u16,
+    headers: Headers,
+    body: String,
+}
+
+impl Response {
+    fn new(status: u16, headers: Headers, body: String) -> Response {
+        Response {
+            status,
+            headers,
+            body,
+        }
+    }
+
+    fn to_string(&self) -> String {
+        let mut s = String::new();
+        s.push_str(&format!("HTTP/1.1 {}\r\n", self.status));
+        s.push_str(&self.headers.to_string());
+        s.push_str(&self.body);
+        s
+    }
+}
+
+struct Request {
+    method: String,
+    path: String,
+    headers: Headers,
+    body: String,
+}
+
+impl Request {
+    fn new(method: &str, path: &str, headers: Headers, body: String) -> Request {
+        Request {
+            method: method.to_string(),
+            path: path.to_string(),
+            headers,
+            body,
+        }
+    }
+
+=======
+
+struct Header {
+    key: String,
+    value: String,
+}
+
+impl Header {
+    fn new(key: &str, value: &str) -> Self {
+        Self {
+            key: key.to_string(),
+            value: value.to_string(),
+        }
+    }
+}
+
+impl std::fmt::Display for Header {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}: {}", self.key, self.value)
+    }
+}
+
+/// A WebSocket frame
+#[derive(Debug, Clone)]
+pub struct Frame {
+    /// The payload of the frame
+    pub payload: Vec<u8>,
+    /// The opcode of the frame
+    pub opcode: Opcode,
+    /// Whether the frame is masked
+    pub masked: bool,
+    /// The length of the payload
+    pub payload_len: usize,
+    /// The masking key
+    pub masking_key: [u8; 4],
+}
+
+impl Frame {
+    /// Creates a new `Frame`.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `payload` - The payload of the frame
+    /// * `opcode` - The opcode of the frame
+    /// * `masked` - Whether the frame is masked
+    /// * `payload_len` - The length of the payload
+    /// * `masking_key` - The masking key
+    pub fn new(
+        payload: Vec<u8>,
+        opcode: Opcode,
+        masked: bool,
+        payload_len: usize,
+        masking_key: [u8; 4],
+    ) -> Self {
+        Self {
+            payload,
+            opcode,
+            masked,
+            payload_len,
+            masking_key,
+        }
+    }
+
+    /// Creates a new `Frame` from a `Vec<u8>`.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `bytes` - The `Vec<u8>` to parse
+    ///
+
+=======
+
+struct Header {
+    bytes: Vec<u8>,
+    index: usize,
+}
+
+impl Header {
+    fn new(bytes: &[u8]) -> Self {
+        Self {
+            bytes: bytes.to_vec(),
+            index: 0,
+        }
+    }
+
+    fn next(&mut self) -> Option<&[u8]> {
+        self.index = self.bytes.iter().position(|b| *b == b'\r').unwrap_or(self.bytes.len());
+
+        if self.index < self.bytes.len() {
+            let (head, tail) = self.bytes.split_at_mut(self.index);
+            self.bytes = tail.to_vec();
+            Some(head)
+        } else {
+            None
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.index == self.bytes.len()
+    }
+}
+
+pub struct WebSocket<R, W> {
+    reader: R,
+    writer: W,
+}
+
+impl<R: Read, W: Write> WebSocket<R, W> {
+    pub fn new(reader: R, writer: W) -> Self {
+        Self { reader, writer }
+    }
+
+    pub fn handshake(self) -> Result<Self> {
+        let mut header = Header::new(b"");
+        let mut buf = [0; 1024];
+
+        loop {
+            let len = self.reader.read(&mut buf)?;
+            header.bytes.extend_from_slice(&buf[..len]);
+
+            if header.is_empty() {
+                break;
+            }
+
+            if let Some(line) = header.next() {
+                if line.starts_with(b"\r\n") {
+                    break;
+                }
+            }
+        }
+
+        let request = std::str::from_utf8(header.bytes.as_slice())?;
+        let mut lines = request.lines();
+
+        let method = lines.next().ok_or(std::io::Error::new(std::io::ErrorKind::Other, "No method"))?;
+
+=======
+
+struct Header {
+    code: u16,
+    reason: String,
+    headers: HashMap<String, String>,
+}
+
+impl Header {
+    fn new(code: u16, reason: &str) -> Header {
+        Header {
+            code,
+            reason: reason.to_string(),
+            headers: HashMap::new(),
+        }
+    }
+
+    fn set_header(&mut self, key: &str, val: &str) {
+        self.headers.insert(key.to_string(), val.to_string());
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = Vec::new();
+        bytes.push(b' ');
+        bytes.push(b' ');
+        bytes.extend_from_slice(&self.code.to_be_bytes());
+        bytes.extend_from_slice(b" ");
+        bytes.extend_from_slice(self.reason.as_bytes());
+        bytes.extend_from_slice(b"\r\n");
+        for (key, val) in &self.headers {
+            bytes.extend_from_slice(key.as_bytes());
+            bytes.extend_from_slice(b": ");
+            bytes.extend_from_slice(val.as_bytes());
+            bytes.extend_from_slice(b"\r\n");
+        }
+        bytes.extend_from_slice(b"\r\n");
+        bytes
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum Opcode {
+    Continuation = 0,
+    Text = 1,
+    Binary = 2,
+    Close = 8,
+    Ping = 9,
+    Pong = 10,
+}
+
+impl Opcode {
+    fn from_u8(num: u8) -> Option<Opcode> {
+        match num {
+            0 => Some(Opcode::Continuation),
+            1 => Some(Opcode::Text),
+            2 => Some(Opcode::Binary),
+            8 => Some(Opcode::Close),
+            9 => Some(Opcode::
+
+=======
+
+struct Header {
+    pub opcode: Opcode,
+    pub payload_len: u64,
+    pub mask: bool,
+    pub mask_key: [u8; 4],
+}
+
+impl Header {
+    fn new(opcode: Opcode, payload_len: u64, mask: bool, mask_key: [u8; 4]) -> Header {
+        Header {
+            opcode,
+            payload_len,
+            mask,
+            mask_key,
+        }
+    }
+}
+
+pub struct WebSocket {
+    pub socket: TcpStream,
+    pub header: Header,
+    pub data: Vec<u8>,
+    pub is_closed: bool,
+}
+
+impl WebSocket {
+    pub fn new(socket: TcpStream) -> WebSocket {
+        WebSocket {
+            socket,
+            header: Header::new(Opcode::Continuation, 0, false, [0; 4]),
+            data: Vec::new(),
+            is_closed: false,
+        }
+    }
+
+    /// Read the header of a WebSocket frame.
+    /// 
+    /// # Errors
+    /// 
+    /// - If the frame is malformed, it will return an error.
+    /// 
+    /// # Example
+    /// 
+    /// ```rust
+    /// use websocket::{Opcode, WebSocket};
+    /// 
+    /// let mut socket = WebSocket::new(TcpStream::connect("
+
+struct Header {
+    name: String,
+    value: String,
+}
+
+impl Header {
+    pub fn new(name: &str, value: &str) -> Self {
+        Self {
+            name: name.to_owned(),
+            value: value.to_owned(),
+        }
+    }
+}
+
+pub struct Request {
+    headers: Vec<Header>,
+}
+
+impl Request {
+    pub fn new(headers: Vec<Header>) -> Self {
+        Self { headers }
+    }
+
+    pub fn headers(&self) -> &Vec<Header> {
+        &self.headers
+    }
+}
+
+pub struct Response {
+    status: String,
+    headers: Vec<Header>,
+    body: Vec<u8>,
+}
+
+impl Response {
+    pub fn new(status: &str, headers: Vec<Header>, body: Vec<u8>) -> Self {
+        Self {
+            status: status.to_owned(),
+            headers,
+            body,
+        }
+    }
+
+    pub fn status(&self) -> &str {
+        &self.status
+    }
+
+    pub fn headers(&self) -> &Vec<Header> {
+        &self.headers
+    }
+
+    pub fn body(&self) -> &Vec<u8> {
+        &self.body
+    }
+}
+
+pub trait Handler {
+    fn handle(&self, request: &Request) -> Response;
+}
+
+pub struct Server {
+    handler: Box<dyn Handler>,
+}
+
+impl Server {
+    pub fn new(handler: Box<dyn Handler>) -> Self {
+        Self { handler }
+    }
+
+    pub fn listen(self, port: u16) {
+        let listener = TcpListener::bind(format!("
+
+=======
+
+struct Header {
+    key: String,
+    value: String,
+}
+
+impl Header {
+    fn new(key: &str, value: &str) -> Header {
+        Header {
+            key: key.to_string(),
+            value: value.to_string(),
+        }
+    }
+}
+
+struct Headers {
+    headers: Vec<Header>,
+}
+
+impl Headers {
+    fn new() -> Headers {
+        Headers { headers: Vec::new() }
+    }
+
+    fn add(&mut self, key: &str, value: &str) {
+        self.headers.push(Header::new(key, value));
+    }
+
+    fn to_string(&self) -> String {
+        let mut s = String::new();
+        for header in &self.headers {
+            s.push_str(&format!("{}: {}\r\n", header.key, header.value));
+        }
+        s.push_str("\r\n");
+        s
+    }
+}
+
+struct Response {
+    status: u16,
+    headers: Headers,
+    body: String,
+}
+
+impl Response {
+    fn new(status: u16, headers: Headers, body: String) -> Response {
+        Response {
+            status,
+            headers,
+            body,
+        }
+    }
+
+    fn to_string(&self) -> String {
+        let mut s = String::new();
+        s.push_str(&format!("HTTP/1.1 {}\r\n", self.status));
+        s.push_str(&self.headers.to_string());
+        s.push_str(&self.body);
+        s
+    }
+}
+
+struct Request {
+    method: String,
+    path: String,
+    headers: Headers,
+    body: String,
+}
+
+impl Request {
+    fn new(method: &str, path: &str, headers: Headers, body: String) -> Request {
+        Request {
+            method: method.to_string(),
+            path: path.to_string(),
+            headers,
+            body,
+        }
+    }
+
+=======
+
+struct Header {
+    key: String,
+    value: String,
+}
+
+impl Header {
+    fn new(key: &str, value: &str) -> Self {
+        Self {
+            key: key.to_string(),
+            value: value.to_string(),
+        }
+    }
+}
+
+impl std::fmt::Display for Header {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}: {}", self.key, self.value)
+    }
+}
+
+/// A WebSocket frame
+#[derive(Debug, Clone)]
+pub struct Frame {
+    /// The payload of the frame
+    pub payload: Vec<u8>,
+    /// The opcode of the frame
+    pub opcode: Opcode,
+    /// Whether the frame is masked
+    pub masked: bool,
+    /// The length of the payload
+    pub payload_len: usize,
+    /// The masking key
+    pub masking_key: [u8; 4],
+}
+
+impl Frame {
+    /// Creates a new `Frame`.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `payload` - The payload of the frame
+    /// * `opcode` - The opcode of the frame
+    /// * `masked` - Whether the frame is masked
+    /// * `payload_len` - The length of the payload
+    /// * `masking_key` - The masking key
+    pub fn new(
+        payload: Vec<u8>,
+        opcode: Opcode,
+        masked: bool,
+        payload_len: usize,
+        masking_key: [u8; 4],
+    ) -> Self {
+        Self {
+            payload,
+            opcode,
+            masked,
+            payload_len,
+            masking_key,
+        }
+    }
+
+    /// Creates a new `Frame` from a `Vec<u8>`.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `bytes` - The `Vec<u8>` to parse
+    ///
+
+=======
+
+struct Header {
+    bytes: Vec<u8>,
+    index: usize,
+}
+
+impl Header {
+    fn new(bytes: &[u8]) -> Self {
+        Self {
+            bytes: bytes.to_vec(),
+            index: 0,
+        }
+    }
+
+    fn next(&mut self) -> Option<&[u8]> {
+        self.index = self.bytes.iter().position(|b| *b == b'\r').unwrap_or(self.bytes.len());
+
+        if self.index < self.bytes.len() {
+            let (head, tail) = self.bytes.split_at_mut(self.index);
+            self.bytes = tail.to_vec();
+            Some(head)
+        } else {
+            None
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.index == self.bytes.len()
+    }
+}
+
+pub struct WebSocket<R, W> {
+    reader: R,
+    writer: W,
+}
+
+impl<R: Read, W: Write> WebSocket<R, W> {
+    pub fn new(reader: R, writer: W) -> Self {
+        Self { reader, writer }
+    }
+
+    pub fn handshake(self) -> Result<Self> {
+        let mut header = Header::new(b"");
+        let mut buf = [0; 1024];
+
+        loop {
+            let len = self.reader.read(&mut buf)?;
+            header.bytes.extend_from_slice(&buf[..len]);
+
+            if header.is_empty() {
+                break;
+            }
+
+            if let Some(line) = header.next() {
+                if line.starts_with(b"\r\n") {
+                    break;
+                }
+            }
+        }
+
+        let request = std::str::from_utf8(header.bytes.as_slice())?;
+        let mut lines = request.lines();
+
+        let method = lines.next().ok_or(std::io::Error::new(std::io::ErrorKind::Other, "No method"))?;
+
+=======
+
+struct Header {
+    code: u16,
+    reason: String,
+    headers: HashMap<String, String>,
+}
+
+impl Header {
+    fn new(code: u16, reason: &str) -> Header {
+        Header {
+            code,
+            reason: reason.to_string(),
+            headers: HashMap::new(),
+        }
+    }
+
+    fn set_header(&mut self, key: &str, val: &str) {
+        self.headers.insert(key.to_string(), val.to_string());
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = Vec::new();
+        bytes.push(b' ');
+        bytes.push(b' ');
+        bytes.extend_from_slice(&self.code.to_be_bytes());
+        bytes.extend_from_slice(b" ");
+        bytes.extend_from_slice(self.reason.as_bytes());
+        bytes.extend_from_slice(b"\r\n");
+        for (key, val) in &self.headers {
+            bytes.extend_from_slice(key.as_bytes());
+            bytes.extend_from_slice(b": ");
+            bytes.extend_from_slice(val.as_bytes());
+            bytes.extend_from_slice(b"\r\n");
+        }
+        bytes.extend_from_slice(b"\r\n");
+        bytes
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum Opcode {
+    Continuation = 0,
+    Text = 1,
+    Binary = 2,
+    Close = 8,
+    Ping = 9,
+    Pong = 10,
+}
+
+impl Opcode {
+    fn from_u8(num: u8) -> Option<Opcode> {
+        match num {
+            0 => Some(Opcode::Continuation),
+            1 => Some(Opcode::Text),
+            2 => Some(Opcode::Binary),
+            8 => Some(Opcode::Close),
+            9 => Some(Opcode::
+
+=======
+
+struct Header {
+    pub opcode: Opcode,
+    pub payload_len: u64,
+    pub mask: bool,
+    pub mask_key: [u8; 4],
+}
+
+impl Header {
+    fn new(opcode: Opcode, payload_len: u64, mask: bool, mask_key: [u8; 4]) -> Header {
+        Header {
+            opcode,
+            payload_len,
+            mask,
+            mask_key,
+        }
+    }
+}
+
+pub struct WebSocket {
+    pub socket: TcpStream,
+    pub header: Header,
+    pub data: Vec<u8>,
+    pub is_closed: bool,
+}
+
+impl WebSocket {
+    pub fn new(socket: TcpStream) -> WebSocket {
+        WebSocket {
+            socket,
+            header: Header::new(Opcode::Continuation, 0, false, [0; 4]),
+            data: Vec::new(),
+            is_closed: false,
+        }
+    }
+
+    /// Read the header of a WebSocket frame.
+    /// 
+    /// # Errors
+    /// 
+    /// - If the frame is malformed, it will return an error.
+    /// 
+    /// # Example
+    /// 
+    /// ```rust
+    /// use websocket::{Opcode, WebSocket};
+    /// 
+    /// let mut socket = WebSocket::new(TcpStream::connect("
