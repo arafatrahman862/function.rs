@@ -1,5 +1,3 @@
-#![allow(non_snake_case)]
-
 //! ### Keeping track of clients
 //!
 //! This doesn't directly relate to the WebSocket protocol,
@@ -10,13 +8,13 @@
 //!
 //! For example, you might keep a table of usernames or ID numbers along with the corresponding WebSocket and other data that you need to associate with that connection.
 
-mod rsv;
-mod serde;
+use convert::Rsv;
+
+mod convert;
 pub mod utils;
 
-pub use rsv::Rsv;
 
-/// ### Data frames
+/// ### Data Frame Header
 ///
 /// ```txt
 ///  0                   1                   2                   3
@@ -38,18 +36,20 @@ pub use rsv::Rsv;
 /// |                     Payload Data continued ...                |
 /// +---------------------------------------------------------------+
 /// ```
-pub struct Frame {
+pub struct Header {
     /// Indicates that this is the final fragment in a message.  The first
     /// fragment MAY also be the final fragment.
-    pub FIN: bool,
+    pub fin: bool,
 
     /// MUST be `false` unless an extension is negotiated that defines meanings
     /// for non-zero values.  If a nonzero value is received and none of
     /// the negotiated extensions defines the meaning of such a nonzero
     /// value, the receiving endpoint MUST _Fail the WebSocket Connection_.
-    pub RSV: Rsv,
+    pub rsv: Rsv,
 
     pub opcode: Opcode,
+
+    pub payload_len: usize,
 
     /// Defines whether the "Payload data" is masked.  If set to 1, a
     /// masking key is present in masking-key, and this is used to unmask
@@ -63,14 +63,11 @@ pub struct Frame {
     /// frame that is not masked.
     ///
     /// Note: A server MUST NOT mask any frames that it sends to the client.
-    _MASK: (),
-
-    pub payload_len: usize,
-
-    // The masking key is a 32-bit value chosen at random by the client
-    pub masking_key: Option<[u8; 4]>,
+    pub mask: Option<[u8; 4]>,
 }
 
+#[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
 pub enum Opcode {
     /// The FIN and opcode fields work together to send a message split up into separate frames. This is called message fragmentation.
     ///
@@ -92,7 +89,7 @@ pub enum Opcode {
     ///   fragmented. An endpoint MUST be capable of handling control frames in the
     ///   middle of a fragmented message.
     ///
-    Continuation = 0,
+    Continue = 0,
 
     Text = 1,
     Binary = 2,
@@ -139,26 +136,49 @@ pub enum Opcode {
     // 11-15 are reserved for further control frames
 }
 
-pub enum CloseStatusCodes {
-    NormalClosure = 1000,
-    GoingAway = 1001,
+impl Opcode {
+    /// Whether the opcode indicates a control frame.
+    pub fn is_control(self) -> bool {
+        self as u8 >= 8
+    }
+}
+
+/// When closing an established connection an endpoint MAY indicate a reason for closure.
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy)]
+pub enum CloseCode {
+    /// The purpose for which the connection was established has been fulfilled
+    Normal = 1000,
+    /// Server going down or a browser having navigated away from a page
+    Away = 1001,
+    /// An endpoint is terminating the connection due to a protocol error.
     ProtocolError = 1002,
-    UnsupportedData = 1003,
+    /// It has received a type of data it cannot accept
+    Unsupported = 1003,
+
     // reserved 1004
+
+    /// MUST NOT be set as a status code in a Close control frame by an endpoint.
+    /// 
+    /// No status code was actually present.
     NoStatusRcvd = 1005,
-    AbnormalClosure = 1006,
-    InvalidFramePayloadData = 1007,
+    /// MUST NOT be set as a status code in a Close control frame by an endpoint.
+    /// 
+    /// Connection was closed abnormally.
+    Abnormal = 1006,
+    /// Application has received data within a message that was not consistent with the type of the message.
+    InvalidPayload = 1007,
+    /// This is a generic status code that can be returned when there is no other more suitable status code.
     PolicyViolation = 1008,
+    /// Message that is too big for it to process.
     MessageTooBig = 1009,
+    /// It has expected the server to negotiate one or more extension.
     MandatoryExt = 1010,
+    /// The server has encountered an unexpected condition that prevented it from fulfilling the request.
     InternalError = 1011,
-    ServiceRestart = 1012,
-    TryAgainLater = 1013,
+    /// MUST NOT be set as a status code in a Close control frame by an endpoint.
+    /// 
+    /// The connection was closed due to a failure to perform a TLS handshake.
     TLSHandshake = 1015,
 }
 
-#[test]
-fn test_name() {
-    println!("{:#?}", std::mem::size_of::<Frame>());
-    println!("{:#?}", std::mem::size_of::<CloseStatusCodes>());
-}

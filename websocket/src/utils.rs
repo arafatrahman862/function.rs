@@ -30,12 +30,22 @@
 /// - `Connection` header field that includes the token `"Upgrade"`,
 /// - `Sec-WebSocket-Key` header field with a base64-encoded value that, when decoded, is 16 bytes in length.
 pub fn sec_web_socket_key(bytes: &[u8]) -> Option<&str> {
-    std::str::from_utf8(bytes)
-        .ok()?
-        .lines()
-        .find(|s| s.starts_with("Sec-WebSocket-Key"))?
-        .split(": ")
-        .nth(1)
+    let mut out = None;
+    for (k, v) in std::str::from_utf8(bytes).ok()?.lines().filter_map(|line| {
+        let mut kv = line.split_terminator(": ");
+        kv.next().zip(kv.next())
+    }) {
+        if (k.eq_ignore_ascii_case("upgrade") && v != "websocket")
+            | (k.eq_ignore_ascii_case("connection") && v != "Upgrade")
+            | (k.eq_ignore_ascii_case("sec-websocket-version") && v != "13")
+        {
+            return None;
+        }
+        if k.eq_ignore_ascii_case("sec-websocket-key") {
+            out = Some(v);
+        }
+    }
+    out
 }
 
 /// ## Server handshake response
@@ -83,7 +93,6 @@ pub fn handshake_response(sec_web_socket_key: &str) -> String {
 
     format!("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: {key}\r\n\r\n",)
 }
-
 
 pub fn apply_mask<const S: usize>(keys: [u8; S], payload: &mut [u8]) {
     payload
