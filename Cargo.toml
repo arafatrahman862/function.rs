@@ -1,13 +1,3 @@
-[package]
-name = "function"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-websocket = { path = "./websocket", version = "0.1" }
-
 [workspace]
-members = ["websocket"]
-
-# members = ["typegen", "codegen", "websocket"]
+members = ["typegen"]
 
