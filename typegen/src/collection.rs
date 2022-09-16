@@ -1,5 +1,22 @@
 use super::*;
 use std::collections::*;
+
+#[derive(Debug)]
+pub enum SetType {
+    BTreeSet,
+    HashSet,
+    BinaryHeap,
+    LinkedList,
+    VecDeque,
+    Vec,
+}
+
+#[derive(Debug)]
+pub enum MapType {
+    HashMap,
+    BTreeMap,
+}
+
 macro_rules! impl_ty_class {
     [Set for $name: tt <$($ty_arg: ty),*> where $($ty: tt)*] => {
         impl<$($ty)*> GetType for $name<$($ty_arg),*> {

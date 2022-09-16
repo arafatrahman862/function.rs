@@ -1,5 +1,7 @@
+#![doc = include_str!("../README.md")]
+
 mod basic;
-mod collections;
+pub mod collection;
 mod fn_ty;
 mod wrapper;
 
@@ -7,22 +9,6 @@ pub use fn_ty::FnType;
 
 pub trait GetType {
     fn get_ty() -> Type;
-}
-
-#[derive(Debug)]
-pub enum SetType {
-    BTreeSet,
-    HashSet,
-    BinaryHeap,
-    LinkedList,
-    VecDeque,
-    Vec,
-}
-
-#[derive(Debug)]
-pub enum MapType {
-    HashMap,
-    BTreeMap,
 }
 
 #[non_exhaustive]
@@ -54,11 +40,11 @@ pub enum Type {
     String,
 
     Set {
-        collection_ty: SetType,
+        collection_ty: collection::SetType,
         ty: Box<Type>,
     },
     Map {
-        collection_ty: MapType,
+        collection_ty: collection::MapType,
         ty: Box<(Type, Type)>,
     },
 
@@ -74,7 +60,7 @@ pub enum Type {
     },
     Enum {
         name: String,
-        varients: Box<[(String, Type)]>,
+        fields: Box<[(String, Type)]>,
     },
     Array {
         len: usize,
