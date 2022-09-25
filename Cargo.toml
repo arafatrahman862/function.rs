@@ -1,3 +1,4 @@
 [workspace]
-members = ["typegen"]
+# members = ["typegen", "irpc", "transport", "macros"]
+members = ["typegen", "irpc"]
 
