@@ -6,3 +6,6 @@ edition = "2021"
 [dependencies]
 bin-layout = "7"
 tokio = { version = "1", features = ["full"] }
+
+macros = { path = "../macros" }
+typegen = { path = "../typegen" }

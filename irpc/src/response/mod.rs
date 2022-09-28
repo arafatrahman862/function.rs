@@ -10,7 +10,7 @@ pub trait Response {
     type Bytes: AsRef<[u8]>;
     type AsyncResult: Future<Output = Result<Self::Bytes, &'static str>>;
     type Stream: Iterator<Item = Self::AsyncResult>;
-    fn into_bytes_stream(&self) -> Self::Stream;
+    fn into_bytes_stream(self) -> Self::Stream;
 }
 
 impl<T: Encoder> Response for T {
@@ -18,10 +18,10 @@ impl<T: Encoder> Response for T {
     type AsyncResult = Ready<Result<Self::Bytes, &'static str>>;
     type Stream = iter::Once<Self::AsyncResult>;
 
-    fn into_bytes_stream(&self) -> Self::Stream {
+    fn into_bytes_stream(self) -> Self::Stream {
         iter::once(ready({
             let mut bytes = Vec::new();
-            match Encoder::encoder(self, &mut bytes) {
+            match self.encoder(&mut bytes) {
                 Err(_) => Err("Parse Error"),
                 Ok(_) => Ok(bytes),
             }
@@ -31,8 +31,6 @@ impl<T: Encoder> Response for T {
 
 #[cfg(test)]
 mod test {
-    use std::fmt::Display;
-
     use super::*;
     use bin_layout::Decoder;
 

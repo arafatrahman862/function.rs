@@ -1,15 +1,18 @@
 use super::*;
-pub trait FnType<Args> {
+use std::future::Future;
+
+pub trait AsyncFnType<Args> {
     fn args_ty(&self) -> Box<[Type]>;
     fn ret_ty(&self) -> Type;
 }
 
 macro_rules! impl_for_typles {
     [$(($($ty: ident),*)),*]  => ($(
-        impl<Func, Ret, $($ty),*> FnType<($($ty),*,)> for Func
+        impl<Func, Fut, Ret, $($ty),*> AsyncFnType<($($ty),*,)> for Func
         where
-            Func: FnOnce($($ty),*) -> Ret,
             Ret: GetType,
+            Fut: Future<Output = Ret>,
+            Func: FnOnce($($ty),*) -> Fut,
             $($ty: GetType),*
         {
             #[inline] fn args_ty(&self) -> Box<[Type]> {
@@ -24,6 +27,7 @@ macro_rules! impl_for_typles {
         }
     )*);
 }
+
 impl_for_typles!(
     (T1),
     (T1, T2),
@@ -42,10 +46,12 @@ impl_for_typles!(
     (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15),
     (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16)
 );
-impl<Func, Ret> FnType<()> for Func
+
+impl<Func, Fut, Ret> AsyncFnType<()> for Func
 where
     Ret: GetType,
-    Func: FnOnce() -> Ret,
+    Fut: Future<Output = Ret>,
+    Func: FnOnce() -> Fut,
 {
     #[inline]
     fn args_ty(&self) -> Box<[Type]> {
