@@ -1,7 +1,7 @@
 use super::*;
 use std::collections::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum SetVariant {
     BTreeSet,
     HashSet,
@@ -11,7 +11,7 @@ pub enum SetVariant {
     Vec,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum MapVariant {
     HashMap,
     BTreeMap,
