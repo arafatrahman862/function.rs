@@ -24,6 +24,10 @@ where
     }
 }
 
+// fn serve<S: Asyn>(socket: S) {
+    
+// }
+
 mod tests {
     use super::*;
     async fn main() -> Result<()> {
