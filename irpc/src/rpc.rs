@@ -34,10 +34,17 @@ macro_rules! rpc {
                     }),*]
                 }
             }
-            pub fn sarve() {
-                let d = 0;
-                match d {
-                    _ => {}
+
+            pub async fn sarve(mut socket: tokio::net::TcpStream) -> Result<()> {
+                use tokio::io::AsyncReadExt;
+                loop {
+                    let id = socket.read_u64_le().await?;
+                    match id {
+                        $(macros::hash_from_ident!($name) => {
+                            Handler::call($h, ((), 0));
+                        }),*
+                        _ => return Ok(())
+                    }
                 }
             }
         }

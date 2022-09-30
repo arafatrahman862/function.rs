@@ -13,7 +13,9 @@ use std::{future::Future, io::Result};
 use tokio::net::{TcpListener, TcpStream};
 use typegen::{AsyncFnType, Type};
 
-async fn serve<T>(listener: TcpListener, service: impl Fn(TcpStream) -> T) -> Result<()>
+type DynErr = Box<(dyn std::error::Error + Send + Sync)>;
+
+async fn accept_connection<T>(listener: TcpListener, service: impl Fn(TcpStream) -> T) -> Result<()>
 where
     T: Future + Send + 'static,
     T::Output: Send,
@@ -24,15 +26,11 @@ where
     }
 }
 
-// fn serve<S: Asyn>(socket: S) {
-    
-// }
-
 mod tests {
     use super::*;
     async fn main() -> Result<()> {
         let listener = TcpListener::bind("0.0.0.0:1234").await?;
-        serve(listener, |stream| async {});
+        accept_connection(listener, |stream| async {});
         Ok(())
     }
 }
