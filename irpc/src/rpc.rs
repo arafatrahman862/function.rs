@@ -1,47 +1,37 @@
 use crate::*;
 
-#[cfg(debug_assertions)]
-pub mod type_def {
-    use super::*;
-    #[derive(Debug, Clone)]
-    pub struct Func {
-        pub name: &'static str,
-        pub args: Box<[Type]>,
-        pub ret_ty: Type,
-    }
-
-    #[derive(Debug, Clone)]
-    pub struct TypeDef {
-        pub name: &'static str,
-        pub version: &'static str,
-        pub funcs: Vec<Func>,
-    }
-}
-
 macro_rules! rpc {
-    [$($h:path as $name: ident)*] => {
+    [$($func:path = $id: literal)*] => {
         mod rpc {
             use super::*;
-            #[cfg(debug_assertions)]
-            pub fn type_def() -> crate::type_def::TypeDef {
-                crate::type_def::TypeDef {
-                    name: env!("CARGO_PKG_NAME"),
-                    version: env!("CARGO_PKG_VERSION"),
-                    funcs: vec![$(crate::type_def::Func {
-                        name: stringify!($name),
-                        args: typegen::AsyncFnType::args_ty(&$h),
-                        ret_ty: typegen::AsyncFnType::ret_ty(&$h)
+            pub fn type_def() -> codegen::TypeDef {
+                codegen::TypeDef {
+                    name: env!("CARGO_PKG_NAME").into(),
+                    version: env!("CARGO_PKG_VERSION").into(),
+                    funcs: vec![$(codegen::Func {
+                        name: stringify!($func).into(),
+                        args: codegen::AsyncFnType::args_ty(&$func),
+                        ret_ty: codegen::AsyncFnType::ret_ty(&$func)
                     }),*]
                 }
             }
-
-            pub async fn sarve(mut socket: tokio::net::TcpStream) -> Result<()> {
+            pub async fn sarve(mut stream: &mut tokio::net::TcpStream) -> Result<()> {
                 use tokio::io::AsyncReadExt;
                 loop {
-                    let id = socket.read_u64_le().await?;
+                    let mut buf = [0; 5];
+                    stream.read_exact(&mut buf).await?;
+
+                    let [b0, b1, b2, b3, b4] = buf;
+                    let id = u16::from_le_bytes([b0, b1]);
+                    let data_len: usize = u32::from_le_bytes([b2, b3, b4, 0]).try_into().unwrap();
+
+                    let mut data = vec![0; data_len];
+                    stream.read_exact(&mut data).await?;
+
                     match id {
-                        $(macros::hash_from_ident!($name) => {
-                            Handler::call($h, ((), 0));
+                        $($id => {
+                            let args = Decoder::decode(&data).unwrap();
+                            Function::call($func, args).await;
                         }),*
                         _ => return Ok(())
                     }
@@ -49,4 +39,16 @@ macro_rules! rpc {
             }
         }
     };
+}
+
+async fn a(a: u8) -> impl Response {
+    0
+}
+async fn b(a: u8, u: u8) {}
+async fn c(a: u8, u: u8) {}
+
+rpc! {
+    // a = 1
+    // b = 2
+    // c = 2
 }

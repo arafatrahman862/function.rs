@@ -1,19 +1,20 @@
 #![allow(warnings)]
-mod context;
-mod handler;
+
+mod func;
 mod response;
 mod rpc;
 
-pub use handler::Handler;
+pub use func::Function;
 pub use response::Response;
-pub use rpc::type_def;
 
 use bin_layout::{Decoder, Encoder};
 use std::{future::Future, io::Result};
-use tokio::net::{TcpListener, TcpStream};
-use typegen::{AsyncFnType, Type};
+use tokio::{
+    io::BufReader,
+    net::{TcpListener, TcpStream},
+};
 
-type DynErr = Box<(dyn std::error::Error + Send + Sync)>;
+type DynErr = Box<dyn std::error::Error + Send + Sync>;
 
 async fn accept_connection<T>(listener: TcpListener, service: impl Fn(TcpStream) -> T) -> Result<()>
 where

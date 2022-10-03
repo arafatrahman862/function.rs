@@ -62,3 +62,18 @@ where
         Ret::get_ty()
     }
 }
+
+// fn get_fn_ty<Func, Args, Ret>(_: Func) -> (Box<[Type]>, Type)
+// where
+//     Func: FnOnce<Args, Output = Ret>,
+//     Args: GetType,
+//     Ret: GetType,
+// {
+//     (
+//         match Args::get_ty() {
+//             Type::Tuple(types) => types,
+//             _ => unreachable!(),
+//         },
+//         Ret::get_ty(),
+//     )
+// }

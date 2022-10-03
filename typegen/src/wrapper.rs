@@ -22,7 +22,7 @@ impl GetType for std::convert::Infallible {
 
 macro_rules! impl_for_typles {
     [$(($($ty: ident),*)),*]  => ($(
-        impl<$($ty),*> GetType for ($($ty),*,)
+        impl<$($ty),*> GetType for ($($ty,)*)
         where
             $($ty: GetType),*
         {
@@ -32,6 +32,7 @@ macro_rules! impl_for_typles {
 }
 
 impl_for_typles!(
+    (),
     (T1),
     (T1, T2),
     (T1, T2, T3),
@@ -49,10 +50,3 @@ impl_for_typles!(
     (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15),
     (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16)
 );
-
-impl GetType for () {
-    #[inline]
-    fn get_ty() -> Type {
-        Type::Tuple(Box::new([]))
-    }
-}
