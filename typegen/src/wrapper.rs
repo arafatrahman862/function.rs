@@ -2,20 +2,20 @@ use super::*;
 
 impl<T: GetType + ?Sized> GetType for &T {
     #[inline]
-    fn get_ty() -> Type {
-        T::get_ty()
-    }
+    fn get_type() -> Type {
+        T::get_type()
+    }    
 }
 
 impl<T: GetType + ?Sized> GetType for &mut T {
     #[inline]
-    fn get_ty() -> Type {
-        T::get_ty()
+    fn get_type() -> Type {
+        T::get_type()
     }
 }
 
 impl GetType for std::convert::Infallible {
-    fn get_ty() -> Type {
+    fn get_type() -> Type {
         unreachable!()
     }
 }
@@ -26,7 +26,7 @@ macro_rules! impl_for_typles {
         where
             $($ty: GetType),*
         {
-            #[inline] fn get_ty() -> Type { Type::Tuple(Box::new([$($ty::get_ty()),*])) }
+            #[inline] fn get_type() -> Type { Type::Tuple(Box::new([$($ty::get_type()),*])) }
         }
     )*);
 }

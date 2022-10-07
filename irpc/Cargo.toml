@@ -8,3 +8,4 @@ bin-layout = "7.1"
 tokio = { version = "1", features = ["full"] }
 
 codegen = { path = "../codegen" }
+std-trait = { path = "../std-trait" }

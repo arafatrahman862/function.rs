@@ -20,20 +20,20 @@ pub enum MapVariant {
 macro_rules! impl_ty_class {
     [Set for $name: tt <$($ty_arg: ty),*> where $($ty: tt)*] => {
         impl<$($ty)*> GetType for $name<$($ty_arg),*> {
-            #[inline] fn get_ty() -> Type {
+            #[inline] fn get_type() -> Type {
                 Type::Set {
                     variant: SetVariant::$name,
-                    ty: Box::new(T::get_ty()),
+                    ty: Box::new(T::get_type()),
                 }
             }
         }
     };
     [Map for $name: tt <$($ty_arg: ty),*> where $($ty: tt)*] => {
         impl<$($ty)*> GetType for $name<$($ty_arg),*> {
-            #[inline] fn get_ty() -> Type {
+            #[inline] fn get_type() -> Type {
                 Type::Map {
                     variant: MapVariant::$name,
-                    ty: Box::new((K::get_ty(), V::get_ty())),
+                    ty: Box::new((K::get_type(), V::get_type())),
                 }
             }
         }

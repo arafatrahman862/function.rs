@@ -1,21 +1,40 @@
 use crate::*;
 
+#[macro_export]
 macro_rules! rpc {
     [$($func:path = $id: literal)*] => {
         mod rpc {
             use super::*;
+            fn async_fn_ty<Func, Args, Ret>(_: &Func) -> (Box<[codegen::Type]>, codegen::Type)
+            where
+                Func: std_trait::FnOnce<Args>,
+                Func::Output: Future<Output = Ret>,
+                Args: codegen::GetType,
+                Ret: codegen::GetType,
+            {
+                (
+                    match Args::get_type() {
+                        codegen::Type::Tuple(types) => types,
+                        _ => unreachable!(),
+                    },
+                    Ret::get_type(),
+                )
+            }
+
             pub fn type_def() -> codegen::TypeDef {
                 codegen::TypeDef {
                     name: env!("CARGO_PKG_NAME").into(),
                     version: env!("CARGO_PKG_VERSION").into(),
-                    funcs: vec![$(codegen::Func {
-                        name: stringify!($func).into(),
-                        args: codegen::AsyncFnType::args_ty(&$func),
-                        ret_ty: codegen::AsyncFnType::ret_ty(&$func)
+                    funcs: vec![$({
+                        let (args, ret_ty) = async_fn_ty(&$func);
+                        codegen::Func { name: stringify!($func).into(), args, ret_ty }
                     }),*]
                 }
             }
-            pub async fn sarve(mut stream: &mut tokio::net::TcpStream) -> Result<()> {
+            pub async fn sarve<T>(stream: &mut T) -> Result<()>
+            where
+                T: AsyncRead + AsyncWrite + Unpin
+            {
                 use tokio::io::AsyncReadExt;
                 loop {
                     let mut buf = [0; 5];
@@ -31,7 +50,7 @@ macro_rules! rpc {
                     match id {
                         $($id => {
                             let args = Decoder::decode(&data).unwrap();
-                            Function::call($func, args).await;
+                            std_trait::FnOnce::call_once($func, args).await;
                         }),*
                         _ => return Ok(())
                     }
@@ -39,16 +58,4 @@ macro_rules! rpc {
             }
         }
     };
-}
-
-async fn a(a: u8) -> impl Response {
-    0
-}
-async fn b(a: u8, u: u8) {}
-async fn c(a: u8, u: u8) {}
-
-rpc! {
-    // a = 1
-    // b = 2
-    // c = 2
 }

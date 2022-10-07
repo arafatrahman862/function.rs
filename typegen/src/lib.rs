@@ -3,15 +3,13 @@
 mod basic;
 mod collection;
 mod encoder;
-mod fn_ty;
 mod wrapper;
 
 pub use collection::{MapVariant, SetVariant};
-pub use fn_ty::AsyncFnType;
-use std::any::type_name;
+use std::any::{type_name, TypeId};
 
 pub trait GetType {
-    fn get_ty() -> Type;
+    fn get_type() -> Type;
 }
 
 #[non_exhaustive]
@@ -48,14 +46,17 @@ pub enum Type {
     Slice(Box<Type>),
     Tuple(Box<[Type]>),
     TupleStruct {
+        type_id: TypeId,
         name: String,
         fields: Box<[Type]>,
     },
     Struct {
+        type_id: TypeId,
         name: String,
         fields: Box<[(String, Type)]>,
     },
     Enum {
+        type_id: TypeId,
         name: String,
         fields: Box<[(String, Type)]>,
     },
@@ -107,5 +108,3 @@ impl Type {
         }
     }
 }
-
-
