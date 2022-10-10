@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 typegen = { path = "../typegen" }
+std-trait = { path = "../std-trait" }

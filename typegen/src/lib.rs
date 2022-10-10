@@ -2,20 +2,20 @@
 
 mod basic;
 mod collection;
-mod encoder;
 mod wrapper;
 
 pub use collection::{MapVariant, SetVariant};
-use std::any::{type_name, TypeId};
 
 pub trait GetType {
-    fn get_type() -> Type;
+    const TYPE: Type;
 }
 
 #[non_exhaustive]
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Type {
+    Never,
+
     u8,
     u16,
     u32,
@@ -40,71 +40,84 @@ pub enum Type {
     str,
     String,
 
-    Option(Box<Type>),
-    Result(Box<(Type, Type)>),
+    Option(&'static Type),
+    Result(&'static (Type, Type)),
 
-    Slice(Box<Type>),
-    Tuple(Box<[Type]>),
+    Slice(&'static Type),
+    Tuple(&'static [Type]),
     TupleStruct {
-        type_id: TypeId,
-        name: String,
-        fields: Box<[Type]>,
+        name: &'static str,
+        fields: &'static [Type],
     },
     Struct {
-        type_id: TypeId,
-        name: String,
-        fields: Box<[(String, Type)]>,
+        name: &'static str,
+        fields: &'static [(&'static str, Type)],
     },
     Enum {
-        type_id: TypeId,
-        name: String,
-        fields: Box<[(String, Type)]>,
+        name: &'static str,
+        fields: &'static [(&'static str, Type)],
     },
     Array {
         len: usize,
-        ty: Box<Type>,
+        ty: &'static Type,
     },
     Set {
         variant: SetVariant,
-        ty: Box<Type>,
+        ty: &'static Type,
     },
     Map {
         variant: MapVariant,
-        ty: Box<(Type, Type)>,
+        ty: &'static (Type, Type),
     },
 }
 
 impl Type {
-    pub fn ty_id(&self) -> u8 {
+    pub fn idx(&self) -> u8 {
         match self {
-            Type::u8 => 0,
-            Type::u16 => 1,
-            Type::u32 => 2,
-            Type::u64 => 3,
-            Type::u128 => 4,
-            Type::usize => 5,
-            Type::i8 => 6,
-            Type::i16 => 7,
-            Type::i32 => 8,
-            Type::i64 => 9,
-            Type::i128 => 10,
-            Type::isize => 11,
-            Type::f32 => 12,
-            Type::f64 => 13,
-            Type::bool => 14,
-            Type::char => 15,
-            Type::str => 16,
-            Type::String => 17,
-            Type::Option(_) => 18,
-            Type::Result(_) => 19,
-            Type::Slice(_) => 20,
-            Type::Tuple(_) => 21,
-            Type::TupleStruct { .. } => 22,
-            Type::Struct { .. } => 23,
-            Type::Enum { .. } => 24,
-            Type::Array { .. } => 25,
-            Type::Set { .. } => 26,
-            Type::Map { .. } => 27,
+            Type::Never => 0,
+            Type::u8 => 1,
+            Type::u16 => 2,
+            Type::u32 => 3,
+            Type::u64 => 4,
+            Type::u128 => 5,
+            Type::usize => 6,
+            Type::i8 => 7,
+            Type::i16 => 8,
+            Type::i32 => 9,
+            Type::i64 => 10,
+            Type::i128 => 11,
+            Type::isize => 12,
+            Type::f32 => 13,
+            Type::f64 => 14,
+            Type::bool => 15,
+            Type::char => 16,
+            Type::str => 17,
+            Type::String => 18,
+            Type::Option(_) => 19,
+            Type::Result(_) => 20,
+            Type::Slice(_) => 21,
+            Type::Tuple(_) => 22,
+            Type::TupleStruct { .. } => 23,
+            Type::Struct { .. } => 24,
+            Type::Enum { .. } => 25,
+            Type::Array { .. } => 26,
+            Type::Set { variant, .. } => match variant {
+                SetVariant::BTreeSet => 27,
+                SetVariant::HashSet => 28,
+                SetVariant::BinaryHeap => 29,
+                SetVariant::LinkedList => 30,
+                SetVariant::VecDeque => 31,
+                SetVariant::Vec => 32,
+            },
+            Type::Map { variant, .. } => match variant {
+                MapVariant::HashMap => 33,
+                MapVariant::BTreeMap => 34,
+            },
         }
     }
 }
+
+// #[test]
+// fn test_name() {
+//     println!("{:?}", std::mem::size_of::<&'static str>());
+// }

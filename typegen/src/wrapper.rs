@@ -1,32 +1,35 @@
 use super::*;
 
 impl<T: GetType + ?Sized> GetType for &T {
-    #[inline]
-    fn get_type() -> Type {
-        T::get_type()
-    }    
+    const TYPE: Type = T::TYPE;
 }
 
 impl<T: GetType + ?Sized> GetType for &mut T {
-    #[inline]
-    fn get_type() -> Type {
-        T::get_type()
-    }
+    const TYPE: Type = T::TYPE;
 }
 
 impl GetType for std::convert::Infallible {
-    fn get_type() -> Type {
-        unreachable!()
-    }
+    const TYPE: Type = Type::Never;
+}
+
+trait Tys {
+    const TYS: &'static [Type];
 }
 
 macro_rules! impl_for_typles {
     [$(($($ty: ident),*)),*]  => ($(
+        impl<$($ty),*> Tys for ($($ty,)*)
+        where
+            $($ty: GetType),*
+        {
+            const TYS: &'static [Type] =  &[$($ty::TYPE),*];
+        }
+
         impl<$($ty),*> GetType for ($($ty,)*)
         where
             $($ty: GetType),*
         {
-            #[inline] fn get_type() -> Type { Type::Tuple(Box::new([$($ty::get_type()),*])) }
+            const TYPE: Type = Type::Tuple(Self::TYS);
         }
     )*);
 }

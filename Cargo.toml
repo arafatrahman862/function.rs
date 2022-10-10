@@ -1,4 +1,4 @@
 [workspace]
 # members = []
-members = ["typegen", "irpc", "codegen", "client", "std-trait"]
+members = ["typegen", "irpc", "codegen", "client", "std-trait", "example"]
 
