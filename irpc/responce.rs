@@ -1,5 +1,6 @@
 use bin_layout::Encoder;
 
+#[derive(Clone, Copy)]
 pub enum Status {
     Ok = 0,
     Err = 1,
@@ -17,3 +18,6 @@ pub struct Responce<'a> {
     status: Status,
     data: &'a [u8],
 }
+
+#[test]
+fn test_name() {}
