@@ -3,24 +3,20 @@
 use std::future::Future;
 pub use typegen::{GetType, Type};
 
-pub const fn async_fn_ty<Func, Args, Ret>(_: &Func) -> (&[Type],  Type)
+pub const fn async_fn_ty<Func, Args, Ret>(_: &Func) -> (&[Type], Type)
 where
     Func: std_trait::FnOnce<Args>,
     Func::Output: Future<Output = Ret>,
     Args: GetType,
     Ret: GetType,
 {
-    (
-        match Args::TYPE {
-            Type::Tuple(types) => types,
-            _ => unreachable!(),
-        },
-        Ret::TYPE,
-    )
+    let Type::Tuple(types) = Args::TYPE else { unreachable!() };
+    (types, Ret::TYPE)
 }
 
 #[derive(Debug, Clone)]
 pub struct Func {
+    pub index: u16,
     pub name: &'static str,
     pub args: &'static [Type],
     pub retn: Type,

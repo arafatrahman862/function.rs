@@ -1,4 +1,16 @@
 [workspace]
-# members = []
-members = ["typegen", "irpc", "codegen", "std-trait"]
+members = ["typegen", "codegen", "std-trait"]
 
+[package]
+name = "irpc"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+quinn = "0.9.3"
+bin-layout = "7.1"
+tokio = { version = "1", features = ["full"] }
+
+codegen = { path = "./codegen" }
+std-trait = { path = "./std-trait" }
+rustls = "0.20.7"
