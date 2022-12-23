@@ -1,16 +1,14 @@
 #![allow(warnings)]
 
 mod context;
-mod argument;
 mod responce;
 mod server;
 
-pub mod utils;
 pub use responce::*;
 
 #[macro_export]
 macro_rules! rpc {
-    [$($func:path = $id: literal)*] => (mod rpc {
+    [$($func:path = $id:literal)*] => (mod rpc {
         use super::*;
 
         #[allow(dead_code)]
@@ -25,21 +23,17 @@ macro_rules! rpc {
             }
         }
 
-        async fn execute(writer: impl tokio::io::AsyncWrite, mut reader: impl tokio::io::AsyncRead + std::marker::Unpin) -> std::io::Result<()> {
-            let mut buf = [0; 5];
+        pub async fn execute<State>(
+            mut reader: impl tokio::io::AsyncRead + std::marker::Unpin,
+            writer: impl tokio::io::AsyncWrite,
+            ctx: context::Ctx<State>,
+        ) -> std::io::Result<()> {
+            let mut buf = [0; 2];
             tokio::io::AsyncReadExt::read_exact(&mut reader, &mut buf).await?;
 
-            let [b0, b1, b2, b3, b4] = buf;
-
-            let id = u16::from_le_bytes([b0, b1]);
-
-            let data_len: usize = u32::from_le_bytes([b2, b3, b4, 0]).try_into().unwrap();
-            let mut data = vec![0; data_len];
-            tokio::io::AsyncReadExt::read_exact(&mut reader, &mut data).await?;
-
-            match id {
+            match u16::from_le_bytes(buf) {
                 $($id => {
-                    // let args = Decoder::decode(&data).unwrap();
+                    // let args = context::Parse::parse(ctx, &data).unwrap();
                     // std_trait::FnOnce::call_once($func, args).await;
                 }),*
                 _=> {}
@@ -49,17 +43,20 @@ macro_rules! rpc {
     });
 }
 
-async fn f(_: u8) -> u16 {
-    match 5 {
-        _ => {}
-    }
-    0
-}
-async fn a(_: u8) -> u16 {
-    0
-}
+// async fn a(num: u8) -> u16 {
+//     println!("{:?}", num);
+//     123
+// }
 
-rpc! {
-    a = 1
-    f = 1
-}
+// rpc! {
+//     a = 1
+// }
+
+// #[tokio::test]
+// async fn test_name() {
+//     let mut reader = [1u8, 0, 1, 0, 0, 42].as_slice();
+//     let writer = vec![];
+
+//     // println!("{:#?}", rpc::type_def());
+//     rpc::execute(&mut reader, writer, context::Ctx { state: () }).await;
+// }

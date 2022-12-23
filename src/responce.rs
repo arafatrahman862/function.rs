@@ -1,23 +1,17 @@
 use bin_layout::Encoder;
+use tokio::io::{AsyncWrite, AsyncWriteExt};
 
-#[derive(Clone, Copy)]
-pub enum Status {
-    Ok = 0,
-    Err = 1,
-    Close = 2,
-}
+// pub trait SendResponse {
+//     type Output;
+//     fn send_response(writer: impl tokio::io::AsyncWrite + std::marker::Unpin) -> Self::Output;
+// }
 
-impl Encoder for Status {
-    fn encoder(&self, c: &mut impl std::io::Write) -> std::io::Result<()> {
-        (*self as u8).encoder(c)
-    }
-}
+// impl<T: Encoder> SendResponse for T {
+  
+// }
 
-#[derive(Encoder)]
-pub struct Responce<'a> {
-    status: Status,
-    data: &'a [u8],
-}
-
-#[test]
-fn test_name() {}
+// impl SendResponse for Close {
+//     fn send_response(mut writer: impl tokio::io::AsyncWrite + std::marker::Unpin) {
+//         todo!()
+//     }
+// }
