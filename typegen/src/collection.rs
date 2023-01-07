@@ -1,7 +1,7 @@
 use super::*;
 use std::collections::*;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum SetVariant {
     BTreeSet,
     HashSet,
@@ -11,7 +11,7 @@ pub enum SetVariant {
     Vec,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum MapVariant {
     HashMap,
     BTreeMap,
@@ -20,21 +20,26 @@ pub enum MapVariant {
 macro_rules! impl_ty_class {
     [Set for $name: tt <$($ty_arg: ty),*> where $($ty: tt)*] => {
         impl<$($ty)*> GetType for $name<$($ty_arg),*> {
-            const TYPE: Type = Type::Set {
-                variant: SetVariant::$name,
-                ty: &T::TYPE
-            };
+            fn ty() -> Type {
+                Type::Set {
+                    variant: SetVariant::$name,
+                    ty: Box::new(T::ty()),
+                }
+            }
         }
     };
     [Map for $name: tt <$($ty_arg: ty),*> where $($ty: tt)*] => {
         impl<$($ty)*> GetType for $name<$($ty_arg),*> {
-            const TYPE: Type = Type::Map {
-                variant: MapVariant::$name,
-                ty: &(K::TYPE, V::TYPE)
-            };
+            fn ty() -> Type {
+                Type::Map {
+                    variant: MapVariant::$name,
+                    ty: Box::new((K::ty(), V::ty())),
+                }
+            }
         }
     };
 }
+
 impl_ty_class!(Set for Vec<T>             where T: GetType);
 impl_ty_class!(Set for VecDeque<T>        where T: GetType);
 impl_ty_class!(Set for LinkedList<T>      where T: GetType);

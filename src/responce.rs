@@ -1,4 +1,4 @@
-use bin_layout::Encoder;
+// use bin_layout::Encoder;
 use tokio::io::{AsyncWrite, AsyncWriteExt};
 
 // pub trait SendResponse {

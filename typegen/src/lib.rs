@@ -4,15 +4,17 @@ mod basic;
 mod collection;
 mod wrapper;
 
+use serde::{Serialize, Deserialize};
 pub use collection::{MapVariant, SetVariant};
 
 pub trait GetType {
-    const TYPE: Type;
+    // const TYPE: Type;
+    fn ty() -> Type;
 }
 
 #[non_exhaustive]
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Type {
     Never,
 
@@ -40,39 +42,39 @@ pub enum Type {
     str,
     String,
 
-    Option(&'static Type),
-    Result(&'static (Type, Type)),
+    Option(Box<Type>),
+    Result(Box<(Type, Type)>),
 
-    Slice(&'static Type),
-    Tuple(&'static [Type]),
+    Slice(Box<Type>),
+    Tuple(Vec<Type>),
     TupleStruct {
-        name: &'static str,
-        fields: &'static [Type],
+        name: String,
+        fields: Vec<Type>,
     },
     Struct {
-        name: &'static str,
-        fields: &'static [(&'static str, Type)],
+        name: String,
+        fields: Vec<(String, Type)>,
     },
     Enum {
-        name: &'static str,
-        fields: &'static [(&'static str, Type)],
+        name: String,
+        fields: Vec<(String, Type)>,
     },
     Array {
         len: usize,
-        ty: &'static Type,
+        ty: Box<Type>,
     },
     Set {
         variant: SetVariant,
-        ty: &'static Type,
+        ty: Box<Type>,
     },
     Map {
         variant: MapVariant,
-        ty: &'static (Type, Type),
+        ty: Box<(Type, Type)>,
     },
 }
 
 impl Type {
-    pub fn idx(&self) -> u8 {
+    pub fn id(&self) -> u8 {
         match self {
             Type::Never => 0,
             Type::u8 => 1,
@@ -116,8 +118,3 @@ impl Type {
         }
     }
 }
-
-// #[test]
-// fn test_name() {
-//     println!("{:?}", std::mem::size_of::<&'static str>());
-// }

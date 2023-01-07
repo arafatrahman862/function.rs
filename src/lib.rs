@@ -12,13 +12,13 @@ macro_rules! rpc {
         use super::*;
 
         #[allow(dead_code)]
-        pub const fn type_def() -> codegen::TypeDef {
+        pub fn type_def() -> codegen::TypeDef {
             codegen::TypeDef {
-                name: env!("CARGO_PKG_NAME"),
-                version: env!("CARGO_PKG_VERSION"),
-                funcs: &[$({
-                    const TY: (&[codegen::Type], codegen::Type) = codegen::async_fn_ty(&$func);
-                    codegen::Func { index: $id, name: stringify!($func), args: TY.0, retn: TY.1 }
+                name: env!("CARGO_PKG_NAME").into(),
+                version: env!("CARGO_PKG_VERSION").into(),
+                funcs: vec![$({
+                    let (args, retn) = codegen::async_fn_ty(&$func);
+                    codegen::Func { index: $id, name: stringify!($func).into(), args, retn }
                 }),*],
             }
         }
@@ -28,10 +28,18 @@ macro_rules! rpc {
             writer: impl tokio::io::AsyncWrite,
             ctx: context::Ctx<State>,
         ) -> std::io::Result<()> {
-            let mut buf = [0; 2];
+            let mut buf = [0; 5];
             tokio::io::AsyncReadExt::read_exact(&mut reader, &mut buf).await?;
 
-            match u16::from_le_bytes(buf) {
+            let [b0, b1, b2, b3, b4] = buf;
+
+            let id = u16::from_le_bytes([b0, b1]);
+
+            let data_len: usize = u32::from_le_bytes([b2, b3, b4, 0]).try_into().unwrap();
+            let mut data = vec![0; data_len];
+            tokio::io::AsyncReadExt::read_exact(&mut reader, &mut data).await?;
+
+            match id {
                 $($id => {
                     // let args = context::Parse::parse(ctx, &data).unwrap();
                     // std_trait::FnOnce::call_once($func, args).await;
@@ -43,20 +51,16 @@ macro_rules! rpc {
     });
 }
 
-// async fn a(num: u8) -> u16 {
-//     println!("{:?}", num);
-//     123
-// }
+async fn a(num: u8) -> u8 {
+    println!("{:?}", num);
+    123
+}
 
-// rpc! {
-//     a = 1
-// }
+rpc! {
+    a = 1
+}
 
-// #[tokio::test]
-// async fn test_name() {
-//     let mut reader = [1u8, 0, 1, 0, 0, 42].as_slice();
-//     let writer = vec![];
-
-//     // println!("{:#?}", rpc::type_def());
-//     rpc::execute(&mut reader, writer, context::Ctx { state: () }).await;
-// }
+#[test]
+fn test_name() {
+    // println!("{:#}", ser);
+}
