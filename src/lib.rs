@@ -59,8 +59,3 @@ async fn a(num: u8) -> u8 {
 rpc! {
     a = 1
 }
-
-#[test]
-fn test_name() {
-    // println!("{:#}", ser);
-}

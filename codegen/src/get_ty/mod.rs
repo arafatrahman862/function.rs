@@ -1,14 +1,11 @@
-#![doc = include_str!("../README.md")]
-
 mod basic;
 mod collection;
 mod wrapper;
 
-use serde::{Serialize, Deserialize};
+// use super::Resource;
 pub use collection::{MapVariant, SetVariant};
-
+use serde::{Deserialize, Serialize};
 pub trait GetType {
-    // const TYPE: Type;
     fn ty() -> Type;
 }
 

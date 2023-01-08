@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-typegen = { path = "../typegen" }
+databuf = "0.1"
 std-trait = { path = "../std-trait" }
-
 serde = { version = "1.0", features = ["derive"] }

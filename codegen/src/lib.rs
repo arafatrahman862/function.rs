@@ -1,11 +1,9 @@
-#![allow(warnings)]
+mod get_ty;
 
 use serde::{Deserialize, Serialize};
-use std::{
-    fmt::{self, Debug},
-    future::Future,
-};
-pub use typegen::{GetType, Type};
+use std::future::Future;
+
+pub use get_ty::{GetType, Type};
 
 pub fn async_fn_ty<Func, Args, Ret>(_: &Func) -> (Vec<Type>, Type)
 where
@@ -26,17 +24,6 @@ pub struct Func {
     pub retn: Type,
 }
 
-// impl Debug for Func {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         f.debug_map()
-//             .entry(&"index", &self.index)
-//             .entry(&"name", &self.name)
-//             .entry(&"args", &self.args)
-//             .entry(&"retn", &FmtTy(self.retn.clone()))
-//             .finish()
-//     }
-// }
-
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub struct TypeDef {
     pub name: String,
@@ -44,12 +31,5 @@ pub struct TypeDef {
     pub funcs: Vec<Func>,
 }
 
-// impl fmt::Display for TypeDef {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         f.debug_map()
-//             .entry(&"name", &self.name)
-//             .entry(&"version", &self.version)
-//             .entry(&"functions", &self.funcs)
-//             .finish()
-//     }
-// }
+/// ## ❌ You should not implement this trait in any type ❌
+pub trait Resource<'de>: GetType + databuf::Encoder +  databuf::Decoder<'de> {}
