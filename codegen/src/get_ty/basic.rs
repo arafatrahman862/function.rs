@@ -1,14 +1,25 @@
 use crate::*;
 
-macro_rules! impl_for { [$($ty:tt),*] => {$( 
+macro_rules! impl_for { [$($ty:tt),*] => {$(
     impl GetType for $ty { fn ty() -> Type { Type::$ty } }
-    // impl Resource<'_> for $ty {}
+    impl Resource for $ty {}
 )*}; }
+
 impl_for!(
-    u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize, f32, f64, bool, char, str,
-    String
+    u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize, f32, f64, bool, char, String
 );
 
+impl<T: Resource, const N: usize> Resource for [T; N] {}
+impl<T: Resource> Resource for Option<T> {}
+impl<T: Resource, E: Resource> Resource for Result<T, E> {}
+
+// -----------------------------------------------------------------
+
+impl GetType for str {
+    fn ty() -> Type {
+        Type::str
+    }
+}
 
 impl<T: GetType, const N: usize> GetType for [T; N] {
     fn ty() -> Type {

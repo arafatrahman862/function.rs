@@ -1,4 +1,9 @@
-use super::*;
+use crate::*;
+
+
+impl<T: Resource> Resource for Box<T> {}
+
+// ---------------------------------------------------------------------------------
 
 impl<T: GetType + ?Sized> GetType for &T {
     fn ty() -> Type {
@@ -7,6 +12,12 @@ impl<T: GetType + ?Sized> GetType for &T {
 }
 
 impl<T: GetType + ?Sized> GetType for &mut T {
+    fn ty() -> Type {
+        T::ty()
+    }
+}
+
+impl<T: GetType> GetType for Box<T> {
     fn ty() -> Type {
         T::ty()
     }
@@ -24,12 +35,13 @@ macro_rules! impl_for_typles {
         where
             $($ty: GetType),*
         {
-            // const TYPE: Type = Type::Tuple(&[$($ty::ty()),*]);
             fn ty() -> Type {
-                // Type::Never
                 Type::Tuple(vec![$($ty::ty()),*])
             }
         }
+
+        impl<$($ty),*> Resource for ($($ty,)*)
+        where $($ty: Resource),* {}
     )*);
 }
 

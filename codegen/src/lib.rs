@@ -32,4 +32,4 @@ pub struct TypeDef {
 }
 
 /// ## ❌ You should not implement this trait in any type ❌
-pub trait Resource<'de>: GetType + databuf::Encoder +  databuf::Decoder<'de> {}
+pub trait Resource: GetType + databuf::Encoder + for<'de> databuf::Decoder<'de> {} // Owned

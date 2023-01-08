@@ -2,9 +2,9 @@ mod basic;
 mod collection;
 mod wrapper;
 
-// use super::Resource;
 pub use collection::{MapVariant, SetVariant};
 use serde::{Deserialize, Serialize};
+
 pub trait GetType {
     fn ty() -> Type;
 }
