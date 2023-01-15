@@ -16,3 +16,8 @@ This has many advantages!
 - Automatically generated typesafe APIs.
 - Because the application knows the type of complex data structures at compile time, it does not need to encode the type information, and efficiently decode data from the encoded bytes.
 - Better use of system resources by using a single (tpc) connection.
+
+
+[A Lightweight and High Performance Remote Procedure Call Framework for Cross Platform Communication](https://www.scitepress.org/papers/2016/59312/59312.pdf)
+[JSON-RPC 2.0 Specification](https://www.jsonrpc.org/specification)
+[Implementing Remote Procedure Calls](http://birrell.org/andrew/papers/ImplementingRPC.pdf)

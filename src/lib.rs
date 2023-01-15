@@ -2,9 +2,17 @@
 
 mod context;
 mod responce;
-mod server;
+// mod server;
 
 pub use responce::*;
+use tokio::io;
+
+pub struct RpcHeader {
+    id: u16,
+    data: Vec<u8>,
+}
+
+pub trait RpcChannel {}
 
 #[macro_export]
 macro_rules! rpc {
@@ -24,21 +32,11 @@ macro_rules! rpc {
         }
 
         pub async fn execute<State>(
-            mut reader: impl tokio::io::AsyncRead + std::marker::Unpin,
+            RpcHeader { id, data: _ } : RpcHeader,
+            reader: impl tokio::io::AsyncRead + std::marker::Unpin,
             writer: impl tokio::io::AsyncWrite,
             ctx: context::Ctx<State>,
         ) -> std::io::Result<()> {
-            let mut buf = [0; 5];
-            tokio::io::AsyncReadExt::read_exact(&mut reader, &mut buf).await?;
-
-            let [b0, b1, b2, b3, b4] = buf;
-
-            let id = u16::from_le_bytes([b0, b1]);
-
-            let data_len: usize = u32::from_le_bytes([b2, b3, b4, 0]).try_into().unwrap();
-            let mut data = vec![0; data_len];
-            tokio::io::AsyncReadExt::read_exact(&mut reader, &mut data).await?;
-
             match id {
                 $($id => {
                     // let args = context::Parse::parse(ctx, &data).unwrap();
@@ -51,11 +49,17 @@ macro_rules! rpc {
     });
 }
 
+// ---------------------------------------------------------------------
+
 async fn a(num: u8) -> u8 {
-    println!("{:?}", num);
     123
 }
 
 rpc! {
     a = 1
+}
+
+#[test]
+fn test_name() {
+    // println!("{:#?}", rpc::type_def());
 }

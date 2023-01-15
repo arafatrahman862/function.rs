@@ -16,7 +16,7 @@ where
     (types, Ret::ty())
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Func {
     pub index: u16,
     pub name: String,
@@ -24,7 +24,7 @@ pub struct Func {
     pub retn: Type,
 }
 
-#[derive(Serialize, Deserialize, Clone, Default)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TypeDef {
     pub name: String,
     pub version: String,
@@ -32,4 +32,14 @@ pub struct TypeDef {
 }
 
 /// ## ❌ You should not implement this trait in any type ❌
-pub trait Resource: GetType + databuf::Encoder + for<'de> databuf::Decoder<'de> {} // Owned
+pub trait Resource: GetType + databuf::Encoder + for<'de> databuf::Decoder<'de> {}
+
+// use codegen_macro::Resource;
+// #[derive(Resource)]
+struct A;
+
+impl GetType for A {
+    fn ty() -> Type {
+        todo!()
+    }
+}
