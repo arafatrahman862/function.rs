@@ -1,9 +1,5 @@
-// use bin_layout::Decoder;
-
 type DynErr = Box<dyn std::error::Error + Send + Sync>;
-pub struct Ctx<State = ()> {
-    pub state: State,
-}
+pub struct Ctx<State = ()>(State);
 
 // pub trait Parse<State, Args>: Sized {
 //     type Error;
