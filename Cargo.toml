@@ -1,5 +1,5 @@
 [workspace]
-members = ["codegen", "codegen-macro", "std-trait"]
+# members = ["codegen", "codegen-macro", "std-trait"]
 
 [package]
 name = "irpc"
@@ -8,9 +8,7 @@ edition = "2021"
 
 [dependencies]
 tokio = { version = "1", features = ["io-util"] }
-
-codegen = { path = "./codegen" }
-std-trait = { path = "./std-trait" }
+databuf = "0.1"
 
 # quinn = "0.9.3"
 # rustls = "0.20.7"
