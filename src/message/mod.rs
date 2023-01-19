@@ -53,7 +53,7 @@ pub enum Type {
     },
     Enum {
         name: String,
-        fields: Vec<(String, Type)>,
+        fields: Vec<(String, isize)>,
     },
     Array {
         len: usize,

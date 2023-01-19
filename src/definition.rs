@@ -25,5 +25,6 @@ pub struct Func {
 pub struct TypeDef {
     pub name: String,
     pub version: String,
+    pub description: String,
     pub funcs: Vec<Func>,
 }

@@ -1,14 +1,15 @@
 [workspace]
-# members = ["codegen", "codegen-macro", "std-trait"]
+members = ["macro"]
 
 [package]
-name = "irpc"
+name = "frpc"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 tokio = { version = "1", features = ["io-util"] }
-databuf = "0.1"
+databuf = "0.1.1"
+frpc-macro = { path = "./macro" }
 
 # quinn = "0.9.3"
 # rustls = "0.20.7"

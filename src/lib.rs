@@ -1,14 +1,14 @@
 #![allow(warnings)]
 
 mod context;
-mod responce;
-mod fn_once;
 mod definition;
-mod message;
+mod fn_once;
+pub mod message;
 
-
-pub use responce::*;
 use tokio::io;
+
+pub use frpc_macro::*;
+pub use message::Message;
 
 pub struct RpcHeader {
     id: u16,
@@ -50,19 +50,4 @@ macro_rules! rpc {
             return Ok(());
         }
     });
-}
-
-// ---------------------------------------------------------------------
-
-async fn a(num: u8) -> u8 {
-    123
-}
-
-rpc! {
-    a = 1
-}
-
-#[test]
-fn test_name() {
-    // println!("{:#?}", rpc::type_def());
 }
