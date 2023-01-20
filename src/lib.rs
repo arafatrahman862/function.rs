@@ -8,7 +8,7 @@ pub mod message;
 use tokio::io;
 
 pub use frpc_macro::*;
-pub use message::Message;
+// pub use message::Message;
 
 pub struct RpcHeader {
     id: u16,

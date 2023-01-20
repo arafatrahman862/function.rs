@@ -1,22 +1,10 @@
 use super::*;
 
-// impl<T: Message + ?Sized> Message for &T {
-//     fn ty() -> Type {
-//         T::ty()
-//     }
-// }
-
 // impl Message for std::convert::Infallible {
 //     fn ty() -> Type {
 //         Type::Never
 //     }
 // }
-
-impl<T: Message> Message for Box<T> {
-    fn ty() -> Type {
-        T::ty()
-    }
-}
 
 macro_rules! impl_for_typles {
     [$(($($ty: ident),*)),*]  => ($(
