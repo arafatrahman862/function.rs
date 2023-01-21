@@ -1,7 +1,7 @@
 use super::*;
 use std::{collections::*, hash::Hash};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SetVariant {
     BTreeSet,
     HashSet,
@@ -11,7 +11,7 @@ pub enum SetVariant {
     Vec,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MapVariant {
     HashMap,
     BTreeMap,
@@ -20,20 +20,20 @@ pub enum MapVariant {
 macro_rules! impl_ty_class {
     [Set for $name: tt <$($ty_arg: ty),*> where $($ty: tt)*] => {
         impl<$($ty)*> Message for $name<$($ty_arg),*> {
-            fn ty() -> Type {
+            fn ty(def: &mut Definition) -> Type {
                 Type::Set {
                     variant: SetVariant::$name,
-                    ty: Box::new(T::ty()),
+                    ty: Box::new(T::ty(def)),
                 }
             }
         }
     };
     [Map for $name: tt <$($ty_arg: ty),*> where $($ty: tt)*] => {
         impl<$($ty)*> Message for $name<$($ty_arg),*> {
-            fn ty() -> Type {
+            fn ty(def: &mut Definition) -> Type {
                 Type::Map {
                     variant: MapVariant::$name,
-                    ty: Box::new((K::ty(), V::ty())),
+                    ty: Box::new((K::ty(def), V::ty(def))),
                 }
             }
         }

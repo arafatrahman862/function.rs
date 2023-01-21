@@ -12,44 +12,30 @@ pub fn message(input: TokenStream) -> TokenStream {
         ..
     } = parse_macro_input!(input);
 
-    add_trait_bounds(&mut generics, parse_quote!(Message));
+    add_trait_bounds(&mut generics, parse_quote!(__msg::Message));
 
     let (_, ty_generics, where_clause) = generics.split_for_impl();
-    let (variant, body) = match data {
+    let (variant, variant_field, body) = match data {
         Data::Struct(data_struct) => match data_struct.fields {
-            Fields::Named(fields) => {
-                let recurse = fields.named.iter().map(|f| {
-                    let name = f.ident.clone().unwrap().to_string();
-                    let ty = &f.ty;
-                    quote_spanned! (f.span()=> StructField {
-                        name: String::from(#name),
-                        ty: <#ty as Message>::ty()
-                    })
-                });
-                ("Struct", quote! { #(#recurse),* })
-            }
-            Fields::Unnamed(fields) => {
-                let recurse = fields.unnamed.iter().map(|f| {
-                    let ty = &f.ty;
-                    quote_spanned! (f.span()=> TupleStructField {
-                        ty: <#ty as Message>::ty(),
-                    })
-                });
-                ("TupleStruct", quote! {#(#recurse),*})
-            }
+            Fields::Named(fields) => ("Struct", "structs", parse_object(&fields)),
+            Fields::Unnamed(fields) => ("TupleStruct", "tuple_structs", parse_tuple(&fields)),
             Fields::Unit => panic!("`Message` struct needs at most one field"),
         },
-        Data::Enum(enum_data) => {
-            let is_enum = enum_data
+        Data::Enum(data) => {
+            let is_enum = data
                 .variants
                 .iter()
                 .all(|v| v.discriminant.is_some() || matches!(v.fields, Fields::Unit));
 
+            let variants = data
+                .variants
+                .iter()
+                .map(|v| (get_comments_from(&v.attrs), v.ident.to_string(), v));
+
             if is_enum {
-                let mut num: isize = -1;
-                let recurse = enum_data.variants.iter().map(|v| {
-                    let name = v.ident.to_string();
-                    num = match &v.discriminant {
+                let mut value: isize = -1;
+                let recurse = variants.map(|(doc, name, v)| {
+                    value = match &v.discriminant {
                         Some((_, expr)) => match expr {
                             Expr::Lit(expr_lit) => match &expr_lit.lit {
                                 Lit::Int(int) => int.base10_parse().unwrap(),
@@ -57,46 +43,105 @@ pub fn message(input: TokenStream) -> TokenStream {
                             },
                             _ => panic!("Not a number"),
                         },
-                        None => num + 1,
+                        None => value + 1,
                     };
-                    let doc = get_comments_from(&v.attrs);
-                    quote_spanned! (v.span()=> EnumField {
-                        doc: String::from(#doc),
-                        name: String::from(#name),
-                        value: #num
+                    quote_spanned! (v.span()=> __msg::EnumField {
+                        doc: s(#doc),
+                        name: s(#name),
+                        value: #value
                     })
                 });
-                ("Enum", quote! { #(#recurse),* })
+                ("Enum", "enums", quote! { #(#recurse),* })
             } else {
-                ("Union", quote! {})
+                let recurse = variants.map(|(doc, name, v)| {
+                    let kind = match &v.fields {
+                        Fields::Named(fields) => {
+                            let body = parse_object(fields);
+                            quote! { Struct(::std::vec![#body]) }
+                        }
+                        Fields::Unnamed(fields) => {
+                            let body = parse_tuple(fields);
+                            quote! { Tuple(::std::vec![#body]) }
+                        }
+                        Fields::Unit => quote! { Unit },
+                    };
+                    quote_spanned! (v.span()=> __msg::UnionField {
+                        doc: s(#doc),
+                        name: s(#name),
+                        kind: __msg::UnionKind::#kind
+                    })
+                });
+                ("Union", "unions", quote! {  #(#recurse),* })
             }
         }
         Data::Union(_) => panic!("`Message` implementation for `union` is not yet stabilized"),
     };
     let doc = get_comments_from(&attrs);
-    let name = ident.to_string();
+    let name = format!("{{}}::{ident}");
     let variant = format_ident!("{variant}");
+    let variant_field = format_ident!("{variant_field}");
     TokenStream::from(quote! {
         const _: () = {
-            use ::std::string::String;
-            use ::frpc::message::*;
-            impl #generics Message for #ident #ty_generics #where_clause {
-                fn ty() -> Type {
-                    Type::#variant {
-                        doc: String::from(#doc),
-                        name: String::from(#name),
-                        fields: vec![#body],
+            use ::frpc::message as __msg;
+            use __msg::_utils::{s,c};
+            impl #generics __msg::Message for #ident #ty_generics #where_clause {
+                fn ty(def: &mut __msg::Definition) -> __msg::Type {
+                    let name = ::std::format!(#name, ::std::module_path!());
+                    if let ::std::collections::hash_map::Entry::Vacant(entry) = def.structs.entry(c(&name)) {
+                        entry.insert(__msg::CostomType::new());
+                        let mut obj = __msg::CostomType {
+                            doc: s(#doc),
+                            fields: ::std::vec![#body]
+                        };
+                        def.#variant_field.insert(c(&name), obj);
                     }
+                    __msg::Type::#variant (name)
                 }
             }
         };
     })
 }
 
+fn parse_tuple(fields: &FieldsUnnamed) -> __private::TokenStream2 {
+    let recurse = fields.unnamed.iter().map(|f| {
+        let doc = get_comments_from(&f.attrs);
+        let ty = &f.ty;
+        quote_spanned! (f.span()=> __msg::TupleStructField {
+            doc: s(#doc),
+            ty: <#ty as __msg::Message>::ty(def),
+        })
+    });
+    quote! { #(#recurse),* }
+}
+
+fn parse_object(fields: &FieldsNamed) -> __private::TokenStream2 {
+    let recurse = fields.named.iter().map(|f| {
+        let doc = get_comments_from(&f.attrs);
+        let name = f.ident.clone().unwrap().to_string();
+        let ty = &f.ty;
+        quote_spanned! (f.span()=> __msg::StructField {
+            doc: s(#doc),
+            name: s(#name),
+            ty: <#ty as __msg::Message>::ty(def)
+        })
+    });
+    quote! { #(#recurse),* }
+}
+
 fn get_comments_from(attrs: &Vec<Attribute>) -> String {
     let mut string = String::new();
-    for Attribute { style, path: Path { segments: s, .. }, tokens, .. } in attrs {
-        if let (AttrStyle::Outer, 1, "doc") = (style, s.len(), s[0].ident.to_string().as_ref()) {
+    for Attribute {
+        style,
+        path: Path { segments, .. },
+        tokens,
+        ..
+    } in attrs
+    {
+        if let (AttrStyle::Outer, 1, "doc") = (
+            style,
+            segments.len(),
+            segments[0].ident.to_string().as_ref(),
+        ) {
             string += tokens
                 .to_string()
                 .trim_start_matches('=')

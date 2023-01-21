@@ -1,16 +1,16 @@
 use std::future::Future;
 
-use crate::message::{Message, Type};
+use crate::message::{Definition, Message, Type};
 
-pub fn async_fn_ty<Func, Args, Ret>(_: &Func) -> (Vec<Type>, Type)
+pub fn async_fn_ty<Func, Args, Ret>(_: &Func, def: &mut Definition) -> (Vec<Type>, Type)
 where
     Func: crate::fn_once::FnOnce<Args>,
     Func::Output: Future<Output = Ret>,
     Args: Message,
     Ret: Message,
 {
-    let Type::Tuple(types) = Args::ty() else { unreachable!() };
-    (types, Ret::ty())
+    let Type::Tuple(types) = Args::ty(def) else { unreachable!() };
+    (types, Ret::ty(def))
 }
 
 #[derive(Clone, Debug)]
@@ -26,5 +26,6 @@ pub struct TypeDef {
     pub name: String,
     pub version: String,
     pub description: String,
+    pub definition: Definition,
     pub funcs: Vec<Func>,
 }

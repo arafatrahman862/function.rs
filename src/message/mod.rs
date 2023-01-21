@@ -3,9 +3,10 @@ mod collection;
 mod wrapper;
 
 pub use collection::{MapVariant, SetVariant};
+use std::collections::HashMap;
 
 pub trait Message {
-    fn ty() -> Type;
+    fn ty(_: &mut Definition) -> Type;
 }
 
 #[non_exhaustive]
@@ -43,25 +44,7 @@ pub enum Type {
 
     Slice(Box<Type>),
     Tuple(Vec<Type>),
-    TupleStruct {
-        doc: String,
-        name: String,
-        fields: Vec<TupleStructField>,
-    },
-    Struct {
-        doc: String,
-        name: String,
-        fields: Vec<StructField>,
-    },
-    Enum {
-        doc: String,
-        name: String,
-        fields: Vec<EnumField>,
-    },
-    Union {
-        name: String,
-        fields: Vec<UnionField>,
-    },
+
     Array {
         len: usize,
         ty: Box<Type>,
@@ -74,37 +57,106 @@ pub enum Type {
         variant: MapVariant,
         ty: Box<(Type, Type)>,
     },
+
+    Enum(String),
+    Union(String),
+    Struct(String),
+    TupleStruct(String),
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct TupleStructField {
-    pub ty: Type,
+#[derive(Default, Debug, Clone)]
+pub struct Definition {
+    pub enums: HashMap<String, CostomType<EnumField>>,
+    pub unions: HashMap<String, CostomType<UnionField>>,
+    pub structs: HashMap<String, CostomType<StructField>>,
+    pub tuple_structs: HashMap<String, CostomType<TupleStructField>>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct StructField {
-    pub name: String,
-    pub ty: Type,
+#[derive(Default, Debug, Clone)]
+pub struct GenericDefinition {
+    pub enums: HashMap<String, Generic<CostomType<EnumField>>>,
+    pub unions: HashMap<String, Generic<CostomType<UnionField>>>,
+    pub structs: HashMap<String, Generic<CostomType<StructField>>>,
+    pub tuple_structs: HashMap<String, Generic<CostomType<TupleStructField>>>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+
+#[derive(Default, Debug, Clone)]
+pub struct Schema {
+    pub definition: Definition,
+    pub generic_definition: GenericDefinition,
+}
+
+#[derive(Default, Debug, Clone)]
+pub struct Generic<CostomType> {
+    pub perameter: Vec<String>,
+    pub costom_type: CostomType,
+}
+
+struct GenericPerameter {
+    name: String,
+    default: Option<Type>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CostomType<Field> {
+    pub doc: String,
+    pub fields: Vec<Field>,
+}
+
+impl<Field> CostomType<Field> {
+    pub fn new() -> Self {
+        Self {
+            doc: Default::default(),
+            fields: Default::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct EnumField {
     pub doc: String,
     pub name: String,
     pub value: isize,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct UnionField {
+    pub doc: String,
     pub name: String,
     pub kind: UnionKind,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum UnionKind {
     Unit,
-    Tuple(TupleStructField),
-    Struct(StructField),
+    Struct(Vec<StructField>),
+    Tuple(Vec<TupleStructField>),
+}
+
+#[derive(Debug, Clone)]
+pub struct StructField {
+    pub doc: String,
+    pub name: String,
+    pub ty: Type,
+}
+
+#[derive(Debug, Clone)]
+pub struct TupleStructField {
+    pub doc: String,
+    pub ty: Type,
+}
+
+pub mod _utils {
+    pub fn s<T>(value: T) -> String
+    where
+        String: From<T>,
+    {
+        String::from(value)
+    }
+    pub fn c<T: Clone>(value: &T) -> T {
+        Clone::clone(value)
+    }
 }
 
 // impl Type {

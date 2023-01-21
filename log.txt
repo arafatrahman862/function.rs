@@ -1,0 +1,35 @@
+```rust
+#[derive(Debug, Message, Clone)]
+pub struct CostomType<Field> {
+    pub doc: String,
+    pub fields: Vec<Field>,
+}
+
+CostomType::<u8>::ty(&mut d);
+```
+
+Definition {
+    enums: {},
+    unions: {},
+    structs: {
+        "basic::CostomType": CostomType {
+            doc: "",
+            fields: [
+                StructField {
+                    doc: "",
+                    name: "doc",
+                    ty: String,
+                },
+                StructField {
+                    doc: "",
+                    name: "fields",
+                    ty: Set {
+                        variant: Vec,
+                        ty: u8,
+                    },
+                },
+            ],
+        },
+    },
+    tuple_structs: {},
+}

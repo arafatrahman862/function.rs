@@ -6,14 +6,20 @@ use super::*;
 //     }
 // }
 
+impl<T: Message> Message for Box<T> {
+    fn ty(def: &mut Definition) -> Type {
+        T::ty(def)
+    }
+}
+
 macro_rules! impl_for_typles {
     [$(($($ty: ident),*)),*]  => ($(
         impl<$($ty),*> Message for ($($ty,)*)
         where
             $($ty: Message),*
         {
-            fn ty() -> Type {
-                Type::Tuple(vec![$($ty::ty()),*])
+            fn ty(def: &mut Definition) -> Type {
+                Type::Tuple(vec![$($ty::ty(def)),*])
             }
         }
     )*);
