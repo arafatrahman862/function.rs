@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use quote::{format_ident, quote, quote_spanned, ToTokens};
+use quote::{format_ident, quote, quote_spanned};
 use syn::__private::TokenStream2;
 use syn::spanned::Spanned;
 use syn::*;
@@ -11,15 +11,14 @@ pub fn message(input: TokenStream) -> TokenStream {
 
     let doc = get_comments_from(&attrs);
     let name = format!("{{}}::{ident}");
-    let generic_params = generics.type_params().map(|param| param.ident.clone()).collect::<Vec<_>>();
     
     add_trait_bounds(&mut generics, parse_quote!(___m::Message));
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let (kind, body) = match data {
         Data::Struct(data_struct) => match data_struct.fields {
-            Fields::Named(fields) => ("Struct", parse_object(&fields, &generic_params)),
-            Fields::Unnamed(fields) => ("TupleStruct", parse_tuple(&fields, &generic_params)),
+            Fields::Named(fields) => ("Struct", parse_object(&fields)),
+            Fields::Unnamed(fields) => ("TupleStruct", parse_tuple(&fields)),
             Fields::Unit => panic!("`Message` struct needs at most one field"),
         },
         Data::Enum(mut data) => {
@@ -47,11 +46,11 @@ pub fn message(input: TokenStream) -> TokenStream {
                 let recurse = variants.map(|(doc, name, v)| {
                     let kind = match &mut v.fields {
                         Fields::Named(fields) => {
-                            let body = parse_object(fields, &generic_params);
+                            let body = parse_object(fields);
                             quote! { Struct(::std::vec![#body]) }
                         }
                         Fields::Unnamed(fields) => {
-                            let body = parse_tuple(fields, &generic_params);
+                            let body = parse_tuple(fields);
                             quote! { Tuple(::std::vec![#body]) }
                         }
                         Fields::Unit => quote! { Unit },
@@ -70,37 +69,6 @@ pub fn message(input: TokenStream) -> TokenStream {
 
     let kind = format_ident!("{kind}");
 
-    let (table, mid, result_expr) = if generic_params.is_empty() {
-        (
-            quote!(costom_types),
-            quote! { ___m::CustomTypeKind::#kind(costom_type) },
-            quote!(___m::Type::CustomType (name))
-        )
-    } else { 
-        (
-            quote!(generic_costom_types),
-            {
-                let params = generic_params.iter().map(|param| {
-                    let param = param.to_string();
-                    quote! { s(#param) }
-                });
-                quote! {
-                    ___m::GenericCustomTypeKind::#kind(___m::Generic { 
-                        params: ::std::vec![#(#params),*], 
-                        costom_type, 
-                    })
-                }
-            },
-            {
-                let args = generics.type_params().map(|param| {
-                    let name= &param.ident;
-                    quote_spanned!(param.span()=> <#name as ___m::Message>::ty(ctx))
-                });
-                quote!(___m::Type::Generic { args: ::std::vec![#(#args),*], name })
-            }
-        )
-    };
-
     TokenStream::from(quote! {
         const _: () = {
             use ::frpc::message as ___m;
@@ -108,46 +76,25 @@ pub fn message(input: TokenStream) -> TokenStream {
             impl #impl_generics ___m::Message for #ident #ty_generics #where_clause {
                 fn ty(ctx: &mut ___m::Context) -> ___m::Type {
                     let name = ::std::format!(#name, ::std::module_path!());
-                    if let ::std::collections::hash_map::Entry::Vacant(entry) = ctx.#table.entry(c(&name)) {
+                    if let ::std::collections::hash_map::Entry::Vacant(entry) = ctx.costom_types.entry(c(&name)) {
                         entry.insert(::std::default::Default::default());
                         let costom_type = ___m::CustomType {
                             doc: s(#doc),
                             fields: ::std::vec![#body]
                         };
-                        ctx.#table.insert(c(&name), #mid);
+                        ctx.costom_types.insert(c(&name), ___m::CustomTypeKind::#kind(costom_type));
                     }
-                    #result_expr
+                    ___m::Type::CustomType (name)
                 }
             }
         };
     })
 }
 
-fn replace_generic_param(ty: TokenStream2, generic_params: &Vec<Ident>) -> TokenStream2 {
-    if !generic_params.is_empty() {
-        let tokens = ty.into_iter().map(|tt| match tt {
-            quote::__private::TokenTree::Ident(ref ty_param) => generic_params
-                .iter()
-                .enumerate()
-                .find_map(|(idx, name)| {
-                    (ty_param == name).then(|| {
-                        let name = format_ident!("T{idx}");
-                        quote_spanned!(ty_param.span()=> ___m::__gp::#name)
-                    })
-                })
-                .unwrap_or_else(|| ty_param.to_token_stream()),
-
-            tt => tt.to_token_stream(),
-        });
-        return quote!(#(#tokens)*);
-    }
-    ty
-}
-
-fn parse_tuple(fields: &FieldsUnnamed, generic_params: &Vec<Ident>) -> TokenStream2 {
+fn parse_tuple(fields: &FieldsUnnamed) -> TokenStream2 {
     let recurse = fields.unnamed.iter().map(|f| {
         let doc = get_comments_from(&f.attrs);
-        let ty = replace_generic_param(f.ty.to_token_stream(), generic_params);
+        let ty = &f.ty;
         quote_spanned! (f.span()=> ___m::TupleStructField {
             doc: s(#doc),
             ty: <#ty as ___m::Message>::ty(ctx),
@@ -156,11 +103,11 @@ fn parse_tuple(fields: &FieldsUnnamed, generic_params: &Vec<Ident>) -> TokenStre
     quote! { #(#recurse),* }
 }
 
-fn parse_object(fields: &FieldsNamed, generic_params: &Vec<Ident>) -> TokenStream2 {
+fn parse_object(fields: &FieldsNamed) -> TokenStream2 {
     let recurse = fields.named.iter().map(|f| {
         let doc = get_comments_from(&f.attrs);
         let name = f.ident.clone().unwrap().to_string();
-        let ty = replace_generic_param(f.ty.to_token_stream(), generic_params);
+        let ty = &f.ty;
         quote_spanned! (f.span()=> ___m::StructField {
             doc: s(#doc),
             name: s(#name),

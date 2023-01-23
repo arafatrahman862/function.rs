@@ -20,8 +20,8 @@ pub enum MapVariant {
 macro_rules! impl_ty_class {
     [Set for $name: tt <$($ty_arg: ty),*> where $($ty: tt)*] => {
         impl<$($ty)*> Message for $name<$($ty_arg),*> {
-            fn ty(def: &mut Context) -> Type {
-                Type::Set {
+            fn ty(def: &mut Context) -> Ty {
+                Ty::Set {
                     variant: SetVariant::$name,
                     ty: Box::new(T::ty(def)),
                 }
@@ -30,8 +30,8 @@ macro_rules! impl_ty_class {
     };
     [Map for $name: tt <$($ty_arg: ty),*> where $($ty: tt)*] => {
         impl<$($ty)*> Message for $name<$($ty_arg),*> {
-            fn ty(def: &mut Context) -> Type {
-                Type::Map {
+            fn ty(def: &mut Context) -> Ty {
+                Ty::Map {
                     variant: MapVariant::$name,
                     ty: Box::new((K::ty(def), V::ty(def))),
                 }

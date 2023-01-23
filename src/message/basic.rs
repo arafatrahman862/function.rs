@@ -1,7 +1,7 @@
 use super::*;
 
 macro_rules! impl_for {
-    [$($ty:tt),*] => {$(impl Message for $ty { fn ty(_: &mut Context) -> Type { Type::$ty } })*};
+    [$($ty:tt),*] => {$(impl Message for $ty { fn ty(_: &mut Context) -> Ty { Ty::$ty } })*};
 }
 
 impl_for!(
@@ -9,8 +9,8 @@ impl_for!(
 );
 
 impl<T: Message, const N: usize> Message for [T; N] {
-    fn ty(def: &mut Context) -> Type {
-        Type::Array {
+    fn ty(def: &mut Context) -> Ty {
+        Ty::Array {
             len: N,
             ty: Box::new(T::ty(def)),
         }
@@ -18,25 +18,25 @@ impl<T: Message, const N: usize> Message for [T; N] {
 }
 
 impl<T: Message> Message for Option<T> {
-    fn ty(def: &mut Context) -> Type {
-        Type::Option(Box::new(T::ty(def)))
+    fn ty(def: &mut Context) -> Ty {
+        Ty::Option(Box::new(T::ty(def)))
     }
 }
 
 impl<T: Message, E: Message> Message for Result<T, E> {
-    fn ty(def: &mut Context) -> Type {
-        Type::Result(Box::new((T::ty(def), E::ty(def))))
+    fn ty(def: &mut Context) -> Ty {
+        Ty::Result(Box::new((T::ty(def), E::ty(def))))
     }
 }
 
 impl Message for &str {
-    fn ty(_: &mut Context) -> Type {
-        Type::str
+    fn ty(_: &mut Context) -> Ty {
+        Ty::str
     }
 }
 
 // impl<T: Message> Message for &[T] {
-//     fn ty() -> Type {
-//         Type::Slice(Box::new(T::ty()))
+//     fn ty() -> Ty {
+//         Ty::Slice(Box::new(T::ty()))
 //     }
 // }

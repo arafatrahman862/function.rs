@@ -1,15 +1,15 @@
 use std::future::Future;
 
-use crate::message::{Context, Message, Type};
+use crate::message::{Context, Message, Ty};
 
-pub fn async_fn_ty<Func, Args, Ret>(_: &Func, def: &mut Context) -> (Vec<Type>, Type)
+pub fn async_fn_ty<Func, Args, Ret>(_: &Func, def: &mut Context) -> (Vec<Ty>, Ty)
 where
     Func: crate::fn_once::FnOnce<Args>,
     Func::Output: Future<Output = Ret>,
     Args: Message,
     Ret: Message,
 {
-    let Type::Tuple(types) = Args::ty(def) else { unreachable!() };
+    let Ty::Tuple(types) = Args::ty(def) else { unreachable!() };
     (types, Ret::ty(def))
 }
 
@@ -17,8 +17,8 @@ where
 pub struct Func {
     pub index: u16,
     pub name: String,
-    pub args: Vec<Type>,
-    pub retn: Type,
+    pub args: Vec<Ty>,
+    pub retn: Ty,
 }
 
 #[derive(Clone, Debug)]

@@ -6,13 +6,13 @@ pub use collection::{MapVariant, SetVariant};
 use std::{collections::HashMap, default};
 
 pub trait Message {
-    fn ty(_: &mut Context) -> Type;
+    fn ty(_: &mut Context) -> Ty;
 }
 
 #[non_exhaustive]
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, PartialEq)]
-pub enum Type {
+pub enum Ty {
     Never,
 
     u8,
@@ -39,23 +39,23 @@ pub enum Type {
     str,
     String,
 
-    Option(Box<Type>),
-    Result(Box<(Type, Type)>),
+    Option(Box<Ty>),
+    Result(Box<(Ty, Ty)>),
 
-    Slice(Box<Type>),
-    Tuple(Vec<Type>),
+    Slice(Box<Ty>),
+    Tuple(Vec<Ty>),
 
     Array {
         len: usize,
-        ty: Box<Type>,
+        ty: Box<Ty>,
     },
     Set {
         variant: SetVariant,
-        ty: Box<Type>,
+        ty: Box<Ty>,
     },
     Map {
         variant: MapVariant,
-        ty: Box<(Type, Type)>,
+        ty: Box<(Ty, Ty)>,
     },
 
     /// The name of the user-defined type
@@ -67,26 +67,11 @@ pub enum Type {
     /// //    Type::CustomType("Bar" | "Foo")
     /// ```
     CustomType(String),
-
-    /// Example:
-    ///
-    /// ```
-    ///    Record < K , V >  //          args
-    /// // ^^^^^^   ^   ^
-    /// //  name    |   |------>  Type::GenericPeram(1)
-    /// //          |---------->  Type::GenericPeram(0)
-    /// ```
-    Generic {
-        args: Vec<Type>,
-        name: String,
-    },
-    GenericPeram(u8),
 }
 
 #[derive(Default, Debug, Clone)]
 pub struct Context {
     pub costom_types: HashMap<String, CustomTypeKind>,
-    pub generic_costom_types: HashMap<String, GenericCustomTypeKind>,
 }
 
 #[derive(Debug, Clone)]
@@ -95,19 +80,6 @@ pub enum CustomTypeKind {
     Enum(CustomType<EnumField>),
     Struct(CustomType<StructField>),
     TupleStruct(CustomType<TupleStructField>),
-}
-
-#[derive(Debug, Clone)]
-pub enum GenericCustomTypeKind {
-    Enum(Generic<CustomType<EnumField>>),
-    Struct(Generic<CustomType<StructField>>),
-    TupleStruct(Generic<CustomType<TupleStructField>>),
-}
-
-#[derive(Debug, Clone)]
-pub struct Generic<CustomType> {
-    pub params: Vec<String>,
-    pub costom_type: CustomType,
 }
 
 /// Any user defined type like: `struct`, `enum`
@@ -142,13 +114,13 @@ pub enum UnionKind {
 pub struct StructField {
     pub doc: String,
     pub name: String,
-    pub ty: Type,
+    pub ty: Ty,
 }
 
 #[derive(Debug, Clone)]
 pub struct TupleStructField {
     pub doc: String,
-    pub ty: Type,
+    pub ty: Ty,
 }
 
 //   -------------------------------------------------------------
@@ -161,34 +133,6 @@ impl Default for CustomTypeKind {
         })
     }
 }
-
-impl Default for GenericCustomTypeKind {
-    fn default() -> Self {
-        Self::Enum(Generic {
-            params: vec![],
-            costom_type: CustomType {
-                doc: "".into(),
-                fields: vec![],
-            },
-        })
-    }
-}
-
-//   -------------------------------------------------------------
-
-macro_rules! generic_param {
-    [$($ty:tt : $idx:literal),*] => {
-        pub mod __gp {$(
-            #[doc(hidden)]
-            pub struct $ty; 
-        )*}
-        
-        $(impl Message for __gp::$ty {
-            fn ty(_: &mut Context) -> Type { Type::GenericPeram($idx) }
-        })* 
-    };
-}
-generic_param!(T0:0, T1:1, T2:2, T3:3, T4:4, T5:5, T6:6, T7:7, T8:8, T9:9, T10:10, T11:11, T12:12, T13:13, T14:14, T15:15);
 
 //   -------------------------------------------------------------
 

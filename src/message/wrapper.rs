@@ -1,13 +1,19 @@
 use super::*;
 
 // impl Message for std::convert::Infallible {
-//     fn ty() -> Type {
-//         Type::Never
+//     fn ty() -> Ty {
+//         Ty::Never
 //     }
 // }
 
+impl<T: Message> Message for &T {
+    fn ty(def: &mut Context) -> Ty {
+        T::ty(def)
+    }
+}
+
 impl<T: Message> Message for Box<T> {
-    fn ty(def: &mut Context) -> Type {
+    fn ty(def: &mut Context) -> Ty {
         T::ty(def)
     }
 }
@@ -18,8 +24,8 @@ macro_rules! impl_for_typles {
         where
             $($ty: Message),*
         {
-            fn ty(def: &mut Context) -> Type {
-                Type::Tuple(vec![$($ty::ty(def)),*])
+            fn ty(def: &mut Context) -> Ty {
+                Ty::Tuple(vec![$($ty::ty(def)),*])
             }
         }
     )*);
