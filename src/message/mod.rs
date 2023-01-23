@@ -99,7 +99,6 @@ pub enum CustomTypeKind {
 
 #[derive(Debug, Clone)]
 pub enum GenericCustomTypeKind {
-    Unit(Generic<CustomType<UnitField>>),
     Enum(Generic<CustomType<EnumField>>),
     Struct(Generic<CustomType<StructField>>),
     TupleStruct(Generic<CustomType<TupleStructField>>),
@@ -107,7 +106,7 @@ pub enum GenericCustomTypeKind {
 
 #[derive(Debug, Clone)]
 pub struct Generic<CustomType> {
-    pub perameter: Vec<String>,
+    pub params: Vec<String>,
     pub costom_type: CustomType,
 }
 
@@ -154,18 +153,6 @@ pub struct TupleStructField {
 
 //   -------------------------------------------------------------
 
-impl Default for GenericCustomTypeKind {
-    fn default() -> Self {
-        Self::Unit(Generic {
-            perameter: vec![],
-            costom_type: CustomType {
-                doc: "".into(),
-                fields: vec![],
-            },
-        })
-    }
-}
-
 impl Default for CustomTypeKind {
     fn default() -> Self {
         Self::Unit(CustomType {
@@ -175,21 +162,33 @@ impl Default for CustomTypeKind {
     }
 }
 
+impl Default for GenericCustomTypeKind {
+    fn default() -> Self {
+        Self::Enum(Generic {
+            params: vec![],
+            costom_type: CustomType {
+                doc: "".into(),
+                fields: vec![],
+            },
+        })
+    }
+}
+
 //   -------------------------------------------------------------
 
-macro_rules! generic_peram {
+macro_rules! generic_param {
     [$($ty:tt : $idx:literal),*] => {
-        pub mod __generic_param {$(
+        pub mod __gp {$(
             #[doc(hidden)]
             pub struct $ty; 
         )*}
         
-        $(impl Message for __generic_param::$ty {
+        $(impl Message for __gp::$ty {
             fn ty(_: &mut Context) -> Type { Type::GenericPeram($idx) }
         })* 
     };
 }
-generic_peram!(T0:0, T1:1, T2:2, T3:3, T4:4, T5:5, T6:6, T7:7, T8:8, T9:9, T10:10, T11:11, T12:12, T13:13, T14:14, T15:15);
+generic_param!(T0:0, T1:1, T2:2, T3:3, T4:4, T5:5, T6:6, T7:7, T8:8, T9:9, T10:10, T11:11, T12:12, T13:13, T14:14, T15:15);
 
 //   -------------------------------------------------------------
 
