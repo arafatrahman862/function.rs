@@ -3,10 +3,10 @@ mod collection;
 mod wrapper;
 
 pub use collection::{MapVariant, SetVariant};
-use std::collections::HashMap;
+use std::{collections::HashMap, default};
 
 pub trait Message {
-    fn ty(_: &mut Definition) -> Type;
+    fn ty(_: &mut Context) -> Type;
 }
 
 #[non_exhaustive]
@@ -58,70 +58,75 @@ pub enum Type {
         ty: Box<(Type, Type)>,
     },
 
-    Enum(String),
-    Union(String),
-    Struct(String),
-    TupleStruct(String),
+    /// The name of the user-defined type
+    ///
+    /// ```
+    ///    struct Bar { ... }  enum Foo { ... }
+    /// //        ^^^               ^^^
+    /// //           \             /
+    /// //    Type::CustomType("Bar" | "Foo")
+    /// ```
+    CustomType(String),
+
+    /// Example:
+    ///
+    /// ```
+    ///    Record < K , V >  //          args
+    /// // ^^^^^^   ^   ^
+    /// //  name    |   |------>  Type::GenericPeram(1)
+    /// //          |---------->  Type::GenericPeram(0)
+    /// ```
+    Generic {
+        args: Vec<Type>,
+        name: String,
+    },
+    GenericPeram(u8),
 }
 
 #[derive(Default, Debug, Clone)]
-pub struct Definition {
-    pub enums: HashMap<String, CostomType<EnumField>>,
-    pub unions: HashMap<String, CostomType<UnionField>>,
-    pub structs: HashMap<String, CostomType<StructField>>,
-    pub tuple_structs: HashMap<String, CostomType<TupleStructField>>,
-}
-
-#[derive(Default, Debug, Clone)]
-pub struct GenericDefinition {
-    pub enums: HashMap<String, Generic<CostomType<EnumField>>>,
-    pub unions: HashMap<String, Generic<CostomType<UnionField>>>,
-    pub structs: HashMap<String, Generic<CostomType<StructField>>>,
-    pub tuple_structs: HashMap<String, Generic<CostomType<TupleStructField>>>,
-}
-
-
-#[derive(Default, Debug, Clone)]
-pub struct Schema {
-    pub definition: Definition,
-    pub generic_definition: GenericDefinition,
-}
-
-#[derive(Default, Debug, Clone)]
-pub struct Generic<CostomType> {
-    pub perameter: Vec<String>,
-    pub costom_type: CostomType,
-}
-
-struct GenericPerameter {
-    name: String,
-    default: Option<Type>,
+pub struct Context {
+    pub costom_types: HashMap<String, CustomTypeKind>,
+    pub generic_costom_types: HashMap<String, GenericCustomTypeKind>,
 }
 
 #[derive(Debug, Clone)]
-pub struct CostomType<Field> {
+pub enum CustomTypeKind {
+    Unit(CustomType<UnitField>),
+    Enum(CustomType<EnumField>),
+    Struct(CustomType<StructField>),
+    TupleStruct(CustomType<TupleStructField>),
+}
+
+#[derive(Debug, Clone)]
+pub enum GenericCustomTypeKind {
+    Unit(Generic<CustomType<UnitField>>),
+    Enum(Generic<CustomType<EnumField>>),
+    Struct(Generic<CustomType<StructField>>),
+    TupleStruct(Generic<CustomType<TupleStructField>>),
+}
+
+#[derive(Debug, Clone)]
+pub struct Generic<CustomType> {
+    pub perameter: Vec<String>,
+    pub costom_type: CustomType,
+}
+
+/// Any user defined type like: `struct`, `enum`
+#[derive(Debug, Clone)]
+pub struct CustomType<Field> {
     pub doc: String,
     pub fields: Vec<Field>,
 }
 
-impl<Field> CostomType<Field> {
-    pub fn new() -> Self {
-        Self {
-            doc: Default::default(),
-            fields: Default::default(),
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
-pub struct EnumField {
+pub struct UnitField {
     pub doc: String,
     pub name: String,
     pub value: isize,
 }
 
 #[derive(Debug, Clone)]
-pub struct UnionField {
+pub struct EnumField {
     pub doc: String,
     pub name: String,
     pub kind: UnionKind,
@@ -147,6 +152,48 @@ pub struct TupleStructField {
     pub ty: Type,
 }
 
+//   -------------------------------------------------------------
+
+impl Default for GenericCustomTypeKind {
+    fn default() -> Self {
+        Self::Unit(Generic {
+            perameter: vec![],
+            costom_type: CustomType {
+                doc: "".into(),
+                fields: vec![],
+            },
+        })
+    }
+}
+
+impl Default for CustomTypeKind {
+    fn default() -> Self {
+        Self::Unit(CustomType {
+            doc: "".into(),
+            fields: vec![],
+        })
+    }
+}
+
+//   -------------------------------------------------------------
+
+macro_rules! generic_peram {
+    [$($ty:tt : $idx:literal),*] => {
+        pub mod __generic_param {$(
+            #[doc(hidden)]
+            pub struct $ty; 
+        )*}
+        
+        $(impl Message for __generic_param::$ty {
+            fn ty(_: &mut Context) -> Type { Type::GenericPeram($idx) }
+        })* 
+    };
+}
+generic_peram!(T0:0, T1:1, T2:2, T3:3, T4:4, T5:5, T6:6, T7:7, T8:8, T9:9, T10:10, T11:11, T12:12, T13:13, T14:14, T15:15);
+
+//   -------------------------------------------------------------
+
+#[doc(hidden)]
 pub mod _utils {
     pub fn s<T>(value: T) -> String
     where
@@ -158,49 +205,3 @@ pub mod _utils {
         Clone::clone(value)
     }
 }
-
-// impl Type {
-//     pub fn id(&self) -> u8 {
-//         match self {
-//             Type::Never => 0,
-//             Type::u8 => 1,
-//             Type::u16 => 2,
-//             Type::u32 => 3,
-//             Type::u64 => 4,
-//             Type::u128 => 5,
-//             Type::usize => 6,
-//             Type::i8 => 7,
-//             Type::i16 => 8,
-//             Type::i32 => 9,
-//             Type::i64 => 10,
-//             Type::i128 => 11,
-//             Type::isize => 12,
-//             Type::f32 => 13,
-//             Type::f64 => 14,
-//             Type::bool => 15,
-//             Type::char => 16,
-//             Type::str => 17,
-//             Type::String => 18,
-//             Type::Option(_) => 19,
-//             Type::Result(_) => 20,
-//             Type::Slice(_) => 21,
-//             Type::Tuple(_) => 22,
-//             Type::TupleStruct { .. } => 23,
-//             Type::Struct { .. } => 24,
-//             Type::Enum { .. } => 25,
-//             Type::Array { .. } => 26,
-//             Type::Set { variant, .. } => match variant {
-//                 SetVariant::BTreeSet => 27,
-//                 SetVariant::HashSet => 28,
-//                 SetVariant::BinaryHeap => 29,
-//                 SetVariant::LinkedList => 30,
-//                 SetVariant::VecDeque => 31,
-//                 SetVariant::Vec => 32,
-//             },
-//             Type::Map { variant, .. } => match variant {
-//                 MapVariant::HashMap => 33,
-//                 MapVariant::BTreeMap => 34,
-//             },
-//         }
-//     }
-// }

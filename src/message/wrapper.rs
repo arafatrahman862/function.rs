@@ -7,7 +7,7 @@ use super::*;
 // }
 
 impl<T: Message> Message for Box<T> {
-    fn ty(def: &mut Definition) -> Type {
+    fn ty(def: &mut Context) -> Type {
         T::ty(def)
     }
 }
@@ -18,7 +18,7 @@ macro_rules! impl_for_typles {
         where
             $($ty: Message),*
         {
-            fn ty(def: &mut Definition) -> Type {
+            fn ty(def: &mut Context) -> Type {
                 Type::Tuple(vec![$($ty::ty(def)),*])
             }
         }

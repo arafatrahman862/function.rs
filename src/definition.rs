@@ -1,8 +1,8 @@
 use std::future::Future;
 
-use crate::message::{Definition, Message, Type};
+use crate::message::{Context, Message, Type};
 
-pub fn async_fn_ty<Func, Args, Ret>(_: &Func, def: &mut Definition) -> (Vec<Type>, Type)
+pub fn async_fn_ty<Func, Args, Ret>(_: &Func, def: &mut Context) -> (Vec<Type>, Type)
 where
     Func: crate::fn_once::FnOnce<Args>,
     Func::Output: Future<Output = Ret>,
@@ -26,6 +26,6 @@ pub struct TypeDef {
     pub name: String,
     pub version: String,
     pub description: String,
-    pub definition: Definition,
+    pub definition: Context,
     pub funcs: Vec<Func>,
 }
