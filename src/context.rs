@@ -1,5 +1,6 @@
-type DynErr = Box<dyn std::error::Error + Send + Sync>;
-pub struct Ctx<State = ()>(State);
+// type DynErr = Box<dyn std::error::Error + Send + Sync>;
+
+// pub struct Ctx<State = ()>(State);
 
 // pub trait Parse<State, Args>: Sized {
 //     type Error;

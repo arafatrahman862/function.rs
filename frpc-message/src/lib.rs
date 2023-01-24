@@ -3,7 +3,6 @@ mod collection;
 mod wrapper;
 
 pub use collection::{MapVariant, SetVariant};
-use std::{collections::HashMap, default};
 
 pub trait Message {
     fn ty(_: &mut Context) -> Ty;
@@ -71,7 +70,7 @@ pub enum Ty {
 
 #[derive(Default, Debug, Clone)]
 pub struct Context {
-    pub costom_types: HashMap<String, CustomTypeKind>,
+    pub costom_types: std::collections::BTreeMap<String, CustomTypeKind>,
 }
 
 #[derive(Debug, Clone)]

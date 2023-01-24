@@ -1,5 +1,5 @@
 [workspace]
-members = ["macro"]
+members = ["frpc-macro", "frpc-message"]
 
 [package]
 name = "frpc"
@@ -9,7 +9,14 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1", features = ["io-util"] }
 databuf = "0.1.1"
-frpc-macro = { path = "./macro" }
+
+frpc-macro = { path = "./frpc-macro" }
+frpc-message = { path = "./frpc-message" }
+
+async-trait = "0.1.63"
 
 # quinn = "0.9.3"
 # rustls = "0.20.7"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt"] }

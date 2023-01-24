@@ -4,15 +4,21 @@ use syn::__private::TokenStream2;
 use syn::spanned::Spanned;
 use syn::*;
 
-#[rustfmt::skip]
 #[proc_macro_derive(Message)]
 pub fn message(input: TokenStream) -> TokenStream {
-    let DeriveInput { attrs, ident, mut generics, data, .. } = parse_macro_input!(input);
+    let DeriveInput { attrs, ident, generics, data, .. } = parse_macro_input!(input);
 
     let doc = get_comments_from(&attrs);
     let name = format!("{{}}::{ident}");
+
+    if let Some(param) =  generics.type_params().next() {
+        return syn::Error::new(
+            param.span(),
+            "Generic type support isn't complete yet, But it's on our roadmap.",
+        )
+        .to_compile_error().into();
+    }
     
-    add_trait_bounds(&mut generics, parse_quote!(___m::Message));
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let (kind, body) = match data {
@@ -71,12 +77,12 @@ pub fn message(input: TokenStream) -> TokenStream {
 
     TokenStream::from(quote! {
         const _: () = {
-            use ::frpc::message as ___m;
+            use ::frpc::frpc_message as ___m;
             use ___m::_utils::{s,c};
             impl #impl_generics ___m::Message for #ident #ty_generics #where_clause {
-                fn ty(ctx: &mut ___m::Context) -> ___m::Type {
+                fn ty(ctx: &mut ___m::Context) -> ___m::Ty {
                     let name = ::std::format!(#name, ::std::module_path!());
-                    if let ::std::collections::hash_map::Entry::Vacant(entry) = ctx.costom_types.entry(c(&name)) {
+                    if let ::std::collections::btree_map::Entry::Vacant(entry) = ctx.costom_types.entry(c(&name)) {
                         entry.insert(::std::default::Default::default());
                         let costom_type = ___m::CustomType {
                             doc: s(#doc),
@@ -84,7 +90,7 @@ pub fn message(input: TokenStream) -> TokenStream {
                         };
                         ctx.costom_types.insert(c(&name), ___m::CustomTypeKind::#kind(costom_type));
                     }
-                    ___m::Type::CustomType (name)
+                    ___m::Ty::CustomType (name)
                 }
             }
         };
@@ -142,13 +148,4 @@ fn get_comments_from(attrs: &Vec<Attribute>) -> String {
         }
     }
     string
-}
-
-/// Add a bound `T: ___m::Message` to every type parameter of `T`.
-fn add_trait_bounds(generics: &mut Generics, bound: TypeParamBound) {
-    for param in &mut generics.params {
-        if let GenericParam::Type(type_param) = param {
-            type_param.bounds.push(bound.clone());
-        }
-    }
 }

@@ -24,8 +24,8 @@ macro_rules! impl_for_typles {
         where
             $($ty: Message),*
         {
-            fn ty(def: &mut Context) -> Ty {
-                Ty::Tuple(vec![$($ty::ty(def)),*])
+            fn ty(_ctx: &mut Context) -> Ty {
+                Ty::Tuple(vec![$($ty::ty(_ctx)),*])
             }
         }
     )*);

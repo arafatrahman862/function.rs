@@ -1,53 +1,57 @@
-#![allow(warnings)]
+pub mod input;
+pub mod output;
+pub mod fn_once;
+pub mod definition;
 
-mod context;
-mod definition;
-mod fn_once;
-pub mod message;
+pub use tokio;
+pub use databuf;
+pub use frpc_message;
 
-use tokio::io;
+pub use frpc_macro::Message;
+// pub use frpc_message::Message;
 
-pub use frpc_macro::*;
-// pub use message::Message;
-
-pub struct RpcHeader {
-    id: u16,
-    data: Vec<u8>,
-}
-
-pub trait RpcChannel {}
+pub use databuf::{Decoder, Encoder};
 
 #[macro_export]
-macro_rules! rpc {
-    [$($func:path = $id:literal)*] => (mod rpc {
+macro_rules! procedure {
+    [$($func:path = $id:literal)*] => (mod procedure {
         use super::*;
 
-        // #[allow(dead_code)]
-        // pub fn type_def() -> codegen::TypeDef {
-        //     codegen::TypeDef {
-        //         name: env!("CARGO_PKG_NAME").into(),
-        //         version: env!("CARGO_PKG_VERSION").into(),
-        //         funcs: vec![$({
-        //             let (args, retn) = codegen::async_fn_ty(&$func);
-        //             codegen::Func { index: $id, name: stringify!($func).into(), args, retn }
-        //         }),*],
-        //     }
-        // }
+        #[allow(dead_code)]
+        pub fn type_def() -> $crate::definition::TypeDef {
+            let mut ctx = $crate::frpc_message::Context::default();
+            let funcs = vec![
+                $({
+                    let (args, retn) = $crate::definition::async_fn_ty(&$func, &mut ctx);
+                    $crate::definition::Func { index: $id, name: stringify!($func).into(), args, retn }
+                }),*
+            ];
+            $crate::definition::TypeDef {
+                name: env!("CARGO_PKG_NAME").into(),
+                version: env!("CARGO_PKG_VERSION").into(),
+                description: env!("CARGO_PKG_DESCRIPTION").into(),
+                ctx,
+                funcs,
+            }
+        }
 
-        pub async fn execute<State>(
-            RpcHeader { id, data }: RpcHeader,
-            reader: impl tokio::io::AsyncRead + std::marker::Unpin,
-            writer: impl tokio::io::AsyncWrite,
-            ctx: context::Ctx<State>,
-        ) -> std::io::Result<()> {
+        pub async fn execute<W>(id: u16, data: Vec<u8>, writer: &mut W) -> ::std::io::Result<()>
+        where
+            W: $crate::tokio::io::AsyncWrite + ::std::marker::Unpin + ::std::marker::Send,
+        {
             match id {
                 $($id => {
-                    // let args = context::Parse::parse(ctx, &data).unwrap();
-                    // std_trait::FnOnce::call_once($func, args).await;
+                    let args = $crate::Decoder::decode(&data).unwrap();
+                    let output = $crate::fn_once::FnOnce::call_once(user, args).await;
+                    $crate::output::Output::write(&output, writer).await
                 }),*
-                _=> {}
+                _ => {
+                    return ::std::result::Result::Err(::std::io::Error::new(
+                        ::std::io::ErrorKind::AddrNotAvailable,
+                        "Unknown request id",
+                    ))
+                }
             }
-            return Ok(());
         }
     });
 }
