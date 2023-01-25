@@ -1,28 +1,11 @@
 mod utils;
-use frpc::{procedure, Decoder, Encoder};
+use databuf::{Decoder, Encoder};
+use frpc::procedure;
 
 procedure! {
     user = 1
 }
 
-pub async fn execute<W>(id: u16, data: Vec<u8>, writer: &mut W) -> ::std::io::Result<()>
-where
-    W: frpc::tokio::io::AsyncWrite + std::marker::Unpin + Send,
-{
-    match id {
-        1 => {
-            let args = frpc::Decoder::decode(&data).unwrap();
-            let output = frpc::fn_once::FnOnce::call_once(user, args).await;
-            frpc::output::Output::write(&output, writer).await
-        }
-        _ => {
-            return ::std::result::Result::Err(::std::io::Error::new(
-                ::std::io::ErrorKind::AddrNotAvailable,
-                "Unknown request id",
-            ))
-        }
-    }
-}
 async fn user(name: String, age: u8) -> String {
     let res = match age {
         ..=18 => "We're excited to have you here!",
