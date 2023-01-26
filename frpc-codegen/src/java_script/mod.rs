@@ -13,6 +13,7 @@ type Result<T, E> =
 
 pub fn generate(w: &mut Writer, type_def: &TypeDef) -> Result {
     for (name, kind) in &type_def.ctx.costom_types {
+        let name = name.replace("::", "_");
         match kind {
             CustomTypeKind::Unit(unit) => {
                 w.write_doc_comments(&unit.doc)?;
@@ -59,6 +60,17 @@ pub fn generate(w: &mut Writer, type_def: &TypeDef) -> Result {
             }
         }
     }
+    for Func {
+        index: _,
+        name,
+        args,
+        retn,
+    } in &type_def.funcs
+    {
+        let name = name.replace("::", "_");
+        let args = join(args.iter().map(ty_str), " ,");
+        writeln!(w, "function {name}({args}): {}", ty_str(retn))?;
+    }
     Ok(())
 }
 
@@ -86,7 +98,7 @@ fn ty_str(ty: &Ty) -> String {
         Ty::u8 | Ty::u16 | Ty::u32 | Ty::i8 | Ty::i16 | Ty::i32 | Ty::f32 | Ty::f64 => {
             "number".into()
         }
-        Ty::u64 | Ty::u128 | Ty::usize | Ty::i64 | Ty::i128 | Ty::isize => "bigint".into(),
+        Ty::u64 | Ty::u128 | Ty::i64 | Ty::i128 => "bigint".into(),
 
         Ty::bool => "bool".into(),
 
@@ -96,9 +108,26 @@ fn ty_str(ty: &Ty) -> String {
         Ty::Result(ty) => format!("Result<{}, {}>", ty_str(&ty.0), ty_str(&ty.1)),
 
         Ty::Tuple(tys) => format!("[{}]", join(tys.iter().map(ty_str), " ,")),
-        Ty::Array { ty, .. } => format!("Array<{}>", ty_str(ty)),
-        Ty::Set { ty, .. } => format!("Set<{}>", ty_str(ty)),
+
+        Ty::Array { ty, .. } | Ty::Set { ty, .. } => match **ty {
+            Ty::u8 => "Uint8Array",
+            Ty::u16 => "Uint16Array",
+            Ty::u32 => "Uint32Array",
+            Ty::u64 => "BigUint64Array",
+
+            Ty::i8 => "Int8Array",
+            Ty::i16 => "Int16Array",
+            Ty::i32 => "Int32Array",
+            Ty::i64 => "BigInt64Array",
+
+            Ty::f32 => "Float32Array",
+            Ty::f64 => "Float64Array",
+
+            Ty::u128 | Ty::i128 => "Array<bigint>",
+            _ => return format!("Array<{}>", ty_str(ty)),
+        }
+        .to_string(),
         Ty::Map { ty, .. } => format!("Map<{}, {}>", ty_str(&ty.0), ty_str(&ty.1)),
-        Ty::CustomType(ty) => ty.clone(),
+        Ty::CustomType(ty) => ty.replace("::", "_"),
     }
 }
