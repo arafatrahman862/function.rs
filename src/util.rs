@@ -11,20 +11,3 @@ where
     let Ty::Tuple(types) = Args::ty(ctx) else { unreachable!() };
     (types, Ret::ty(ctx))
 }
-
-#[derive(Clone, Debug)]
-pub struct Func {
-    pub index: u16,
-    pub name: String,
-    pub args: Vec<Ty>,
-    pub retn: Ty,
-}
-
-#[derive(Clone, Debug)]
-pub struct TypeDef {
-    pub name: String,
-    pub version: String,
-    pub description: String,
-    pub ctx: Context,
-    pub funcs: Vec<Func>,
-}

@@ -1,4 +1,4 @@
-pub mod definition;
+pub mod util;
 pub mod fn_once;
 pub mod output;
 
@@ -11,15 +11,15 @@ macro_rules! procedure {
         use super::*;
 
         #[allow(dead_code)]
-        pub fn type_def() -> $crate::definition::TypeDef {
+        pub fn type_def() -> $crate::frpc_message::TypeDef {
             let mut ctx = $crate::frpc_message::Context::default();
             let funcs = vec![
                 $({
-                    let (args, retn) = $crate::definition::async_fn_ty(&$func, &mut ctx);
-                    $crate::definition::Func { index: $id, name: stringify!($func).into(), args, retn }
+                    let (args, retn) = $crate::util::async_fn_ty(&$func, &mut ctx);
+                    $crate::frpc_message::Func { index: $id, name: stringify!($func).into(), args, retn }
                 }),*
             ];
-            $crate::definition::TypeDef {
+            $crate::frpc_message::TypeDef {
                 name: env!("CARGO_PKG_NAME").into(),
                 version: env!("CARGO_PKG_VERSION").into(),
                 description: env!("CARGO_PKG_DESCRIPTION").into(),

@@ -31,7 +31,7 @@ impl<T: Message, E: Message> Message for Result<T, E> {
 
 impl Message for &str {
     fn ty(_: &mut Context) -> Ty {
-        Ty::str
+        Ty::String
     }
 }
 

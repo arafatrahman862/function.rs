@@ -8,11 +8,27 @@ pub trait Message {
     fn ty(_: &mut Context) -> Ty;
 }
 
-#[non_exhaustive]
+#[derive(Clone, Debug)]
+pub struct Func {
+    pub index: u16,
+    pub name: String,
+    pub args: Vec<Ty>,
+    pub retn: Ty,
+}
+
+#[derive(Clone, Debug)]
+pub struct TypeDef {
+    pub name: String,
+    pub version: String,
+    pub description: String,
+    pub ctx: Context,
+    pub funcs: Vec<Func>,
+}
+
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum Ty {
-    Never,
+    // Never,
 
     u8,
     u16,
@@ -34,14 +50,11 @@ pub enum Ty {
     bool,
     char,
 
-    /// String slice (`&str`)
-    str,
     String,
 
     Option(Box<Ty>),
     Result(Box<(Ty, Ty)>),
 
-    Slice(Box<Ty>),
     Tuple(Vec<Ty>),
 
     Array {
