@@ -16,7 +16,7 @@ macro_rules! procedure {
             let funcs = vec![
                 $({
                     let (args, retn) = $crate::util::async_fn_ty(&$func, &mut ctx);
-                    $crate::frpc_message::Func { index: $id, name: stringify!($func).into(), args, retn }
+                    $crate::frpc_message::Func { index: $id, path: stringify!($func).into(), args, retn }
                 }),*
             ];
             $crate::frpc_message::TypeDef {

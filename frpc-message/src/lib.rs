@@ -11,7 +11,7 @@ pub trait Message {
 #[derive(Clone, Debug)]
 pub struct Func {
     pub index: u16,
-    pub name: String,
+    pub path: String,
     pub args: Vec<Ty>,
     pub retn: Ty,
 }
@@ -68,13 +68,13 @@ pub enum Ty {
         ty: Box<(Ty, Ty)>,
     },
 
-    /// The name of the user-defined type
+    /// The path of the user-defined type
     ///
     /// ```
     ///    struct Bar { ... }  enum Foo { ... }
     /// //        ^^^               ^^^
     /// //           \             /
-    /// //    Type::CustomType("Bar" | "Foo")
+    /// //    Type::CustomType("<path>::Bar" | "<path>::Foo")
     /// ```
     CustomType(String),
 }

@@ -1,4 +1,4 @@
-use crate::utils::join;
+use crate::utils::{join, to_camel_case};
 use crate::writer::Writer;
 use frpc_message::*;
 use std::fmt::Display;
@@ -12,8 +12,8 @@ type Result<T, E> =
 "#;
 
 pub fn generate(w: &mut Writer, type_def: &TypeDef) -> Result {
-    for (name, kind) in &type_def.ctx.costom_types {
-        let name = name.replace("::", "_");
+    for (path, kind) in &type_def.ctx.costom_types {
+        let name = to_camel_case(path, ':');
         match kind {
             CustomTypeKind::Unit(unit) => {
                 w.write_doc_comments(&unit.doc)?;
@@ -62,12 +62,12 @@ pub fn generate(w: &mut Writer, type_def: &TypeDef) -> Result {
     }
     for Func {
         index: _,
-        name,
+        path,
         args,
         retn,
     } in &type_def.funcs
     {
-        let name = name.replace("::", "_");
+        let name = to_camel_case(path, ':');
         let args = join(args.iter().map(ty_str), " ,");
         writeln!(w, "function {name}({args}): {}", ty_str(retn))?;
     }
@@ -104,11 +104,6 @@ fn ty_str(ty: &Ty) -> String {
 
         Ty::char | Ty::String => "string".into(),
 
-        Ty::Option(ty) => format!("{} | null", ty_str(ty)),
-        Ty::Result(ty) => format!("Result<{}, {}>", ty_str(&ty.0), ty_str(&ty.1)),
-
-        Ty::Tuple(tys) => format!("[{}]", join(tys.iter().map(ty_str), " ,")),
-
         Ty::Array { ty, .. } | Ty::Set { ty, .. } => match **ty {
             Ty::u8 => "Uint8Array",
             Ty::u16 => "Uint16Array",
@@ -127,7 +122,12 @@ fn ty_str(ty: &Ty) -> String {
             _ => return format!("Array<{}>", ty_str(ty)),
         }
         .to_string(),
+
+        Ty::Option(ty) => format!("{} | null", ty_str(ty)),
+        Ty::Result(ty) => format!("Result<{}, {}>", ty_str(&ty.0), ty_str(&ty.1)),
+
         Ty::Map { ty, .. } => format!("Map<{}, {}>", ty_str(&ty.0), ty_str(&ty.1)),
-        Ty::CustomType(ty) => ty.replace("::", "_"),
+        Ty::Tuple(tys) => format!("[{}]", join(tys.iter().map(ty_str), " ,")),
+        Ty::CustomType(path) => to_camel_case(path, ':'),
     }
 }

@@ -1,5 +1,5 @@
 
-pub mod java_script;
+pub mod javascript;
 
 pub mod writer;
 pub mod utils;
