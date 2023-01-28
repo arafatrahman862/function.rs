@@ -41,3 +41,5 @@ export interface Transport {
 export type Result<T, E> =
     | { type: "Ok", value: T }
     | { type: "Err", value: E };
+
+export type Option<T> = T | null;
