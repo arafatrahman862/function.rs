@@ -10,7 +10,7 @@ impl Writer {
     pub fn new() -> Self {
         Self {
             buf: String::new(),
-            spaces: 3,
+            spaces: 2,
             indent_lvl: 0,
         }
     }
@@ -30,7 +30,11 @@ impl Writer {
 
 impl Write for Writer {
     fn write_str(&mut self, s: &str) -> std::fmt::Result {
-        self.buf += &" ".repeat(self.spaces * self.indent_lvl);
+        match s {
+            "{" => self.indent_lvl += 1,
+            "}" => self.indent_lvl -= 1,
+            _ => {}
+        }
         self.buf += s;
         Ok(())
     }
