@@ -122,8 +122,10 @@ export class Decoder {
     }
 
     vec<T>(v: Decode<T>) {
-        const len = this.len_u22();
-        return this.arr(v, len)
+        return () => {
+            const len = this.len_u22();
+            return this.arr(v, len)()
+        }
     }
 
     map<K, V>(k: Decode<K>, v: Decode<V>) {

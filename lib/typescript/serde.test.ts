@@ -121,7 +121,7 @@ Deno.test("Serde test: common", () => {
     assertEquals(decoder.result(decoder.str, decoder.arr(decoder.u8, 2))(), err);
 })
 
-Deno.test("Serde test: ...", () => {
+Deno.test("Serde test: Complex", () => {
     const value = new Map();
     value.set(0, null)
     value.set(1, "some")
@@ -143,6 +143,6 @@ Deno.test("Serde test: ...", () => {
     const d = new Decoder(new Uint8Array(writer.bytes));
 
     const decode = d.result(d.map(d.u8, d.option(d.str)), d.vec(d.str));
-    console.log(decode())
-    console.log(decode())
+    assertEquals(decode(), ok);
+    assertEquals(decode(), err);
 })
