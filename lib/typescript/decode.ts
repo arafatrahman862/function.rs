@@ -2,7 +2,7 @@
 import { Result } from "./transport.ts";
 import { bytes_slice, char_from } from "./utils.ts";
 
-type Decode<T> = (this: Decoder) => T;
+export type Decode<T> = (this: Decoder) => T;
 
 export class Decoder {
     #offset = 0;

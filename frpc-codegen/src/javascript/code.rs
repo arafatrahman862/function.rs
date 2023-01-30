@@ -10,10 +10,11 @@ pub fn generate(c: &mut CodeFormatter, type_def: &TypeDef) -> Result {
         Ty::CustomType(path) => Some(path),
         _ => None,
     });
+    writeln!(c, "const struct = {{")?;
 
     for path in interface {
         let ident = to_camel_case(path, ':');
-        writeln!(c, "export function {ident}(d: Decoder) {{")?;
+        write!(c, "{ident}: (d: use.Decoder) => ")?;
 
         match &type_def.ctx.costom_types[path] {
             CustomTypeKind::Unit(data) => {
@@ -36,20 +37,21 @@ pub fn generate(c: &mut CodeFormatter, type_def: &TypeDef) -> Result {
                 write_enum(c, &ident, items)?;
             }
             CustomTypeKind::Struct(data) => {
-                writeln!(c, "return {{")?;
+                writeln!(c, "({{")?;
                 for StructField { doc, name, ty } in data.fields.iter() {
                     c.write_doc_comments(doc)?;
-                    writeln!(c, "{name}: {},", field_ty(ty))?;
+                    writeln!(c, "{name}: {}(),", field_ty(ty))?;
                 }
-                writeln!(c, "}}")?;
+                writeln!(c, "}}),")?;
             }
             CustomTypeKind::TupleStruct(data) => {
                 let tys = data.fields.iter().map(|f| format!("{}", field_ty(&f.ty)));
-                return writeln!(c, "return d.tuple({});", join(tys, ", "));
+                writeln!(c, "d.tuple({}),", join(tys, ", "))?;
             }
         }
-        writeln!(c, "}}")?;
     }
+
+    writeln!(c, "}}")?;
     Ok(())
 }
 
@@ -107,6 +109,8 @@ fn write_enum<I>(c: &mut CodeFormatter, ident: &String, items: I) -> Result
 where
     I: Iterator<Item = String>,
 {
+    writeln!(c, "{{")?;
+    
     writeln!(c, "const num = d.len_u15();")?;
     writeln!(c, "switch (num) {}", '{')?;
     for (i, item) in items.enumerate() {
@@ -116,7 +120,8 @@ where
         c,
         "default: return new Error(`Unknown discriminant of {ident}: ${{num}}`)"
     )?;
-    c.write_str("}")
+    c.write_str("}")?;
+    writeln!(c, "}},")
 }
 
 #[test]

@@ -12,6 +12,7 @@ databuf = "0.1.1"
 
 frpc-macros = { path = "./frpc-macros" }
 frpc-message = { path = "./frpc-message" }
+frpc-codegen = { path = "./frpc-codegen" }
 
 async-trait = "0.1.63"
 
