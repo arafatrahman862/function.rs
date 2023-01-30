@@ -110,11 +110,11 @@ pub struct UnitField {
 pub struct EnumField {
     pub doc: String,
     pub name: String,
-    pub kind: UnionKind,
+    pub kind: EnumKind,
 }
 
 #[derive(Debug, Clone)]
-pub enum UnionKind {
+pub enum EnumKind {
     Unit,
     Struct(Vec<StructField>),
     Tuple(Vec<TupleStructField>),

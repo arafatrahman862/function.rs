@@ -3,7 +3,7 @@ pub mod fn_once;
 pub mod output;
 
 pub use frpc_message;
-pub use frpc_macro::Message;
+pub use frpc_macros::Message;
 
 #[macro_export]
 macro_rules! procedure {

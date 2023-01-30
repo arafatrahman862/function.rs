@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-explicit-any
 import { Result } from "./transport.ts";
 import { bytes_slice, char_from } from "./utils.ts";
 
@@ -82,15 +83,15 @@ export class Decoder {
         return !!this.u8()
     }
 
-    u8_arr(len: number) { return new Uint8Array(this.#read_slice(len)) }
-    u16_arr(len: number) { return new Uint16Array(this.#read_slice(len * 2)) }
-    u32_arr(len: number) { return new Uint32Array(this.#read_slice(len * 4)) }
-    u64_arr(len: number) { return new BigUint64Array(this.#read_slice(len * 8)) }
+    u8_arr(len: number) { return () => new Uint8Array(this.#read_slice(len)) }
+    u16_arr(len: number) { return () => new Uint16Array(this.#read_slice(len * 2)) }
+    u32_arr(len: number) { return () => new Uint32Array(this.#read_slice(len * 4)) }
+    u64_arr(len: number) { return () => new BigUint64Array(this.#read_slice(len * 8)) }
 
-    i8_arr(len: number) { return new Int8Array(this.#read_slice(len)) }
-    i16_arr(len: number) { return new Int16Array(this.#read_slice(len * 2)) }
-    i32_arr(len: number) { return new Int32Array(this.#read_slice(len * 4)) }
-    i64_arr(len: number) { return new BigInt64Array(this.#read_slice(len * 8)) }
+    i8_arr(len: number) { return () => new Int8Array(this.#read_slice(len)) }
+    i16_arr(len: number) { return () => new Int16Array(this.#read_slice(len * 2)) }
+    i32_arr(len: number) { return () => new Int32Array(this.#read_slice(len * 4)) }
+    i64_arr(len: number) { return () => new BigInt64Array(this.#read_slice(len * 8)) }
 
     option<T>(v: Decode<T>) {
         return () => {
@@ -110,7 +111,6 @@ export class Decoder {
         }
     }
 
-
     arr<T>(v: Decode<T>, len: number) {
         return () => {
             const values = []
@@ -121,7 +121,7 @@ export class Decoder {
         }
     }
 
-    vec<T>(v: Decode<T>) {
+    set<T>(v: Decode<T>) {
         return () => {
             const len = this.len_u22();
             return this.arr(v, len)()
@@ -138,6 +138,16 @@ export class Decoder {
                 map.set(key, value)
             }
             return map
+        }
+    }
+
+    tuple<T extends Decode<any>[]>(...args: T) {
+        return () => {
+            const tuples = [] as { [K in keyof T]: ReturnType<T[K]> };
+            for (const arg of args) {
+                tuples.push(arg.call(this))
+            }
+            return tuples
         }
     }
 
