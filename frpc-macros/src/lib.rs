@@ -64,7 +64,7 @@ pub fn message(input: TokenStream) -> TokenStream {
                     quote_spanned! (v.span()=> ___m::EnumField {
                         doc: s(#doc),
                         name: s(#name),
-                        kind: ___m::UnionKind::#kind
+                        kind: ___m::EnumKind::#kind
                     })
                 });
                 ("Enum", quote! {  #(#recurse),* })

@@ -1,5 +1,5 @@
 use crate::{
-    code_formatter::CodeFormatter,
+    code_formatter::write_doc_comments,
     utils::{join, to_camel_case},
 };
 use frpc_message::*;
@@ -42,7 +42,7 @@ impl<'a> Interface<'a> {
     }
 }
 
-pub fn generate(c: &mut CodeFormatter, type_def: &TypeDef) -> Result {
+pub fn generate(c: &mut impl Write, type_def: &TypeDef) -> Result {
     let mut interface = Interface::default();
     interface.add_tys(type_def.funcs.iter().map(|func| &func.retn), &type_def.ctx);
 
@@ -54,10 +54,7 @@ pub fn generate(c: &mut CodeFormatter, type_def: &TypeDef) -> Result {
 
         match &type_def.ctx.costom_types[path] {
             CustomTypeKind::Unit(data) => {
-                let items = data
-                    .fields
-                    .iter()
-                    .map(|f| format!("{ident}.{}", f.name));
+                let items = data.fields.iter().map(|f| format!("{ident}.{}", f.name));
 
                 write_enum(c, &ident, items)?;
             }
@@ -67,7 +64,12 @@ pub fn generate(c: &mut CodeFormatter, type_def: &TypeDef) -> Result {
                     .iter()
                     .map(|EnumField { name, kind, .. }| match kind {
                         EnumKind::Unit => format!("{{ type: {name:?} }}"),
-                        EnumKind::Struct(_) | EnumKind::Tuple(_) => format!("{ident}{name}()"),
+                        EnumKind::Struct(fields) => {
+                            format!("{{ type: {name:?} }}")
+                        },
+                        EnumKind::Tuple(fields) => {
+                            format!("{{ type: {name:?} }}")
+                        },
                     });
 
                 write_enum(c, &ident, items)?;
@@ -75,13 +77,13 @@ pub fn generate(c: &mut CodeFormatter, type_def: &TypeDef) -> Result {
             CustomTypeKind::Struct(data) => {
                 writeln!(c, "({{")?;
                 for StructField { doc, name, ty } in data.fields.iter() {
-                    c.write_doc_comments(doc)?;
+                    write_doc_comments(c, doc)?;
                     writeln!(c, "{name}: {}(),", field_ty(ty))?;
                 }
                 writeln!(c, "}}),")?;
             }
             CustomTypeKind::Tuple(data) => {
-                let tys = data.fields.iter().map(|f| format!("{}", field_ty(&f.ty)));
+                let tys = data.fields.iter().map(|f| field_ty(&f.ty));
                 writeln!(c, "d.tuple({}),", join(tys, ", "))?;
             }
         }
@@ -141,14 +143,14 @@ fn field_ty(ty: &Ty) -> String {
     .to_string()
 }
 
-fn write_enum<I>(c: &mut CodeFormatter, ident: &String, items: I) -> Result
+fn write_enum<I>(c: &mut impl Write, ident: &String, items: I) -> Result
 where
     I: Iterator<Item = String>,
 {
     writeln!(c, "{{")?;
 
     writeln!(c, "const num = d.len_u15();")?;
-    writeln!(c, "switch (num) {}", '{')?;
+    writeln!(c, "switch (num) {{")?;
     for (i, item) in items.enumerate() {
         writeln!(c, "case {i}: return {item};")?;
     }
@@ -157,6 +159,7 @@ where
         "default: throw new Error('Unknown discriminant of `{ident}`: ' + num)"
     )?;
     c.write_str("}")?;
+
     writeln!(c, "}},")
 }
 

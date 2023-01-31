@@ -8,6 +8,7 @@ procedure! {
     user = 1
     get_user = 2
 }
+
 #[derive(Message, Decoder)]
 enum Car {
     Foo,
@@ -15,17 +16,25 @@ enum Car {
 }
 
 #[derive(Message, Decoder)]
+enum Foo {
+    Quz { x: u8 },
+    Bar
+}
+
+#[derive(Message, Decoder)]
 struct User {
     name: String,
     age: u8,
-    car: Car
+    car: Car,
+    foo: Foo
 }
 
 async fn get_user() -> User {
     User {
         name: "alex".into(),
         age: 20,
-        car: Car::Bar
+        car: Car::Bar,
+        foo: Foo::Bar
     }
 }
 
@@ -41,7 +50,7 @@ async fn user(name: String, age: u8) -> String {
 #[test]
 fn test_name() {
     let typedef = procedure::type_def();
-    let mut c = code_formatter::CodeFormatter::new();
+    let mut c = code_formatter::CodeFormatter::default();
     frpc_codegen::javascript::code::generate(&mut c, &typedef).unwrap();
     println!("{}", c.buf);
     

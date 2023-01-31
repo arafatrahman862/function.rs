@@ -1,41 +1,40 @@
+use crate::code_formatter::write_doc_comments;
 use crate::utils::{join, to_camel_case};
-use crate::code_formatter::CodeFormatter;
 use frpc_message::*;
 use std::fmt::Display;
 use std::fmt::Result;
 use std::fmt::Write;
 
-pub fn generate(w: &mut CodeFormatter, type_def: &TypeDef) -> Result {
+pub fn generate(w: &mut impl Write, type_def: &TypeDef) -> Result {
     for (path, kind) in &type_def.ctx.costom_types {
         let name = to_camel_case(path, ':');
         match kind {
             CustomTypeKind::Unit(unit) => {
-                w.write_doc_comments(&unit.doc)?;
+                write_doc_comments(w, &unit.doc)?;
 
                 write!(w, "enum {name} ")?;
                 write_map(w, unit.fields.iter().map(|f| (&f.doc, &f.name, f.value)))?;
             }
             CustomTypeKind::Struct(data) => {
-                w.write_doc_comments(&data.doc)?;
+                write_doc_comments(w, &data.doc)?;
 
                 write!(w, "interface {name} ")?;
                 let fields = data.fields.iter().map(|f| (&f.doc, &f.name, ty_str(&f.ty)));
                 write_map(w, fields)?;
             }
             CustomTypeKind::Tuple(data) => {
-                w.write_doc_comments(&data.doc)?;
+                write_doc_comments(w, &data.doc)?;
                 let fields = join(data.fields.iter().map(|f| ty_str(&f.ty)), ", ");
                 write!(w, "type {name} = [{fields}];")?;
             }
             CustomTypeKind::Enum(data) => {
-                w.write_doc_comments(&data.doc)?;
+                write_doc_comments(w, &data.doc)?;
 
                 writeln!(w, "type {name} =")?;
-                w.indent_lvl += 1;
 
                 for EnumField { doc: _, name, kind } in &data.fields {
                     let fields = match kind {
-                        EnumKind::Unit => format!(""),
+                        EnumKind::Unit => String::new(),
                         EnumKind::Struct(dta) => join(
                             dta.iter().map(|f| format!("{}: {}", f.name, ty_str(&f.ty))),
                             ", ",
@@ -49,8 +48,6 @@ pub fn generate(w: &mut CodeFormatter, type_def: &TypeDef) -> Result {
                     };
                     writeln!(w, "| {{ type: {name:?}, {fields}}}")?;
                 }
-
-                w.indent_lvl -= 1;
             }
         }
     }
@@ -68,7 +65,7 @@ pub fn generate(w: &mut CodeFormatter, type_def: &TypeDef) -> Result {
     Ok(())
 }
 
-fn write_map<'a, I, K, V>(w: &mut CodeFormatter, fields: I) -> Result
+fn write_map<'a, I, K, V>(w: &mut impl Write, fields: I) -> Result
 where
     K: Display,
     V: Display,
@@ -77,12 +74,11 @@ where
     w.write_str("{\n")?;
 
     for (doc, name, item) in fields {
-        w.write_doc_comments(doc)?;
+        write_doc_comments(w, doc)?;
         writeln!(w, "{name}: {item},")?;
     }
 
-    w.write_str("}\n")?;
-    Ok(())
+    w.write_str("}\n")
 }
 
 fn ty_str(ty: &Ty) -> String {
