@@ -65,21 +65,25 @@ pub fn generate(c: &mut impl Write, type_def: &TypeDef) -> Result {
                     .map(|EnumField { name, kind, .. }| match kind {
                         EnumKind::Unit => format!("{{ type: {name:?} }}"),
                         EnumKind::Struct(fields) => {
-                            format!("{{ type: {name:?} }}")
-                        },
+                            let mut s = String::from("\n");
+                            write_struct_fields(&mut s, fields).unwrap();
+                            format!("{{ type: {name:?}, {s}}}")
+                        }
                         EnumKind::Tuple(fields) => {
-                            format!("{{ type: {name:?} }}")
-                        },
+                            let strings = fields
+                                .iter()
+                                .enumerate()
+                                .map(|(i, f)| format!(" {i}: {}()", field_ty(&f.ty)));
+
+                            format!("{{ type: {name:?},{} }}", join(strings, ","))
+                        }
                     });
 
                 write_enum(c, &ident, items)?;
             }
             CustomTypeKind::Struct(data) => {
                 writeln!(c, "({{")?;
-                for StructField { doc, name, ty } in data.fields.iter() {
-                    write_doc_comments(c, doc)?;
-                    writeln!(c, "{name}: {}(),", field_ty(ty))?;
-                }
+                write_struct_fields(c, &data.fields)?;
                 writeln!(c, "}}),")?;
             }
             CustomTypeKind::Tuple(data) => {
@@ -88,8 +92,14 @@ pub fn generate(c: &mut impl Write, type_def: &TypeDef) -> Result {
             }
         }
     }
+    writeln!(c, "}}")
+}
 
-    writeln!(c, "}}")?;
+fn write_struct_fields(c: &mut impl Write, fields: &Vec<StructField>) -> Result {
+    for StructField { doc, name, ty } in fields.iter() {
+        write_doc_comments(c, doc)?;
+        writeln!(c, "{name}: {}(),", field_ty(ty))?;
+    }
     Ok(())
 }
 

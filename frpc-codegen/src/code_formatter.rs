@@ -28,9 +28,9 @@ pub fn write_doc_comments(this: &mut impl Write, lines: &str) -> std::fmt::Resul
     if lines.is_empty() {
         return Ok(());
     }
-    writeln!(this, "/**\n")?;
+    writeln!(this, "/**")?;
     for line in lines.trim().lines() {
-        writeln!(this, " * {line}\n")?;
+        writeln!(this, " * {line}")?;
     }
-    writeln!(this, " */\n")
+    writeln!(this, " */")
 }

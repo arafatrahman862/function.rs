@@ -12,13 +12,16 @@ procedure! {
 #[derive(Message, Decoder)]
 enum Car {
     Foo,
-    Bar
+    Bar,
 }
 
 #[derive(Message, Decoder)]
 enum Foo {
-    Quz { x: u8 },
-    Bar
+    Quz {
+        /// Message
+        x: u8,
+    },
+    Bar(u8, u16),
 }
 
 #[derive(Message, Decoder)]
@@ -26,7 +29,7 @@ struct User {
     name: String,
     age: u8,
     car: Car,
-    foo: Foo
+    foo: Foo,
 }
 
 async fn get_user() -> User {
@@ -34,7 +37,7 @@ async fn get_user() -> User {
         name: "alex".into(),
         age: 20,
         car: Car::Bar,
-        foo: Foo::Bar
+        foo: Foo::Bar(1, 2),
     }
 }
 
@@ -53,7 +56,7 @@ fn test_name() {
     let mut c = code_formatter::CodeFormatter::default();
     frpc_codegen::javascript::code::generate(&mut c, &typedef).unwrap();
     println!("{}", c.buf);
-    
+
     // println!("{typedef:#?}");
 
     // utils::execute_fut(async {
