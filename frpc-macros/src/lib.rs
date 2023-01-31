@@ -24,7 +24,7 @@ pub fn message(input: TokenStream) -> TokenStream {
     let (kind, body) = match data {
         Data::Struct(data_struct) => match data_struct.fields {
             Fields::Named(fields) => ("Struct", parse_object(&fields)),
-            Fields::Unnamed(fields) => ("TupleStruct", parse_tuple(&fields)),
+            Fields::Unnamed(fields) => ("Tuple", parse_tuple(&fields)),
             Fields::Unit => panic!("`Message` struct needs at most one field"),
         },
         Data::Enum(mut data) => {
@@ -101,7 +101,7 @@ fn parse_tuple(fields: &FieldsUnnamed) -> TokenStream2 {
     let recurse = fields.unnamed.iter().map(|f| {
         let doc = get_comments_from(&f.attrs);
         let ty = &f.ty;
-        quote_spanned! (f.span()=> ___m::TupleStructField {
+        quote_spanned! (f.span()=> ___m::TupleField {
             doc: s(#doc),
             ty: <#ty as ___m::Message>::ty(ctx),
         })

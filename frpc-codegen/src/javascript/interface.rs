@@ -22,7 +22,7 @@ pub fn generate(w: &mut CodeFormatter, type_def: &TypeDef) -> Result {
                 let fields = data.fields.iter().map(|f| (&f.doc, &f.name, ty_str(&f.ty)));
                 write_map(w, fields)?;
             }
-            CustomTypeKind::TupleStruct(data) => {
+            CustomTypeKind::Tuple(data) => {
                 w.write_doc_comments(&data.doc)?;
                 let fields = join(data.fields.iter().map(|f| ty_str(&f.ty)), ", ");
                 write!(w, "type {name} = [{fields}];")?;

@@ -82,7 +82,7 @@ Deno.test("Serde test: string, bytes", () => {
     const decoder = new Decoder(new Uint8Array(writer.bytes));
 
     assertEquals(decoder.str(), str)
-    assertEquals(decoder.vec(decoder.u8)(), bytes)
+    assertEquals(decoder.set(decoder.u8)(), bytes)
 })
 
 Deno.test("Serde test: common type", () => {
@@ -143,15 +143,7 @@ Deno.test("Serde test: Complex type", () => {
     e.flush()
     const d = new Decoder(new Uint8Array(writer.bytes));
 
-    const decode = d.result(d.map(d.u8, d.option(d.str)), d.vec(d.str));
+    const decode = d.result(d.map(d.u8, d.option(d.str)), d.set(d.str));
     assertEquals(decode(), ok);
     assertEquals(decode(), err);
 })
-
-export function User(d: Decoder) {
-    return {
-        name: d.str(),
-        age: d.u8(),
-        fab: d.vec(d.str)()
-    }
-}

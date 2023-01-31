@@ -44,7 +44,8 @@ fn test_name() {
     let mut c = code_formatter::CodeFormatter::new();
     frpc_codegen::javascript::code::generate(&mut c, &typedef).unwrap();
     println!("{}", c.buf);
-    println!("{typedef:#?}");
+    
+    // println!("{typedef:#?}");
 
     // utils::execute_fut(async {
     //     let mut writer: Vec<u8> = vec![];

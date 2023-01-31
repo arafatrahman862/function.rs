@@ -5,14 +5,50 @@ use crate::{
 use frpc_message::*;
 use std::fmt::{Result, Write};
 
+#[derive(Default, Debug)]
+struct Interface<'a> {
+    objects: Vec<&'a String>,
+}
+
+impl<'a> Interface<'a> {
+    fn add_tys(&mut self, tys: impl Iterator<Item = &'a Ty>, ctx: &'a Context) {
+        tys.filter_map(|ty| match ty {
+            Ty::CustomType(path) => Some(path),
+            _ => None,
+        })
+        .for_each(|path| self.add(path, ctx));
+    }
+
+    fn add(&mut self, path: &'a String, ctx: &'a Context) {
+        self.objects.push(path);
+        match &ctx.costom_types[path] {
+            CustomTypeKind::Enum(data) => {
+                for data in data.fields.iter() {
+                    match &data.kind {
+                        EnumKind::Tuple(fields) => self.add_tys(fields.iter().map(|f| &f.ty), ctx),
+                        EnumKind::Struct(fields) => self.add_tys(fields.iter().map(|f| &f.ty), ctx),
+                        EnumKind::Unit => {}
+                    }
+                }
+            }
+            CustomTypeKind::Tuple(data) => {
+                self.add_tys(data.fields.iter().map(|f| &f.ty), ctx);
+            }
+            CustomTypeKind::Struct(data) => {
+                self.add_tys(data.fields.iter().map(|f| &f.ty), ctx);
+            }
+            CustomTypeKind::Unit(_) => {}
+        }
+    }
+}
+
 pub fn generate(c: &mut CodeFormatter, type_def: &TypeDef) -> Result {
-    let interface = type_def.funcs.iter().filter_map(|func| match &func.retn {
-        Ty::CustomType(path) => Some(path),
-        _ => None,
-    });
+    let mut interface = Interface::default();
+    interface.add_tys(type_def.funcs.iter().map(|func| &func.retn), &type_def.ctx);
+
     writeln!(c, "const struct = {{")?;
 
-    for path in interface {
+    for path in interface.objects {
         let ident = to_camel_case(path, ':');
         write!(c, "{ident}: (d: use.Decoder) => ")?;
 
@@ -21,7 +57,7 @@ pub fn generate(c: &mut CodeFormatter, type_def: &TypeDef) -> Result {
                 let items = data
                     .fields
                     .iter()
-                    .map(|f| format!("__a.{ident}.{};", f.name));
+                    .map(|f| format!("{ident}.{}", f.name));
 
                 write_enum(c, &ident, items)?;
             }
@@ -44,7 +80,7 @@ pub fn generate(c: &mut CodeFormatter, type_def: &TypeDef) -> Result {
                 }
                 writeln!(c, "}}),")?;
             }
-            CustomTypeKind::TupleStruct(data) => {
+            CustomTypeKind::Tuple(data) => {
                 let tys = data.fields.iter().map(|f| format!("{}", field_ty(&f.ty)));
                 writeln!(c, "d.tuple({}),", join(tys, ", "))?;
             }
@@ -99,7 +135,7 @@ fn field_ty(ty: &Ty) -> String {
         Ty::Map { ty, .. } => return format!("d.map({}, {})", field_ty(&ty.0), field_ty(&ty.1)),
         Ty::CustomType(path) => {
             let ident = to_camel_case(path, ':');
-            return ident;
+            return format!("struct.{ident}.bind(null, d)");
         }
     }
     .to_string()
@@ -110,7 +146,7 @@ where
     I: Iterator<Item = String>,
 {
     writeln!(c, "{{")?;
-    
+
     writeln!(c, "const num = d.len_u15();")?;
     writeln!(c, "switch (num) {}", '{')?;
     for (i, item) in items.enumerate() {
@@ -118,7 +154,7 @@ where
     }
     writeln!(
         c,
-        "default: return new Error(`Unknown discriminant of {ident}: ${{num}}`)"
+        "default: throw new Error('Unknown discriminant of `{ident}`: ' + num)"
     )?;
     c.write_str("}")?;
     writeln!(c, "}},")
