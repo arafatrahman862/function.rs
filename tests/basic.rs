@@ -1,9 +1,44 @@
+#![allow(warnings)]
 mod utils;
 use databuf::{Decoder, Encoder};
-use frpc::procedure;
+use frpc::{procedure, Message};
+use frpc_codegen::code_formatter;
 
 procedure! {
     user = 1
+    get_user = 2
+}
+
+#[derive(Message, Decoder)]
+enum Car {
+    Foo,
+    Bar,
+}
+
+#[derive(Message, Decoder)]
+enum Foo {
+    Quz {
+        /// Message
+        x: u8,
+    },
+    Bar(u8, u16),
+}
+
+#[derive(Message, Decoder)]
+struct User {
+    name: String,
+    age: u8,
+    car: Car,
+    foo: Foo,
+}
+
+async fn get_user() -> User {
+    User {
+        name: "alex".into(),
+        age: 20,
+        car: Car::Bar,
+        foo: Foo::Bar(1, 2),
+    }
 }
 
 async fn user(name: String, age: u8) -> String {
@@ -17,12 +52,19 @@ async fn user(name: String, age: u8) -> String {
 
 #[test]
 fn test_name() {
-    utils::execute_fut(async {
-        let mut writer: Vec<u8> = vec![];
-        procedure::execute(1, (String::from("Nur"), 22u8).encode(), &mut writer)
-            .await
-            .unwrap();
+    let typedef = procedure::type_def();
+    let mut c = code_formatter::CodeFormatter::default();
+    frpc_codegen::javascript::code::generate(&mut c, &typedef).unwrap();
+    println!("{}", c.buf);
 
-        println!("{:?}", String::decode(&writer));
-    });
+    // println!("{typedef:#?}");
+
+    // utils::execute_fut(async {
+    //     let mut writer: Vec<u8> = vec![];
+    //     procedure::execute(1, (String::from("Nur"), 22u8).encode(), &mut writer)
+    //         .await
+    //         .unwrap();
+
+    //     println!("{:?}", String::decode(&writer));
+    // });
 }

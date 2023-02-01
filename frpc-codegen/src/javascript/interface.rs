@@ -1,56 +1,53 @@
+use crate::code_formatter::write_doc_comments;
 use crate::utils::{join, to_camel_case};
-use crate::writer::Writer;
 use frpc_message::*;
 use std::fmt::Display;
 use std::fmt::Result;
 use std::fmt::Write;
 
-pub fn generate(w: &mut Writer, type_def: &TypeDef) -> Result {
+pub fn generate(w: &mut impl Write, type_def: &TypeDef) -> Result {
     for (path, kind) in &type_def.ctx.costom_types {
         let name = to_camel_case(path, ':');
         match kind {
             CustomTypeKind::Unit(unit) => {
-                w.write_doc_comments(&unit.doc)?;
+                write_doc_comments(w, &unit.doc)?;
 
                 write!(w, "enum {name} ")?;
                 write_map(w, unit.fields.iter().map(|f| (&f.doc, &f.name, f.value)))?;
             }
             CustomTypeKind::Struct(data) => {
-                w.write_doc_comments(&data.doc)?;
+                write_doc_comments(w, &data.doc)?;
 
                 write!(w, "interface {name} ")?;
                 let fields = data.fields.iter().map(|f| (&f.doc, &f.name, ty_str(&f.ty)));
                 write_map(w, fields)?;
             }
-            CustomTypeKind::TupleStruct(data) => {
-                w.write_doc_comments(&data.doc)?;
-                let fields = join(data.fields.iter().map(|f| ty_str(&f.ty)), " ,");
+            CustomTypeKind::Tuple(data) => {
+                write_doc_comments(w, &data.doc)?;
+                let fields = join(data.fields.iter().map(|f| ty_str(&f.ty)), ", ");
                 write!(w, "type {name} = [{fields}];")?;
             }
             CustomTypeKind::Enum(data) => {
-                w.write_doc_comments(&data.doc)?;
+                write_doc_comments(w, &data.doc)?;
 
                 writeln!(w, "type {name} =")?;
-                w.indent_lvl += 1;
 
                 for EnumField { doc: _, name, kind } in &data.fields {
                     let fields = match kind {
-                        UnionKind::Unit => format!(""),
-                        UnionKind::Struct(dta) => join(
+                        EnumKind::Unit => String::new(),
+                        EnumKind::Struct(dta) => join(
                             dta.iter().map(|f| format!("{}: {}", f.name, ty_str(&f.ty))),
                             ", ",
                         ),
-                        UnionKind::Tuple(data) => join(
+                        EnumKind::Tuple(data) => join(
                             data.iter()
                                 .enumerate()
                                 .map(|(i, field)| format!("{i}: {}", ty_str(&field.ty))),
-                            " ,",
+                            ", ",
                         ),
                     };
                     writeln!(w, "| {{ type: {name:?}, {fields}}}")?;
                 }
-
-                w.indent_lvl -= 1;
             }
         }
     }
@@ -62,29 +59,26 @@ pub fn generate(w: &mut Writer, type_def: &TypeDef) -> Result {
     } in &type_def.funcs
     {
         let name = to_camel_case(path, ':');
-        let args = join(args.iter().map(ty_str), " ,");
+        let args = join(args.iter().map(ty_str), ", ");
         writeln!(w, "function {name}({args}): {}", ty_str(retn))?;
     }
     Ok(())
 }
 
-fn write_map<'a, I, K, V>(w: &mut Writer, fields: I) -> Result
+fn write_map<'a, I, K, V>(w: &mut impl Write, fields: I) -> Result
 where
     K: Display,
     V: Display,
     I: Iterator<Item = (&'a String, K, V)>,
 {
     w.write_str("{\n")?;
-    w.indent_lvl += 1;
 
     for (doc, name, item) in fields {
-        w.write_doc_comments(doc)?;
+        write_doc_comments(w, doc)?;
         writeln!(w, "{name}: {item},")?;
     }
 
-    w.write_str("}\n")?;
-    w.indent_lvl -= 1;
-    Ok(())
+    w.write_str("}\n")
 }
 
 fn ty_str(ty: &Ty) -> String {
@@ -121,7 +115,7 @@ fn ty_str(ty: &Ty) -> String {
         Ty::Result(ty) => format!("Result<{}, {}>", ty_str(&ty.0), ty_str(&ty.1)),
 
         Ty::Map { ty, .. } => format!("Map<{}, {}>", ty_str(&ty.0), ty_str(&ty.1)),
-        Ty::Tuple(tys) => format!("[{}]", join(tys.iter().map(ty_str), " ,")),
+        Ty::Tuple(tys) => format!("[{}]", join(tys.iter().map(ty_str), ", ")),
         Ty::CustomType(path) => to_camel_case(path, ':'),
     }
 }

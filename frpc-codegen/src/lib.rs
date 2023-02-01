@@ -1,7 +1,7 @@
 
 pub mod javascript;
 
-pub mod writer;
+pub mod code_formatter;
 pub mod utils;
 
 // pub mod fmt;

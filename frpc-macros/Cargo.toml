@@ -1,5 +1,5 @@
 [package]
-name = "frpc-macro"
+name = "frpc-macros"
 version = "0.1.0"
 edition = "2021"
 

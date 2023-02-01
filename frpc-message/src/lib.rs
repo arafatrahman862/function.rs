@@ -88,8 +88,8 @@ pub struct Context {
 pub enum CustomTypeKind {
     Unit(CustomType<UnitField>),
     Enum(CustomType<EnumField>),
+    Tuple(CustomType<TupleField>),
     Struct(CustomType<StructField>),
-    TupleStruct(CustomType<TupleStructField>),
 }
 
 /// Any user defined type like: `struct`, `enum`
@@ -110,14 +110,14 @@ pub struct UnitField {
 pub struct EnumField {
     pub doc: String,
     pub name: String,
-    pub kind: UnionKind,
+    pub kind: EnumKind,
 }
 
 #[derive(Debug, Clone)]
-pub enum UnionKind {
+pub enum EnumKind {
     Unit,
     Struct(Vec<StructField>),
-    Tuple(Vec<TupleStructField>),
+    Tuple(Vec<TupleField>),
 }
 
 #[derive(Debug, Clone)]
@@ -128,7 +128,7 @@ pub struct StructField {
 }
 
 #[derive(Debug, Clone)]
-pub struct TupleStructField {
+pub struct TupleField {
     pub doc: String,
     pub ty: Ty,
 }

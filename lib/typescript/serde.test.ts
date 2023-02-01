@@ -82,10 +82,10 @@ Deno.test("Serde test: string, bytes", () => {
     const decoder = new Decoder(new Uint8Array(writer.bytes));
 
     assertEquals(decoder.str(), str)
-    assertEquals(decoder.vec(decoder.u8)(), bytes)
+    assertEquals(decoder.set(decoder.u8)(), bytes)
 })
 
-Deno.test("Serde test: common", () => {
+Deno.test("Serde test: common type", () => {
     const char = '4';
     const bool = true;
 
@@ -121,13 +121,14 @@ Deno.test("Serde test: common", () => {
     assertEquals(decoder.result(decoder.str, decoder.arr(decoder.u8, 2))(), err);
 })
 
-Deno.test("Serde test: Complex", () => {
+Deno.test("Serde test: Complex type", () => {
     const value = new Map();
     value.set(0, null)
     value.set(1, "some")
 
-    const ok: Result<Map<number, Option<string>>, Array<string>> = { type: "Ok", value };
-    const err: Result<Map<number, Option<string>>, Array<string>> = {
+    type ResultTy = Result<Map<number, Option<string>>, Array<string>>;
+    const ok: ResultTy = { type: "Ok", value };
+    const err: ResultTy = {
         type: "Err",
         value: ["Error: 1", "Error: 2"]
     };
@@ -142,7 +143,7 @@ Deno.test("Serde test: Complex", () => {
     e.flush()
     const d = new Decoder(new Uint8Array(writer.bytes));
 
-    const decode = d.result(d.map(d.u8, d.option(d.str)), d.vec(d.str));
+    const decode = d.result(d.map(d.u8, d.option(d.str)), d.set(d.str));
     assertEquals(decode(), ok);
     assertEquals(decode(), err);
 })
