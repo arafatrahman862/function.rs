@@ -67,7 +67,7 @@ pub fn generate(c: &mut impl Write, type_def: &TypeDef) -> Result {
                         EnumKind::Struct(fields) => {
                             let mut s = String::from("\n");
                             write_struct_fields(&mut s, fields).unwrap();
-                            format!("{{ type: {name:?}, {s}}}")
+                            format!("{{ type: {name:?} as const, {s}}}")
                         }
                         EnumKind::Tuple(fields) => {
                             let strings = fields
@@ -75,7 +75,7 @@ pub fn generate(c: &mut impl Write, type_def: &TypeDef) -> Result {
                                 .enumerate()
                                 .map(|(i, f)| format!(" {i}: {}()", field_ty(&f.ty)));
 
-                            format!("{{ type: {name:?},{} }}", join(strings, ","))
+                            format!("{{ type: {name:?} as const,{} }}", join(strings, ","))
                         }
                     });
 

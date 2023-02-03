@@ -1,0 +1,20 @@
+[package]
+name = "frpc"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1", features = ["io-util"] }
+databuf = "0.1.1"
+
+frpc-macros = { path = "../frpc-macros" }
+frpc-message = { path = "../frpc-message" }
+frpc-codegen = { path = "../frpc-codegen" }
+
+async-trait = "0.1.63"
+
+# quinn = "0.9.3"
+# rustls = "0.20.7"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt"] }

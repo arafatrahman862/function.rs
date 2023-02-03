@@ -1,11 +1,6 @@
 import * as use from "./decode.ts";
 
-export enum BasicCar {
-  Foo,
-  Bar,
-}
-
-const struct = {
+export const struct = {
   BasicUser: (d: use.Decoder) => ({
     name: d.str(),
     age: d.u8(),
@@ -27,7 +22,7 @@ const struct = {
     const num = d.len_u15();
     switch (num) {
       case 0:
-        return { type: "Quz", x: d.u8(), } as const;
+        return { type: "Quz" as const, x: d.u8() }
       case 1:
         return { type: "Bar", 0: d.u8(), 1: d.u16() } as const;
       default:
@@ -35,3 +30,8 @@ const struct = {
     }
   },
 };
+
+export enum BasicCar {
+  Foo,
+  Bar,
+}

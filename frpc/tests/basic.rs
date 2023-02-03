@@ -9,6 +9,12 @@ procedure! {
     get_user = 2
 }
 
+async fn awd() {
+    let a = awds().await;
+}
+async fn awds() {}
+
+
 #[derive(Message, Decoder)]
 enum Car {
     Foo,
@@ -41,6 +47,12 @@ async fn get_user() -> User {
     }
 }
 
+// macro_rules! swdwd {
+//     ($d:d) => {
+
+//     };
+// }
+/// Hello World
 async fn user(name: String, age: u8) -> String {
     let res = match age {
         ..=18 => "We're excited to have you here!",
@@ -52,9 +64,11 @@ async fn user(name: String, age: u8) -> String {
 
 #[test]
 fn test_name() {
+    // let typedef = procedure::;
     let typedef = procedure::type_def();
     let mut c = code_formatter::CodeFormatter::default();
     frpc_codegen::javascript::code::generate(&mut c, &typedef).unwrap();
+
     println!("{}", c.buf);
 
     // println!("{typedef:#?}");
