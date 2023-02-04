@@ -1,4 +1,31 @@
-import * as use from "./decode.ts";
+import * as use from "./mod.ts";
+
+export interface BasicUser {
+  name: string,
+  age: number,
+  car: BasicCar,
+  foo: BasicFoo,
+}
+
+export enum BasicCar {
+  Foo = 0,
+  Bar = 1,
+}
+
+export type BasicFoo =
+  | { type: "Quz", x: number }
+  | { type: "Bar", 0: number, 1: number }
+
+const extern = {
+  BasicUser: (e: use.BufWriter, z: BasicUser) => {
+    e.str(z.name);
+    e.u8(z.age);
+    extern.BasicCar.bind(null, e)(z.car);
+  },
+  BasicCar: (e: use.BufWriter, z: BasicCar) => {
+
+  }
+}
 
 const struct = {
   BasicUser: (d: use.Decoder) => ({
@@ -26,9 +53,4 @@ const struct = {
       default: throw new Error('Unknown discriminant of `BasicFoo`: ' + num)
     }
   },
-}
-
-export enum BasicCar {
-  Foo = 0,
-  Bar = 1,
 }

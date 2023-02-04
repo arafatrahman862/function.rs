@@ -37,13 +37,8 @@ struct User {
     foo: Foo,
 }
 
-async fn get_user() -> User {
-    User {
-        name: "alex".into(),
-        age: 20,
-        car: Car::Bar,
-        foo: Foo::Bar(1, 2),
-    }
+async fn get_user(user: User) -> User {
+    user
 }
 
 /// Hello World
@@ -60,10 +55,9 @@ async fn user(name: String, age: u8) -> String {
 fn test_name() {
     // let typedef = procedure::;
     let typedef = procedure::type_def();
-    let mut c = code_formatter::CodeFormatter::default();
+    let mut c = String::new();
     frpc_codegen::javascript::code::generate(&mut c, &typedef).unwrap();
-
-    println!("{}", c.buf);
+    println!("{}", c);
 
     // println!("{typedef:#?}");
     // utils::execute_fut(async {

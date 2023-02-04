@@ -6,51 +6,6 @@ use std::fmt::Result;
 use std::fmt::Write;
 
 pub fn generate(w: &mut impl Write, type_def: &TypeDef) -> Result {
-    for (path, kind) in &type_def.ctx.costom_types {
-        let name = to_camel_case(path, ':');
-        match kind {
-            CustomTypeKind::Unit(unit) => {
-                write_doc_comments(w, &unit.doc)?;
-
-                write!(w, "enum {name} ")?;
-                write_map(w, unit.fields.iter().map(|f| (&f.doc, &f.name, f.value)))?;
-            }
-            CustomTypeKind::Struct(data) => {
-                write_doc_comments(w, &data.doc)?;
-
-                write!(w, "interface {name} ")?;
-                let fields = data.fields.iter().map(|f| (&f.doc, &f.name, ty_str(&f.ty)));
-                write_map(w, fields)?;
-            }
-            CustomTypeKind::Tuple(data) => {
-                write_doc_comments(w, &data.doc)?;
-                let fields = join(data.fields.iter().map(|f| ty_str(&f.ty)), ", ");
-                write!(w, "type {name} = [{fields}];")?;
-            }
-            CustomTypeKind::Enum(data) => {
-                write_doc_comments(w, &data.doc)?;
-
-                writeln!(w, "type {name} =")?;
-
-                for EnumField { doc: _, name, kind } in &data.fields {
-                    let fields = match kind {
-                        EnumKind::Unit => String::new(),
-                        EnumKind::Struct(dta) => join(
-                            dta.iter().map(|f| format!("{}: {}", f.name, ty_str(&f.ty))),
-                            ", ",
-                        ),
-                        EnumKind::Tuple(data) => join(
-                            data.iter()
-                                .enumerate()
-                                .map(|(i, field)| format!("{i}: {}", ty_str(&field.ty))),
-                            ", ",
-                        ),
-                    };
-                    writeln!(w, "| {{ type: {name:?}, {fields}}}")?;
-                }
-            }
-        }
-    }
     for Func {
         index: _,
         path,
@@ -65,20 +20,68 @@ pub fn generate(w: &mut impl Write, type_def: &TypeDef) -> Result {
     Ok(())
 }
 
-fn write_map<'a, I, K, V>(w: &mut impl Write, fields: I) -> Result
+pub fn gen_type(f: &mut impl Write, ident: String, kind: &CustomTypeKind) -> Result {
+    Ok(match kind {
+        CustomTypeKind::Unit(unit) => {
+            write_doc_comments(f, &unit.doc)?;
+
+            write!(f, "export enum {ident} ")?;
+            write_map(
+                f,
+                " =",
+                unit.fields.iter().map(|f| (&f.doc, &f.name, f.value)),
+            )?;
+        }
+        CustomTypeKind::Struct(data) => {
+            write_doc_comments(f, &data.doc)?;
+
+            write!(f, "export interface {ident} ")?;
+            let fields = data.fields.iter().map(|f| (&f.doc, &f.name, ty_str(&f.ty)));
+            write_map(f, ":", fields)?;
+        }
+        CustomTypeKind::Tuple(data) => {
+            write_doc_comments(f, &data.doc)?;
+            let fields = join(data.fields.iter().map(|f| ty_str(&f.ty)), ", ");
+            write!(f, "export type {ident} = [{fields}];")?;
+        }
+        CustomTypeKind::Enum(data) => {
+            write_doc_comments(f, &data.doc)?;
+
+            writeln!(f, "export type {ident} =")?;
+
+            for EnumField { doc: _, name, kind } in &data.fields {
+                let fields = match kind {
+                    EnumKind::Unit => String::new(),
+                    EnumKind::Struct(dta) => join(
+                        dta.iter().map(|f| format!("{}: {}", f.name, ty_str(&f.ty))),
+                        ", ",
+                    ),
+                    EnumKind::Tuple(data) => join(
+                        data.iter()
+                            .enumerate()
+                            .map(|(i, field)| format!("{i}: {}", ty_str(&field.ty))),
+                        ", ",
+                    ),
+                };
+                writeln!(f, "| {{ type: {name:?}, {fields}}}")?;
+            }
+        }
+    })
+}
+
+fn write_map<'a, I, K, V>(f: &mut impl Write, sep: &str, fields: I) -> Result
 where
     K: Display,
     V: Display,
     I: Iterator<Item = (&'a String, K, V)>,
 {
-    w.write_str("{\n")?;
+    writeln!(f, "{{")?;
 
     for (doc, name, item) in fields {
-        write_doc_comments(w, doc)?;
-        writeln!(w, "{name}: {item},")?;
+        write_doc_comments(f, doc)?;
+        writeln!(f, "{name}{sep} {item},")?;
     }
-
-    w.write_str("}\n")
+    writeln!(f, "}}")
 }
 
 fn ty_str(ty: &Ty) -> String {

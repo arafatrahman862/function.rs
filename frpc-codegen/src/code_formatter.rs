@@ -24,13 +24,13 @@ impl Write for CodeFormatter {
 }
 
 // Todo: Use `&Vec<String>` instade of `&str`
-pub fn write_doc_comments(this: &mut impl Write, lines: &str) -> std::fmt::Result {
+pub fn write_doc_comments(f: &mut impl Write, lines: &str) -> std::fmt::Result {
     if lines.is_empty() {
         return Ok(());
     }
-    writeln!(this, "/**")?;
+    writeln!(f, "/**")?;
     for line in lines.trim().lines() {
-        writeln!(this, " * {line}")?;
+        writeln!(f, " * {line}")?;
     }
-    writeln!(this, " */")
+    writeln!(f, " */")
 }

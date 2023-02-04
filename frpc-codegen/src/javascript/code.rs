@@ -5,6 +5,8 @@ use crate::{
 use frpc_message::*;
 use std::fmt::{Result, Write};
 
+use super::interface::gen_type;
+
 #[derive(Default, Debug)]
 struct Interface<'a> {
     objects: Vec<&'a String>,
@@ -42,23 +44,51 @@ impl<'a> Interface<'a> {
     }
 }
 
-pub fn generate(c: &mut impl Write, type_def: &TypeDef) -> Result {
-    let mut interface = Interface::default();
-    interface.add_tys(type_def.funcs.iter().map(|func| &func.retn), &type_def.ctx);
+fn gen_input_encoders(f: &mut impl Write, type_def: &TypeDef) -> Result {
+    let mut input_tys = Interface::default();
+    input_tys.add_tys(
+        type_def.funcs.iter().flat_map(|func| func.args.iter()),
+        &type_def.ctx,
+    );
+
+    writeln!(f, "const extern = {{")?;
+
+    for path in input_tys.objects {
+        let ident = to_camel_case(path, ':');
+        write!(f, "{ident}: (d: use.BufWriter) => {{")?;
+        // field_ty();
+        match &type_def.ctx.costom_types[path] {
+            CustomTypeKind::Unit(_) => {},
+            CustomTypeKind::Enum(_) => {},
+            CustomTypeKind::Tuple(_) => {},
+            CustomTypeKind::Struct(_) => {},
+        }
+        write!(f, "}},")?;
+    }
+
+    writeln!(f, "}}")?;
+    Ok(())
+}
+
+pub fn generate(f: &mut impl Write, type_def: &TypeDef) -> Result {
+    gen_input_encoders(f, type_def)?;
+
+    let mut output_tys = Interface::default();
+    output_tys.add_tys(type_def.funcs.iter().map(|func| &func.retn), &type_def.ctx);
 
     let mut unions = vec![];
 
-    writeln!(c, "const struct = {{")?;
+    writeln!(f, "const struct = {{")?;
 
-    for path in interface.objects {
+    for path in output_tys.objects {
         let ident = to_camel_case(path, ':');
-        write!(c, "{ident}: (d: use.Decoder) => ")?;
+        write!(f, "{ident}: (d: use.Decoder) => ")?;
 
         match &type_def.ctx.costom_types[path] {
             CustomTypeKind::Unit(data) => {
                 let items = data.fields.iter().map(|f| format!("{ident}.{}", f.name));
                 unions.push(path);
-                write_enum(c, &ident, items)?;
+                write_enum(f, &ident, items)?;
             }
             CustomTypeKind::Enum(data) => {
                 let items = data
@@ -81,32 +111,24 @@ pub fn generate(c: &mut impl Write, type_def: &TypeDef) -> Result {
                         }
                     });
 
-                write_enum(c, &ident, items)?;
+                write_enum(f, &ident, items)?;
             }
             CustomTypeKind::Struct(data) => {
-                writeln!(c, "({{")?;
-                write_struct_fields(c, &data.fields)?;
-                writeln!(c, "}}),")?;
+                writeln!(f, "({{")?;
+                write_struct_fields(f, &data.fields)?;
+                writeln!(f, "}}),")?;
             }
             CustomTypeKind::Tuple(data) => {
                 let tys = data.fields.iter().map(|f| field_ty(&f.ty));
-                writeln!(c, "d.tuple({}),", join(tys, ", "))?;
+                writeln!(f, "d.tuple({}),", join(tys, ", "))?;
             }
         }
     }
-    writeln!(c, "}}")?;
+    writeln!(f, "}}")?;
 
     for path in unions {
-        let CustomTypeKind::Unit(union) = &type_def.ctx.costom_types[path] else { unreachable!() };
         let ident = to_camel_case(path, ':');
-
-        write_doc_comments(c, &union.doc)?;
-        writeln!(c, "export enum {ident} {{")?;
-        for UnitField { doc, name, value } in union.fields.iter() {
-            write_doc_comments(c, doc)?;
-            writeln!(c, "{name} = {value},")?;
-        }
-        writeln!(c, "}}")?;
+        gen_type(f, ident, &type_def.ctx.costom_types[path])?;
     }
 
     Ok(())
