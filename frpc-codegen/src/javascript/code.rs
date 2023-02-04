@@ -46,6 +46,8 @@ pub fn generate(c: &mut impl Write, type_def: &TypeDef) -> Result {
     let mut interface = Interface::default();
     interface.add_tys(type_def.funcs.iter().map(|func| &func.retn), &type_def.ctx);
 
+    let mut unions = vec![];
+
     writeln!(c, "const struct = {{")?;
 
     for path in interface.objects {
@@ -55,7 +57,7 @@ pub fn generate(c: &mut impl Write, type_def: &TypeDef) -> Result {
         match &type_def.ctx.costom_types[path] {
             CustomTypeKind::Unit(data) => {
                 let items = data.fields.iter().map(|f| format!("{ident}.{}", f.name));
-
+                unions.push(path);
                 write_enum(c, &ident, items)?;
             }
             CustomTypeKind::Enum(data) => {
@@ -92,7 +94,22 @@ pub fn generate(c: &mut impl Write, type_def: &TypeDef) -> Result {
             }
         }
     }
-    writeln!(c, "}}")
+    writeln!(c, "}}")?;
+
+    for path in unions {
+        let CustomTypeKind::Unit(union) = &type_def.ctx.costom_types[path] else { unreachable!() };
+        let ident = to_camel_case(path, ':');
+
+        write_doc_comments(c, &union.doc)?;
+        writeln!(c, "export enum {ident} {{")?;
+        for UnitField { doc, name, value } in union.fields.iter() {
+            write_doc_comments(c, doc)?;
+            writeln!(c, "{name} = {value},")?;
+        }
+        writeln!(c, "}}")?;
+    }
+
+    Ok(())
 }
 
 fn write_struct_fields(c: &mut impl Write, fields: &Vec<StructField>) -> Result {

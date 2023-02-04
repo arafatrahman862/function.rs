@@ -14,7 +14,6 @@ async fn awd() {
 }
 async fn awds() {}
 
-
 #[derive(Message, Decoder)]
 enum Car {
     Foo,
@@ -47,11 +46,6 @@ async fn get_user() -> User {
     }
 }
 
-// macro_rules! swdwd {
-//     ($d:d) => {
-
-//     };
-// }
 /// Hello World
 async fn user(name: String, age: u8) -> String {
     let res = match age {
@@ -72,13 +66,11 @@ fn test_name() {
     println!("{}", c.buf);
 
     // println!("{typedef:#?}");
-
     // utils::execute_fut(async {
     //     let mut writer: Vec<u8> = vec![];
     //     procedure::execute(1, (String::from("Nur"), 22u8).encode(), &mut writer)
     //         .await
     //         .unwrap();
-
     //     println!("{:?}", String::decode(&writer));
     // });
 }
