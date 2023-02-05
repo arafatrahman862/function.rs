@@ -25,6 +25,6 @@ where
 }
 
 
-pub fn ident(name: &String) -> fmt!() {
+pub fn ident(name: &String) -> fmt!(type '_) {
     fmt!(move |f| { f.write_fmt(format_args!("{}", &name)) })
 }

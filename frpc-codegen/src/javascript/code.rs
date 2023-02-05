@@ -1,5 +1,6 @@
 use crate::{
     code_formatter::write_doc_comments,
+    fmt,
     utils::{join, to_camel_case},
 };
 use frpc_message::*;
@@ -51,22 +52,34 @@ fn gen_input_encoders(f: &mut impl Write, type_def: &TypeDef) -> Result {
         &type_def.ctx,
     );
 
+    for path in &input_tys.objects {
+        let ident = to_camel_case(path, ':');
+        let kind = &type_def.ctx.costom_types[path.clone()];
+        gen_type(f, ident, kind)?;
+    }
+
     writeln!(f, "const extern = {{")?;
 
     for path in input_tys.objects {
         let ident = to_camel_case(path, ':');
+        writeln!(f, "{ident}(d: use.BufWriter, z: {ident}) {{")?;
         match &type_def.ctx.costom_types[path] {
-            CustomTypeKind::Unit(_data) => {}
+            CustomTypeKind::Unit(data) => {
+                writeln!(f, "switch (z) {{")?;
+                for (i, UnitField { name, .. }) in data.fields.iter().enumerate() {
+                    writeln!(f, "case {ident}.{name}: return d.len_u15({i});")?;
+                }
+                writeln!(f, "}}")?;
+            }
             CustomTypeKind::Enum(_data) => {}
             CustomTypeKind::Tuple(_data) => {}
             CustomTypeKind::Struct(data) => {
-                write!(f, "{ident}(d: use.BufWriter, z: any) {{")?;
                 for StructField { name, ty, .. } in &data.fields {
                     writeln!(f, "{}(z.{name});", field_ty(ty))?;
                 }
-                write!(f, "}},")?;
             }
         }
+        writeln!(f, "}},")?;
     }
 
     writeln!(f, "}}")?;
@@ -89,31 +102,36 @@ pub fn generate(f: &mut impl Write, type_def: &TypeDef) -> Result {
 
         match &type_def.ctx.costom_types[path] {
             CustomTypeKind::Unit(data) => {
-                let items = data.fields.iter().map(|f| format!("{ident}.{}", f.name));
                 unions.push(path);
+
+                let items = fmt!(|f| {
+                    for (i, field) in data.fields.iter().enumerate() {
+                        writeln!(f, "case {i}: return {ident}.{};", field.name)?;
+                    }
+                    Ok(())
+                });
                 write_enum(f, &ident, items)?;
             }
             CustomTypeKind::Enum(data) => {
-                let items = data
-                    .fields
-                    .iter()
-                    .map(|EnumField { name, kind, .. }| match kind {
-                        EnumKind::Unit => format!("{{ type: {name:?} }}"),
-                        EnumKind::Struct(fields) => {
-                            let mut s = String::from("\n");
-                            write_struct_fields(&mut s, fields).unwrap();
-                            format!("{{ type: {name:?} as const, {s}}}")
-                        }
-                        EnumKind::Tuple(fields) => {
-                            let strings = fields
-                                .iter()
-                                .enumerate()
-                                .map(|(i, f)| format!(" {i}: {}()", field_ty(&f.ty)));
+                writeln!(f, "let x;")?;
 
-                            format!("{{ type: {name:?} as const,{} }}", join(strings, ","))
+                let items = fmt!(|f| {
+                    for (i, EnumField { name, kind, .. }) in data.fields.iter().enumerate() {
+                        writeln!(f, "case {i}: x = {{\ntype: {name:?} as const,")?;
+                        match kind {
+                            EnumKind::Struct(fields) => write_struct_fields(f, fields)?,
+                            EnumKind::Tuple(fields) => {
+                                for (i, TupleField { doc, ty }) in fields.iter().enumerate() {
+                                    write_doc_comments(f, doc)?;
+                                    writeln!(f, " {i}: {}(),", field_ty(&ty))?;
+                                }
+                            }
+                            EnumKind::Unit => {}
                         }
-                    });
-
+                        writeln!(f, "}};\nreturn x as typeof x;")?;
+                    }
+                    Ok(())
+                });
                 write_enum(f, &ident, items)?;
             }
             CustomTypeKind::Struct(data) => {
@@ -123,17 +141,17 @@ pub fn generate(f: &mut impl Write, type_def: &TypeDef) -> Result {
             }
             CustomTypeKind::Tuple(data) => {
                 let tys = data.fields.iter().map(|f| field_ty(&f.ty));
-                writeln!(f, "return d.tuple({});", join(tys, ", "))?;
+                writeln!(f, "return d.tuple({})();", join(tys, ", "))?;
             }
         }
         writeln!(f, "}},")?;
     }
     writeln!(f, "}}")?;
 
-    for path in unions {
-        let ident = to_camel_case(path, ':');
-        gen_type(f, ident, &type_def.ctx.costom_types[path])?;
-    }
+    // for path in unions {
+    //     let ident = to_camel_case(path, ':');
+    //     gen_type(f, ident, &type_def.ctx.costom_types[path])?;
+    // }
 
     Ok(())
 }
@@ -196,20 +214,15 @@ fn field_ty(ty: &Ty) -> String {
     .to_string()
 }
 
-fn write_enum<I>(f: &mut impl Write, ident: &String, items: I) -> Result
-where
-    I: Iterator<Item = String>,
-{
+fn write_enum(f: &mut impl Write, ident: &String, items: fmt!(type)) -> Result {
     writeln!(f, "const num = d.len_u15();")?;
     writeln!(f, "switch (num) {{")?;
-    for (i, item) in items.enumerate() {
-        writeln!(f, "case {i}: return {item};")?;
-    }
+    writeln!(f, "{items:?}")?;
     writeln!(
         f,
         "default: throw new Error('Unknown discriminant of `{ident}`: ' + num)"
     )?;
-    f.write_str("}")
+    writeln!(f, "}}")
 }
 
 #[test]
@@ -227,8 +240,9 @@ fn test_field_ty() {
             )),
         },
     ]);
+
     assert_eq!(
         field_ty(&ty),
-        "d.tuple(d.option(d.bool), d.result(PathIdent, d.str), d.map(d.str, d.set(d.u8)))"
+        "d.tuple(d.option(d.bool), d.result(this.PathIdent.bind(this, d), d.str), d.map(d.str, d.set(d.u8)))"
     );
 }

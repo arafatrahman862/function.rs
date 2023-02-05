@@ -9,12 +9,7 @@ procedure! {
     get_user = 2
 }
 
-async fn awd() {
-    let a = awds().await;
-}
-async fn awds() {}
-
-#[derive(Message, Decoder)]
+#[derive(Message, Decoder, Encoder)]
 enum Car {
     Foo,
     Bar,
@@ -22,10 +17,7 @@ enum Car {
 
 #[derive(Message, Decoder)]
 enum Foo {
-    Quz {
-        /// Message
-        x: u8,
-    },
+    Quz { x: u8 },
     Bar(u8, u16, Bez),
 }
 
