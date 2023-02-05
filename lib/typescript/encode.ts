@@ -1,5 +1,5 @@
 import { Result, WriteSync } from "./transport.ts";
-import { bytes_slice, write_all } from "./utils.ts";
+import { bytes_slice, write_all, assertEq } from "./utils.ts";
 
 type Encode<T> = (this: BufWriter, value: T) => void;
 
@@ -110,15 +110,55 @@ export class BufWriter implements WriteSync {
         this.u8(+ean)
     }
 
-    u8_arr(bytes: Uint8Array) { this.write_all(bytes); }
-    u16_arr(data: Uint16Array) { this.write_all(bytes_slice(data)); }
-    u32_arr(data: Uint32Array) { this.write_all(bytes_slice(data)); }
-    u64_arr(data: BigUint64Array) { this.write_all(bytes_slice(data)); }
+    u8_arr(len: number) {
+        return (data: Uint8Array) => {
+            assertEq(data.length, len);
+            this.write_all(data);
+        }
+    }
+    u16_arr(len: number) {
+        return (data: Uint16Array) => {
+            assertEq(data.length, len);
+            this.write_all(bytes_slice(data));
+        };
+    }
+    u32_arr(len: number) {
+        return (data: Uint32Array) => {
+            assertEq(data.length, len);
+            this.write_all(bytes_slice(data));
+        };
+    }
+    u64_arr(len: number) {
+        return (data: BigUint64Array) => {
+            assertEq(data.length, len);
+            this.write_all(bytes_slice(data));
+        };
+    }
 
-    i8_arr(data: Int8Array) { this.write_all(bytes_slice(data)); }
-    i16_arr(data: Int16Array) { this.write_all(bytes_slice(data)); }
-    i32_arr(data: Int32Array) { this.write_all(bytes_slice(data)); }
-    i64_arr(data: BigInt64Array) { this.write_all(bytes_slice(data)); }
+    i8_arr(len: number) {
+        return (data: Int8Array) => {
+            assertEq(data.length, len);
+            this.write_all(bytes_slice(data));
+        };
+    }
+    i16_arr(len: number) {
+        return (data: Int16Array) => {
+            assertEq(data.length, len);
+            this.write_all(bytes_slice(data));
+        };
+    }
+    i32_arr(len: number) {
+        return (data: Int32Array) => {
+            assertEq(data.length, len);
+            this.write_all(bytes_slice(data));
+        };
+    }
+    i64_arr(len: number) {
+        return (data: BigInt64Array) => {
+            assertEq(data.length, len);
+            this.write_all(bytes_slice(data));
+        };
+    }
 
     option<T>(v: Encode<T>) {
         return (value: null | T) => {

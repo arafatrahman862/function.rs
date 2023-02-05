@@ -55,15 +55,18 @@ fn gen_input_encoders(f: &mut impl Write, type_def: &TypeDef) -> Result {
 
     for path in input_tys.objects {
         let ident = to_camel_case(path, ':');
-        write!(f, "{ident}: (d: use.BufWriter) => {{")?;
-        // field_ty();
         match &type_def.ctx.costom_types[path] {
-            CustomTypeKind::Unit(_) => {},
-            CustomTypeKind::Enum(_) => {},
-            CustomTypeKind::Tuple(_) => {},
-            CustomTypeKind::Struct(_) => {},
+            CustomTypeKind::Unit(_data) => {}
+            CustomTypeKind::Enum(_data) => {}
+            CustomTypeKind::Tuple(_data) => {}
+            CustomTypeKind::Struct(data) => {
+                write!(f, "{ident}(d: use.BufWriter, z: any) {{")?;
+                for StructField { name, ty, .. } in &data.fields {
+                    writeln!(f, "{}(z.{name});", field_ty(ty))?;
+                }
+                write!(f, "}},")?;
+            }
         }
-        write!(f, "}},")?;
     }
 
     writeln!(f, "}}")?;
@@ -82,7 +85,7 @@ pub fn generate(f: &mut impl Write, type_def: &TypeDef) -> Result {
 
     for path in output_tys.objects {
         let ident = to_camel_case(path, ':');
-        write!(f, "{ident}: (d: use.Decoder) => ")?;
+        writeln!(f, "{ident}(d: use.Decoder) {{")?;
 
         match &type_def.ctx.costom_types[path] {
             CustomTypeKind::Unit(data) => {
@@ -114,15 +117,16 @@ pub fn generate(f: &mut impl Write, type_def: &TypeDef) -> Result {
                 write_enum(f, &ident, items)?;
             }
             CustomTypeKind::Struct(data) => {
-                writeln!(f, "({{")?;
+                writeln!(f, "return {{")?;
                 write_struct_fields(f, &data.fields)?;
-                writeln!(f, "}}),")?;
+                writeln!(f, "}}")?;
             }
             CustomTypeKind::Tuple(data) => {
                 let tys = data.fields.iter().map(|f| field_ty(&f.ty));
-                writeln!(f, "d.tuple({}),", join(tys, ", "))?;
+                writeln!(f, "return d.tuple({});", join(tys, ", "))?;
             }
         }
+        writeln!(f, "}},")?;
     }
     writeln!(f, "}}")?;
 
@@ -134,10 +138,10 @@ pub fn generate(f: &mut impl Write, type_def: &TypeDef) -> Result {
     Ok(())
 }
 
-fn write_struct_fields(c: &mut impl Write, fields: &Vec<StructField>) -> Result {
+fn write_struct_fields(f: &mut impl Write, fields: &Vec<StructField>) -> Result {
     for StructField { doc, name, ty } in fields.iter() {
-        write_doc_comments(c, doc)?;
-        writeln!(c, "{name}: {}(),", field_ty(ty))?;
+        write_doc_comments(f, doc)?;
+        writeln!(f, "{name}: {}(),", field_ty(ty))?;
     }
     Ok(())
 }
@@ -186,30 +190,26 @@ fn field_ty(ty: &Ty) -> String {
         Ty::Map { ty, .. } => return format!("d.map({}, {})", field_ty(&ty.0), field_ty(&ty.1)),
         Ty::CustomType(path) => {
             let ident = to_camel_case(path, ':');
-            return format!("struct.{ident}.bind(null, d)");
+            return format!("this.{ident}.bind(this, d)");
         }
     }
     .to_string()
 }
 
-fn write_enum<I>(c: &mut impl Write, ident: &String, items: I) -> Result
+fn write_enum<I>(f: &mut impl Write, ident: &String, items: I) -> Result
 where
     I: Iterator<Item = String>,
 {
-    writeln!(c, "{{")?;
-
-    writeln!(c, "const num = d.len_u15();")?;
-    writeln!(c, "switch (num) {{")?;
+    writeln!(f, "const num = d.len_u15();")?;
+    writeln!(f, "switch (num) {{")?;
     for (i, item) in items.enumerate() {
-        writeln!(c, "case {i}: return {item};")?;
+        writeln!(f, "case {i}: return {item};")?;
     }
     writeln!(
-        c,
+        f,
         "default: throw new Error('Unknown discriminant of `{ident}`: ' + num)"
     )?;
-    c.write_str("}")?;
-
-    writeln!(c, "}},")
+    f.write_str("}")
 }
 
 #[test]

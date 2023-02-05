@@ -26,8 +26,11 @@ enum Foo {
         /// Message
         x: u8,
     },
-    Bar(u8, u16),
+    Bar(u8, u16, Bez),
 }
+
+#[derive(Message, Decoder)]
+struct Bez(u8, u16);
 
 #[derive(Message, Decoder)]
 struct User {
