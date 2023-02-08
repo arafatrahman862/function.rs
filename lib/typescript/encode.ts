@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-explicit-any
 import { Result, WriteSync } from "./transport.ts";
 import { bytes_slice, write_all, assertEq } from "./utils.ts";
 
@@ -204,6 +205,14 @@ export class BufWriter implements WriteSync {
             for (const [key, value] of values) {
                 k.call(this, key);
                 v.call(this, value);
+            }
+        }
+    }
+
+    tuple<Encoders extends Encode<any>[]>(...encoders: Encoders) {
+        return (values: { [K in keyof Encoders]: Parameters<Encoders[K]>[0] }) => {
+            for (let i = 0; i < encoders.length; i++) {
+                encoders[i].call(this, values[i])
             }
         }
     }

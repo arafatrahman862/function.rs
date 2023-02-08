@@ -1,58 +1,23 @@
+mod interface_path;
+
+use super::interface::gen_type;
 use crate::{
     code_formatter::write_doc_comments,
     fmt,
     utils::{join, to_camel_case},
 };
 use frpc_message::*;
+use interface_path::InterfacePath;
 use std::fmt::{Result, Write};
 
-use super::interface::gen_type;
-
-#[derive(Default, Debug)]
-struct Interface<'a> {
-    objects: Vec<&'a String>,
-}
-
-impl<'a> Interface<'a> {
-    fn add_tys(&mut self, tys: impl Iterator<Item = &'a Ty>, ctx: &'a Context) {
-        tys.filter_map(|ty| match ty {
-            Ty::CustomType(path) => Some(path),
-            _ => None,
-        })
-        .for_each(|path| self.add(path, ctx));
-    }
-
-    fn add(&mut self, path: &'a String, ctx: &'a Context) {
-        self.objects.push(path);
-        match &ctx.costom_types[path] {
-            CustomTypeKind::Enum(data) => {
-                for data in data.fields.iter() {
-                    match &data.kind {
-                        EnumKind::Tuple(fields) => self.add_tys(fields.iter().map(|f| &f.ty), ctx),
-                        EnumKind::Struct(fields) => self.add_tys(fields.iter().map(|f| &f.ty), ctx),
-                        EnumKind::Unit => {}
-                    }
-                }
-            }
-            CustomTypeKind::Tuple(data) => {
-                self.add_tys(data.fields.iter().map(|f| &f.ty), ctx);
-            }
-            CustomTypeKind::Struct(data) => {
-                self.add_tys(data.fields.iter().map(|f| &f.ty), ctx);
-            }
-            CustomTypeKind::Unit(_) => {}
-        }
-    }
-}
-
 fn gen_input_encoders(f: &mut impl Write, type_def: &TypeDef) -> Result {
-    let mut input_tys = Interface::default();
+    let mut input_tys = InterfacePath::default();
     input_tys.add_tys(
         type_def.funcs.iter().flat_map(|func| func.args.iter()),
         &type_def.ctx,
     );
 
-    for path in &input_tys.objects {
+    for path in &input_tys.paths {
         let ident = to_camel_case(path, ':');
         let kind = &type_def.ctx.costom_types[path.clone()];
         gen_type(f, ident, kind)?;
@@ -60,7 +25,7 @@ fn gen_input_encoders(f: &mut impl Write, type_def: &TypeDef) -> Result {
 
     writeln!(f, "const extern = {{")?;
 
-    for path in input_tys.objects {
+    for path in input_tys.paths {
         let ident = to_camel_case(path, ':');
         writeln!(f, "{ident}(d: use.BufWriter, z: {ident}) {{")?;
         match &type_def.ctx.costom_types[path] {
@@ -71,12 +36,27 @@ fn gen_input_encoders(f: &mut impl Write, type_def: &TypeDef) -> Result {
                 }
                 writeln!(f, "}}")?;
             }
-            CustomTypeKind::Enum(_data) => {}
-            CustomTypeKind::Tuple(_data) => {}
-            CustomTypeKind::Struct(data) => {
-                for StructField { name, ty, .. } in &data.fields {
-                    writeln!(f, "{}(z.{name});", field_ty(ty))?;
+            CustomTypeKind::Enum(data) => {
+                writeln!(f, "switch (z.type) {{")?;
+                for (i, EnumField { name, kind, .. }) in data.fields.iter().enumerate() {
+                    writeln!(f, "case {name:?}: d.len_u15({i});")?;
+                    match kind {
+                        EnumKind::Struct(fields) => write_encoder_struct(f, fields)?,
+                        EnumKind::Tuple(fields) => {
+                            for (i, TupleField { ty, .. }) in fields.iter().enumerate() {
+                                writeln!(f, "{}(z[{i}]);", field_ty(ty))?;
+                            }
+                        }
+                        EnumKind::Unit => {}
+                    }
+                    writeln!(f, "break;")?;
                 }
+                writeln!(f, "}}")?;
+            }
+            CustomTypeKind::Struct(data) => write_encoder_struct(f, &data.fields)?,
+            CustomTypeKind::Tuple(data) => {
+                let tys = data.fields.iter().map(|f| field_ty(&f.ty));
+                writeln!(f, "return d.tuple({})(z);", join(tys, ", "))?;
             }
         }
         writeln!(f, "}},")?;
@@ -86,17 +66,21 @@ fn gen_input_encoders(f: &mut impl Write, type_def: &TypeDef) -> Result {
     Ok(())
 }
 
+fn write_encoder_struct(f: &mut impl Write, fields: &Vec<StructField>) -> Result {
+    fields.iter().try_for_each(|StructField { name, ty, .. }| writeln!(f, "{}(z.{name});", field_ty(ty)))
+}
+
 pub fn generate(f: &mut impl Write, type_def: &TypeDef) -> Result {
     gen_input_encoders(f, type_def)?;
 
-    let mut output_tys = Interface::default();
+    let mut output_tys = InterfacePath::default();
     output_tys.add_tys(type_def.funcs.iter().map(|func| &func.retn), &type_def.ctx);
 
     let mut unions = vec![];
 
     writeln!(f, "const struct = {{")?;
 
-    for path in output_tys.objects {
+    for path in output_tys.paths {
         let ident = to_camel_case(path, ':');
         writeln!(f, "{ident}(d: use.Decoder) {{")?;
 
@@ -105,21 +89,23 @@ pub fn generate(f: &mut impl Write, type_def: &TypeDef) -> Result {
                 unions.push(path);
 
                 let items = fmt!(|f| {
-                    for (i, field) in data.fields.iter().enumerate() {
-                        writeln!(f, "case {i}: return {ident}.{};", field.name)?;
-                    }
-                    Ok(())
+                    data.fields
+                        .iter()
+                        .enumerate()
+                        .try_for_each(|(i, UnitField { name, .. })| {
+                            writeln!(f, "case {i}: return {ident}.{name};")
+                        })
                 });
                 write_enum(f, &ident, items)?;
             }
             CustomTypeKind::Enum(data) => {
                 writeln!(f, "let x;")?;
 
-                let items = fmt!(|f| {
-                    for (i, EnumField { name, kind, .. }) in data.fields.iter().enumerate() {
+                let items = fmt!(|f| data.fields.iter().enumerate().try_for_each(
+                    |(i, EnumField { name, kind, .. })| {
                         writeln!(f, "case {i}: x = {{\ntype: {name:?} as const,")?;
                         match kind {
-                            EnumKind::Struct(fields) => write_struct_fields(f, fields)?,
+                            EnumKind::Struct(fields) => write_decoder_struct(f, fields)?,
                             EnumKind::Tuple(fields) => {
                                 for (i, TupleField { doc, ty }) in fields.iter().enumerate() {
                                     write_doc_comments(f, doc)?;
@@ -128,15 +114,14 @@ pub fn generate(f: &mut impl Write, type_def: &TypeDef) -> Result {
                             }
                             EnumKind::Unit => {}
                         }
-                        writeln!(f, "}};\nreturn x as typeof x;")?;
-                    }
-                    Ok(())
-                });
+                        writeln!(f, "}};\nreturn x as typeof x;")
+                    },
+                ));
                 write_enum(f, &ident, items)?;
             }
             CustomTypeKind::Struct(data) => {
                 writeln!(f, "return {{")?;
-                write_struct_fields(f, &data.fields)?;
+                write_decoder_struct(f, &data.fields)?;
                 writeln!(f, "}}")?;
             }
             CustomTypeKind::Tuple(data) => {
@@ -156,12 +141,17 @@ pub fn generate(f: &mut impl Write, type_def: &TypeDef) -> Result {
     Ok(())
 }
 
-fn write_struct_fields(f: &mut impl Write, fields: &Vec<StructField>) -> Result {
-    for StructField { doc, name, ty } in fields.iter() {
+fn write_decoder_struct(f: &mut impl Write, fields: &Vec<StructField>) -> Result {
+    fields.iter().try_for_each(|StructField { doc, name, ty }| {
         write_doc_comments(f, doc)?;
-        writeln!(f, "{name}: {}(),", field_ty(ty))?;
-    }
-    Ok(())
+        writeln!(f, "{name}: {}(),", field_ty(ty))
+    })
+}
+
+fn write_tuple(f: &mut impl Write, tys: impl Iterator<Item = Ty>)  {
+    // let tys = data.fields.iter().map(|f| field_ty(&f.ty));
+    // writeln!(f, "return d.tuple({})();", join(tys, ", "))?;
+    // Ok(())
 }
 
 fn field_ty(ty: &Ty) -> String {

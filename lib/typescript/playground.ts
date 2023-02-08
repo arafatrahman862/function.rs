@@ -1,23 +1,20 @@
 // deno-lint-ignore-file
 import * as use from "./mod.ts";
-
 export interface BasicUser {
-  name: string;
-  age: number;
-  car: BasicCar;
-  foo: BasicFoo;
+  name: string,
+  age: number,
+  car: BasicCar,
+  foo: BasicFoo,
 }
-
 export enum BasicCar {
   Foo = 0,
   Bar = 1,
 }
-
 export type BasicFoo =
-  | { type: "Quz"; x: number }
-  | { type: "Bar"; 0: number; 1: number; 2: BasicBez };
+  | { type: "Quz", x: number }
+  | { type: "Bar", 0: number, 1: number, 2: BasicBez }
 
-export type BasicBez = [number, number];
+  export type BasicBez = [number, number];
 
 const extern = {
   BasicUser(d: use.BufWriter, z: BasicUser) {
@@ -28,18 +25,26 @@ const extern = {
   },
   BasicCar(d: use.BufWriter, z: BasicCar) {
     switch (z) {
-      case BasicCar.Foo:
-        return d.len_u15(0);
-      case BasicCar.Bar:
-        return d.len_u15(1);
+      case BasicCar.Foo: return d.len_u15(0);
+      case BasicCar.Bar: return d.len_u15(1);
     }
   },
   BasicFoo(d: use.BufWriter, z: BasicFoo) {
+    switch (z.type) {
+      case "Quz": d.len_u15(0);
+        d.u8(z.x);
+        break;
+      case "Bar": d.len_u15(1);
+        d.u8(z[0]);
+        d.u16(z[1]);
+        this.BasicBez.bind(this, d)(z[2]);
+        break;
+    }
   },
   BasicBez(d: use.BufWriter, z: BasicBez) {
+    return d.tuple(d.u8, d.u16)(z);
   },
-};
-
+}
 const struct = {
   BasicUser(d: use.Decoder) {
     return {
@@ -47,49 +52,38 @@ const struct = {
       age: d.u8(),
       car: this.BasicCar.bind(this, d)(),
       foo: this.BasicFoo.bind(this, d)(),
-    };
+    }
   },
   BasicCar(d: use.Decoder) {
     const num = d.len_u15();
     switch (num) {
-      case 0:
-        return BasicCar.Foo;
-      case 1:
-        return BasicCar.Bar;
+      case 0: return BasicCar.Foo;
+      case 1: return BasicCar.Bar;
 
-      default:
-        throw new Error("Unknown discriminant of `BasicCar`: " + num);
+      default: throw new Error('Unknown discriminant of `BasicCar`: ' + num)
     }
   },
   BasicFoo(d: use.Decoder) {
     let x;
     const num = d.len_u15();
     switch (num) {
-      case 0:
-        x = {
-          type: "Quz" as const,
-          x: d.u8(),
-        };
+      case 0: x = {
+        type: "Quz" as const,
+        x: d.u8(),
+      };
         return x as typeof x;
-      case 1:
-        x = {
-          type: "Bar" as const,
-          0: d.u8(),
-          1: d.u16(),
-          2: this.BasicBez.bind(this, d)(),
-        };
-        return x as typeof x;
-      case 6:
-        x = {
-          type: "Ba" as const,
-        };
+      case 1: x = {
+        type: "Bar" as const,
+        0: d.u8(),
+        1: d.u16(),
+        2: this.BasicBez.bind(this, d)(),
+      };
         return x as typeof x;
 
-      default:
-        throw new Error("Unknown discriminant of `BasicFoo`: " + num);
+      default: throw new Error('Unknown discriminant of `BasicFoo`: ' + num)
     }
   },
   BasicBez(d: use.Decoder) {
     return d.tuple(d.u8, d.u16)();
   },
-};
+}
