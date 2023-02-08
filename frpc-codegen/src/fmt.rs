@@ -1,30 +1,35 @@
-use super::fmt;
+use core::fmt;
 
-pub struct Formatter<FmtFn> {
-    func: FmtFn,
+#[repr(transparent)]
+pub struct Formatter<Fmt> {
+    func: Fmt,
 }
 
-impl<FmtFn> Formatter<FmtFn>
+impl<Fmt> Formatter<Fmt>
 where
-    FmtFn: Fn(&mut std::fmt::Formatter) -> std::fmt::Result,
+    Fmt: Fn(&mut fmt::Formatter) -> fmt::Result,
 {
     #[inline]
-    pub fn new(func: FmtFn) -> Self {
+    pub fn new(func: Fmt) -> Self {
         Self { func }
     }
 }
 
-impl<FmtFn> std::fmt::Debug for Formatter<FmtFn>
+impl<Fmt> fmt::Debug for Formatter<Fmt>
 where
-    FmtFn: Fn(&mut std::fmt::Formatter) -> std::fmt::Result,
+    Fmt: Fn(&mut fmt::Formatter) -> fmt::Result,
 {
     #[inline]
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         (self.func)(f)
     }
 }
 
-
-pub fn ident(name: &String) -> fmt!(type '_) {
-    fmt!(move |f| { f.write_fmt(format_args!("{}", &name)) })
+impl<Fmt> fmt::Display for Formatter<Fmt>
+where
+    Fmt: Fn(&mut fmt::Formatter) -> fmt::Result,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        (self.func)(f)
+    }
 }
