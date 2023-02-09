@@ -50,9 +50,7 @@ async fn user(name: String, age: u8) -> String {
 fn test_name() {
     // let typedef = procedure::;
     let typedef = procedure::type_def();
-    let mut c = String::new();
-    frpc_codegen::javascript::code::generate(&mut c, &typedef).unwrap();
-    println!("{}", c);
+    println!("{}", frpc_codegen::javascript::code::generate(&typedef));
 
     // println!("{typedef:#?}");
     // utils::execute_fut(async {
