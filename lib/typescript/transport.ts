@@ -1,19 +1,3 @@
-export interface ReadWriterSync extends ReadSync, WriteSync { }
-
-export interface ReadSync {
-    read(bytes: Uint8Array): number;
-    /** Must not call this function more then once */
-    close(): void;
-}
-
-export interface WriteSync {
-    write(bytes: Uint8Array): number
-    /** Must not call this function more then once */
-    flush(): void
-}
-
-//----------------------------------------------------------
-
 export interface ReadWriter extends Read, Write { }
 
 export interface Read {
@@ -37,9 +21,3 @@ export interface Transport {
     /** Must not call this function more then once */
     close(reason?: string): Promise<void>;
 }
-
-export type Result<T, E> =
-    | { type: "Ok", value: T }
-    | { type: "Err", value: E };
-
-export type Option<T> = T | null;

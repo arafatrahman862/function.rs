@@ -1,4 +1,4 @@
-import { WriteSync, ReadSync } from "./transport.ts";
+import { WriteSync, ReadSync } from "./mod.ts";
 
 export function assertEq<T>(actual: T, expected: T) {
     if (!Object.is(actual, expected)) {

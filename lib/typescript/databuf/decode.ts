@@ -1,5 +1,5 @@
 // deno-lint-ignore-file no-explicit-any
-import { Result } from "./transport.ts";
+import { Result } from "./mod.ts";
 import { bytes_slice, char_from } from "./utils.ts";
 
 export type Decode<T> = (this: Decoder) => T;

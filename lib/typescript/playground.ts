@@ -1,4 +1,4 @@
-import * as use from "./mod.ts";
+import * as use from "./databuf/mod.ts";
 
 const struct = {
   BasicUser(d: use.Decoder) {

@@ -1,5 +1,5 @@
 // deno-lint-ignore-file no-explicit-any
-import { Result, WriteSync } from "./transport.ts";
+import { Result, WriteSync } from "./mod.ts";
 import { bytes_slice, write_all, assertEq } from "./utils.ts";
 
 type Encode<T> = (this: BufWriter, value: T) => void;
