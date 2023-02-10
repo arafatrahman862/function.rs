@@ -5,7 +5,7 @@ use frpc::{procedure, Message};
 use frpc_codegen::code_formatter;
 
 procedure! {
-    user = 1
+    user = 6
     get_user = 2
 }
 

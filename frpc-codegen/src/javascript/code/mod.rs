@@ -1,6 +1,6 @@
 mod interface_path;
 
-use super::interface::gen_type;
+use super::interface::{gen_type, ty_str};
 use crate::{code_formatter::write_doc_comments, fmt, utils::to_camel_case};
 use frpc_message::*;
 use interface_path::InterfacePath;
@@ -45,8 +45,34 @@ pub fn generate<'def>(type_def: &'def TypeDef) -> fmt!(type 'def) {
             }
         }
 
-        write_encoders(f, input_interface.paths, type_def)
+        write_encoders(f, input_interface.paths, type_def)?;
+        write_rpc(f, type_def)
     })
+}
+
+fn write_rpc(f: &mut impl Write, type_def: &TypeDef) -> Result {
+    writeln!(f, "export default class mod {{")?;
+    writeln!(f, "constructor(private rpc: RPC) {{}}")?;
+    writeln!(f, "static close(this: mod) {{ this.rpc.close() }}")?;
+
+    type_def.funcs.iter().try_for_each(
+        |Func {
+             index,
+             path,
+             args,
+             retn,
+         }| {
+            let ident = path.replace("::", "_");
+            write!(f, "{ident}(")?;
+            for (arg_no, ty) in args.iter().enumerate() {
+                write!(f, "_{arg_no}: {}, ", ty_str(ty))?;
+            }
+            writeln!(f, "): {} {{", ty_str(retn))?;
+            writeln!(f, "{index};")?;
+            writeln!(f, "}}")
+        },
+    )?;
+    writeln!(f, "}}")
 }
 
 fn write_decoders<'a, 'path>(

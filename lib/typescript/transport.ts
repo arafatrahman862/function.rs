@@ -1,23 +1,25 @@
-export interface ReadWriter extends Read, Write { }
+// export interface ReadWriter extends Read, Write { }
 
-export interface Read {
-    read(bytes: Uint8Array): Promise<number>;
-    /** Must not call this function more then once */
-    close(): Promise<void>;
-}
+import { Write } from "./databuf/mod.ts"
 
-export interface Write {
-    write(bytes: Uint8Array): Promise<number>
-    write_all(bytes: Uint8Array): Promise<void>
+// export interface Read {
+//     read(bytes: Uint8Array): Promise<number>;
+// }
 
-    /** Must not call this function more then once */
-    flush(): Promise<void>
-}
+// export interface Write {
+//     write_all(bytes: Uint8Array): Promise<void>
+//     /** Must not call this function more then once */
+//     flush(): Promise<void>
+// }
 
-export interface Transport {
-    open_uni_stream(): Write;
-    open_bi_stream(): ReadWriter;
+// export interface Transport {
+//     open_uni_stream(): Write;
+//     open_bi_stream(): ReadWriter;
+//     /** Must not call this function more then once */
+//     close(reason?: string): Promise<void>;
+// }
 
-    /** Must not call this function more then once */
-    close(reason?: string): Promise<void>;
+export interface RPC {
+    unary_call(): Write & { output(): Promise<ArrayBuffer> }
+    close(): void
 }

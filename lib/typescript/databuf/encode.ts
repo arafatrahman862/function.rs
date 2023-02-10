@@ -1,22 +1,22 @@
 // deno-lint-ignore-file no-explicit-any
-import { Result, WriteSync } from "./mod.ts";
-import { bytes_slice, write_all, assertEq } from "./utils.ts";
+import { Result, Write } from "./mod.ts";
+import { bytes_slice, assertEq } from "./utils.ts";
 
 type Encode<T> = (this: BufWriter, value: T) => void;
 
-export class BufWriter implements WriteSync {
-    #inner: WriteSync;
+export class BufWriter implements Write {
+    #inner: Write;
 
     #written = 0;
     #view: DataView;
 
-    constructor(writer: WriteSync, size = 4096) {
+    constructor(writer: Write, size = 4096) {
         this.#inner = writer;
         this.#view = new DataView(new ArrayBuffer(Math.max(size, 512)));
     }
 
     #write_buf() {
-        write_all(this.#inner, new Uint8Array(this.#view.buffer, 0, this.#written));
+        this.#inner.write(new Uint8Array(this.#view.buffer, 0, this.#written));
         this.#written = 0;
     }
 
@@ -43,7 +43,7 @@ export class BufWriter implements WriteSync {
             this.#write_buf();
         }
         if (bytes.length >= this.#view.byteLength) {
-            return write_all(this.#inner, bytes);
+            return this.#inner.write(bytes);
         }
         new Uint8Array(this.#view.buffer).set(bytes, this.#written);
         this.#written += bytes.length;

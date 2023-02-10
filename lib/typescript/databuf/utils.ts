@@ -1,4 +1,4 @@
-import { WriteSync, ReadSync } from "./mod.ts";
+// import { Write } from "./mod.ts";
 
 export function assertEq<T>(actual: T, expected: T) {
     if (!Object.is(actual, expected)) {
@@ -11,26 +11,26 @@ export function bytes_slice(buf: any, start = 0, end = buf.byteLength) {
     return new Uint8Array(buf.buffer, buf.byteOffset + start, end - start)
 }
 
-export function write_all(self: WriteSync, buf: Uint8Array) {
-    while (buf.byteLength > 0) {
-        const amt = self.write(buf);
-        if (amt == 0) {
-            throw new Error("failed to write whole buffer")
-        }
-        buf = bytes_slice(buf, amt)
-    }
-}
+// export function write_all(self: Write, buf: Uint8Array) {
+//     while (buf.byteLength > 0) {
+//         const amt = self.write(buf);
+//         if (amt == 0) {
+//             throw new Error("failed to write whole buffer")
+//         }
+//         buf = bytes_slice(buf, amt)
+//     }
+// }
 
-export function read_exect(self: ReadSync, buf: Uint8Array) {
-    while (buf.length > 0) {
-        const amt = self.read(buf);
-        if (amt == 0) {
-            if (buf.length > 0) throw new Error("failed to fill whole buffer");
-            return
-        }
-        buf = bytes_slice(buf, amt);
-    }
-}
+// export function read_exect(self: ReadSync, buf: Uint8Array) {
+//     while (buf.length > 0) {
+//         const amt = self.read(buf);
+//         if (amt == 0) {
+//             if (buf.length > 0) throw new Error("failed to fill whole buffer");
+//             return
+//         }
+//         buf = bytes_slice(buf, amt);
+//     }
+// }
 
 export function char_from(bytes: Uint8Array) {
     return String.fromCharCode(

@@ -1,3 +1,4 @@
+import { RPC } from "./transport.ts";
 import * as use from "./databuf/mod.ts";
 
 const struct = {
@@ -51,7 +52,7 @@ export enum BasicCar {
 export type BasicFoo = ReturnType<typeof struct.BasicFoo>;
 export type BasicUser = ReturnType<typeof struct.BasicUser>;
 
-export const extern = {
+const extern = {
   BasicUser(d: use.BufWriter, z: BasicUser) {
     d.str(z.name);
     d.u8(z.age);
@@ -79,4 +80,26 @@ export const extern = {
   BasicBez(d: use.BufWriter, z: BasicBez) {
     return d.tuple(d.u8, d.u16,)(z);
   },
+}
+
+export default class mod {
+  constructor(private rpc: RPC) { }
+  static close(this: mod) { this.rpc.close() }
+  async user(_0: string, _1: number,) {
+    const fn = this.rpc.unary_call();
+    const d = new use.BufWriter(fn);
+    d.u16(6);
+    d.tuple(d.str, d.u16)([_0, _1]);
+    d.flush();
+
+    return new use.Decoder(new Uint8Array(await fn.output())).str()
+  }
+  get_user(_0: BasicUser,): BasicUser {
+    const fn = this.rpc.unary_call();
+    const d = new use.BufWriter(fn);
+    d.u16(2);
+    extern.BasicUser(d, _0);
+    // d.tuple(extern.BasicUser)([_0]);
+    throw "todo"
+  }
 }

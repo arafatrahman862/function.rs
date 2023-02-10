@@ -76,7 +76,6 @@ where
     I: Iterator<Item = (&'a String, K, V)>,
 {
     writeln!(f, "{{")?;
-
     for (doc, name, item) in fields {
         write_doc_comments(f, doc)?;
         writeln!(f, "{name}{sep} {item},")?;
@@ -84,7 +83,7 @@ where
     writeln!(f, "}}")
 }
 
-fn ty_str(ty: &Ty) -> String {
+pub fn ty_str(ty: &Ty) -> String {
     match ty {
         Ty::u8 | Ty::u16 | Ty::u32 | Ty::i8 | Ty::i16 | Ty::i32 | Ty::f32 | Ty::f64 => {
             "number".into()

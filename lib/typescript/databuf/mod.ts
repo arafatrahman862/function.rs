@@ -7,16 +7,8 @@ export type Result<T, E> =
 
 export type Option<T> = T | null;
 
-export interface ReadWriterSync extends ReadSync, WriteSync { }
-
-export interface ReadSync {
-    read(bytes: Uint8Array): number;
-    /** Must not call this function more then once */
-    close(): void;
-}
-
-export interface WriteSync {
-    write(bytes: Uint8Array): number
+export interface Write {
+    write(bytes: Uint8Array): void
     /** Must not call this function more then once */
     flush(): void
 }

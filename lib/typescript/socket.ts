@@ -1,12 +1,18 @@
-// deno-lint-ignore-file no-explicit-any
 import { deferred, Deferred } from "https://deno.land/std@0.158.0/async/mod.ts";
-import { ReadWriter, Transport, Write } from "./transport.ts";
+import { RPC } from "./transport.ts";
+
+export interface Option {
+    protocols?: string | string[],
+    binaryType: "arraybuffer" | "blob"
+}
 
 export class Socket {
+    // deno-lint-ignore no-explicit-any
     #reader: ReadableStreamDefaultReader<MessageEvent<any>>;
 
-    static async open(url: string | URL, opt: { protocols?: string | string[] } = {}) {
+    static async connect(url: string | URL, opt: Option = { binaryType: "blob" }) {
         const ws = new WebSocket(url, opt.protocols);
+        ws.binaryType = opt.binaryType;
         const closed = deferred<CloseEvent>()
 
         const readableStream: ReadableStream = await new Promise((resolve, reject) => {
@@ -27,7 +33,7 @@ export class Socket {
         return new Socket(ws, closed, readableStream);
     }
 
-    constructor(protected ws: WebSocket, public readonly closed: Deferred<CloseEvent>, stream: ReadableStream) {
+    constructor(private ws: WebSocket, public readonly closed: Deferred<CloseEvent>, stream: ReadableStream) {
         this.#reader = stream.getReader();
         closed.then(() => {
             if (stream.locked) this.#reader.releaseLock()
@@ -59,25 +65,33 @@ export class Socket {
     }
 }
 
-export class WebSocketTransport implements Transport {
-    q = [];
-
+export class WebSocketTransport implements RPC {
     static async connect(url: string) {
-        const socket = await Socket.open(url);
+        const socket = await Socket.connect(url, { binaryType: "arraybuffer" });
         return new WebSocketTransport(socket)
     }
-
     constructor(private socket: Socket) { }
 
-    open_uni_stream(): Write {
-        throw new Error("Method not implemented.");
+    unary_call() {
+        return {
+            flush() { /* noop */ },
+            write: (bytes: Uint8Array) => this.socket.send(bytes),
+            output: async () => {
+                try {
+                    const { done, value } = await this.socket.read();
+                    if (done || !(value.data instanceof ArrayBuffer)) {
+                        throw new Error("Invalid data type: " + typeof value?.data);
+                    }
+                    return value.data;
+                } catch (error) {
+                    this.socket.close()
+                    throw error
+                }
+            }
+        }
     }
 
-    open_bi_stream(): ReadWriter {
-        throw new Error("Method not implemented.");
-    }
-
-    close(reason?: string | undefined): Promise<void> {
-        throw new Error("Method not implemented.");
+    close() {
+        this.socket.close()
     }
 }

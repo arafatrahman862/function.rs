@@ -1,12 +1,11 @@
 import { rand } from "./fuzz.ts";
-import { BufWriter, Decoder, Option, Result, WriteSync } from "./mod.ts";
+import { BufWriter, Decoder, Option, Result, Write } from "./mod.ts";
 import { assertEquals } from "https://deno.land/std@0.175.0/testing/asserts.ts";
 
-class DefaultWriter implements WriteSync {
+class DefaultWriter implements Write {
     bytes: number[] = []
-    write(bytes: Uint8Array): number {
+    write(bytes: Uint8Array) {
         this.bytes = this.bytes.concat(...bytes)
-        return bytes.byteLength
     }
     flush() { }
 }
