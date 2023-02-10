@@ -1,5 +1,5 @@
-use std::future::Future;
 use frpc_message::{Context, Message, Ty};
+use std::future::Future;
 
 pub fn async_fn_ty<Func, Args, Ret>(_: &Func, ctx: &mut Context) -> (Vec<Ty>, Ty)
 where

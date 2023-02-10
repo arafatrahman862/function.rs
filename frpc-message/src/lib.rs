@@ -29,7 +29,6 @@ pub struct TypeDef {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Ty {
     // Never,
-
     u8,
     u16,
     u32,

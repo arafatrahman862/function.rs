@@ -6,19 +6,26 @@ use syn::*;
 
 #[proc_macro_derive(Message)]
 pub fn message(input: TokenStream) -> TokenStream {
-    let DeriveInput { attrs, ident, generics, data, .. } = parse_macro_input!(input);
+    let DeriveInput {
+        attrs,
+        ident,
+        generics,
+        data,
+        ..
+    } = parse_macro_input!(input);
 
     let doc = get_comments_from(&attrs);
     let name = format!("{{}}::{ident}");
 
-    if let Some(param) =  generics.type_params().next() {
+    if let Some(param) = generics.type_params().next() {
         return syn::Error::new(
             param.span(),
             "Generic type support isn't complete yet, But it's on our roadmap.",
         )
-        .to_compile_error().into();
+        .to_compile_error()
+        .into();
     }
-    
+
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let (kind, body) = match data {
@@ -28,10 +35,14 @@ pub fn message(input: TokenStream) -> TokenStream {
             Fields::Unit => panic!("`Message` struct needs at most one field"),
         },
         Data::Enum(mut data) => {
-            let is_unit_enum_variant = data.variants.iter()
+            let is_unit_enum_variant = data
+                .variants
+                .iter()
                 .all(|v| v.discriminant.is_some() || matches!(v.fields, Fields::Unit));
 
-            let variants = data.variants.iter_mut()
+            let variants = data
+                .variants
+                .iter_mut()
                 .map(|v| (get_comments_from(&v.attrs), v.ident.to_string(), v));
 
             if is_unit_enum_variant {

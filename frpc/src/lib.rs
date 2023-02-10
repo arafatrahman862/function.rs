@@ -1,9 +1,9 @@
-pub mod util;
 pub mod fn_once;
 pub mod output;
+pub mod util;
 
-pub use frpc_message;
 pub use frpc_macros::Message;
+pub use frpc_message;
 
 #[macro_export]
 macro_rules! procedure {

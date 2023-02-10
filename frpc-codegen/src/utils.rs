@@ -1,3 +1,17 @@
+use std::fmt;
+
+// Todo: Use `&Vec<String>` instade of `&str`
+pub fn write_doc_comments(f: &mut impl fmt::Write, lines: &str) -> fmt::Result {
+    if lines.is_empty() {
+        return Ok(());
+    }
+    writeln!(f, "/**")?;
+    for line in lines.trim().lines() {
+        writeln!(f, " * {line}")?;
+    }
+    writeln!(f, " */")
+}
+
 pub fn join(strings: impl Iterator<Item = String>, separator: &str) -> String {
     let mut string = String::new();
     let mut first = true;

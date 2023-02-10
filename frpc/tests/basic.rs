@@ -2,7 +2,6 @@
 mod utils;
 use databuf::{Decoder, Encoder};
 use frpc::{procedure, Message};
-use frpc_codegen::code_formatter;
 
 procedure! {
     user = 6

@@ -1,12 +1,15 @@
 mod interface_path;
 
-use super::interface::{gen_type, ty_str};
-use crate::{code_formatter::write_doc_comments, fmt, utils::to_camel_case};
+use super::interface::{fmt_js_ty, gen_type};
+use crate::{
+    fmt,
+    utils::{to_camel_case, write_doc_comments},
+};
 use frpc_message::*;
 use interface_path::InterfacePath;
 use std::{
     collections::BTreeSet,
-    fmt::{Result, Write},
+    fmt::{Debug, Result, Write},
 };
 
 pub fn generate<'def>(type_def: &'def TypeDef) -> fmt!(type 'def) {
@@ -65,10 +68,32 @@ fn write_rpc(f: &mut impl Write, type_def: &TypeDef) -> Result {
             let ident = path.replace("::", "_");
             write!(f, "{ident}(")?;
             for (arg_no, ty) in args.iter().enumerate() {
-                write!(f, "_{arg_no}: {}, ", ty_str(ty))?;
+                write!(f, "_{arg_no}: {}, ", fmt_js_ty(ty))?;
             }
-            writeln!(f, "): {} {{", ty_str(retn))?;
-            writeln!(f, "{index};")?;
+            writeln!(f, "): {} {{", fmt_js_ty(retn))?;
+
+            writeln!(f, "const fn = this.rpc.unary_call()")?;
+            writeln!(f, "const d = new use.BufWriter(fn);")?;
+            writeln!(f, "d.u16({index})")?;
+
+            write!(f, "d.tuple(")?;
+            args.iter().try_for_each(|ty| match ty {
+                Ty::CustomType(path) => {
+                    let ident = to_camel_case(path, ':');
+                    write!(f, "extern.{ident}.bind(extern, d),")
+                }
+                ty => write!(f, "{},", fmt_ty(ty))
+            })?;
+            write!(f, ")")?;
+
+            // writeln!(f, "{}", fmt_tuple(args))?;
+
+            // d.tuple(d.str, d.u16)([_0, _1]);
+            // d.flush();
+
+            // return new use.Decoder(new Uint8Array(await fn.output())).str()
+
+            // writeln!(f, "{index};")?;
             writeln!(f, "}}")
         },
     )?;
@@ -267,9 +292,9 @@ fn write_enum(f: &mut impl Write, ident: &String, items: fmt!(type)) -> Result {
 
 #[test]
 #[rustfmt::skip]
-fn test_fmt_ty() {
+fn test_fmt_tuple() {
     use Ty::*;
-    let ty = Tuple(vec![
+    let tys = vec![
         Option(Box::new(bool)),
         Result(Box::new((CustomType("::path::ident".into()), String))),
         Map {
@@ -279,10 +304,10 @@ fn test_fmt_ty() {
                 Set { variant: SetVariant::BTreeSet, ty: Box::new(u8), },
             )),
         },
-    ]);
+    ];
     
     assert_eq!(
-        format!("{}", fmt_ty(&ty)),
+        format!("{}", fmt_ty(&Tuple(tys))),
         "d.tuple(d.option(d.bool),d.result(this.PathIdent.bind(this, d), d.str),d.map(d.str, d.set(d.u8)),)"
     );
 }
