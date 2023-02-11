@@ -1,5 +1,5 @@
 import { deferred, Deferred } from "https://deno.land/std@0.158.0/async/mod.ts";
-import { RPC } from "./transport.ts";
+import { RPC } from "./mod.ts";
 
 export interface Option {
     protocols?: string | string[],

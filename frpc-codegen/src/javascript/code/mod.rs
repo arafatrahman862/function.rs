@@ -26,25 +26,12 @@ pub fn generate<'def>(type_def: &'def TypeDef) -> fmt!(type 'def) {
             .chain(input_interface.paths.iter())
             .collect();
 
-        // ------------------------------------------------------------------------------------------
-
-        let output_unit_interface_paths = write_decoders(f, &output_interface.paths, type_def)?;
-
         for path in interface_paths {
             let ident = to_camel_case(path, ':');
-
-            if output_unit_interface_paths.contains(&path) {
-                gen_type(f, ident, &type_def.ctx.costom_types[*path])?;
-            } else if output_interface.paths.contains(path) {
-                writeln!(
-                    f,
-                    "export type {ident} = ReturnType<typeof struct.{ident}>;"
-                )?;
-            } else if input_interface.paths.contains(path) {
-                gen_type(f, ident, &type_def.ctx.costom_types[*path])?;
-            }
+            gen_type(f, ident, &type_def.ctx.costom_types[*path])?;
         }
 
+        write_decoders(f, output_interface.paths, type_def)?;
         write_encoders(f, input_interface.paths, type_def)?;
         write_rpc(f, type_def)
     })
@@ -52,7 +39,7 @@ pub fn generate<'def>(type_def: &'def TypeDef) -> fmt!(type 'def) {
 
 fn write_rpc(f: &mut impl Write, type_def: &TypeDef) -> Result {
     writeln!(f, "export default class mod {{")?;
-    writeln!(f, "constructor(private rpc: RPC) {{}}")?;
+    writeln!(f, "constructor(private rpc: use.RPC) {{}}")?;
     writeln!(f, "static close(this: mod) {{ this.rpc.close() }}")?;
 
     type_def.funcs.iter().try_for_each(
@@ -64,17 +51,11 @@ fn write_rpc(f: &mut impl Write, type_def: &TypeDef) -> Result {
          }| {
             let ident = path.replace("::", "_");
 
-            fn fmt_arg(ty: &Ty) -> String {
-                match ty {
-                    Ty::CustomType(path) => format!("{}", to_camel_case(path, ':')),
-                    ty => fmt_js_ty(ty),
-                }
-            }
             write!(f, "{ident}(")?;
             for (num, ty) in args.iter().enumerate() {
-                write!(f, "_{num}: {}, ", fmt_arg(ty))?;
+                write!(f, "_{num}: {}, ", fmt_js_ty(ty))?;
             }
-            writeln!(f, "): {} {{", fmt_arg(retn))?;
+            writeln!(f, ") {{")?;
 
             writeln!(f, "const fn = this.rpc.unary_call()")?;
             writeln!(f, "const d = new use.BufWriter(fn);")?;
@@ -107,22 +88,18 @@ fn write_rpc(f: &mut impl Write, type_def: &TypeDef) -> Result {
     writeln!(f, "}}")
 }
 
-fn write_decoders<'a, 'path>(
+fn write_decoders<'a>(
     f: &mut impl Write,
-    output_interface_path: &'path Vec<&'a String>,
+    output_interface_path: Vec<&'a String>,
     type_def: &'a TypeDef,
-) -> std::result::Result<Vec<&'path &'a String>, std::fmt::Error> {
-    let mut output_unit_interface_paths = vec![];
-
+) -> Result {
     writeln!(f, "let struct = {{")?;
     for path in output_interface_path {
         let ident = to_camel_case(path, ':');
-        writeln!(f, "{ident}(d: use.Decoder) {{")?;
+        writeln!(f, "{ident}(d: use.Decoder): {ident} {{")?;
 
-        match &type_def.ctx.costom_types[*path] {
+        match &type_def.ctx.costom_types[path] {
             CustomTypeKind::Unit(data) => {
-                output_unit_interface_paths.push(path);
-
                 let items = fmt!(|f| {
                     data.fields
                         .iter()
@@ -134,11 +111,9 @@ fn write_decoders<'a, 'path>(
                 write_enum(f, &ident, items)?;
             }
             CustomTypeKind::Enum(data) => {
-                writeln!(f, "let x;")?;
-
                 let items = fmt!(|f| data.fields.iter().enumerate().try_for_each(
                     |(i, EnumField { name, kind, .. })| {
-                        writeln!(f, "case {i}: x = {{\ntype: {name:?} as const,")?;
+                        writeln!(f, "case {i}: return {{\ntype: {name:?},")?;
                         match kind {
                             EnumKind::Struct(fields) => write_decoder_struct(f, fields)?,
                             EnumKind::Tuple(fields) => {
@@ -149,7 +124,7 @@ fn write_decoders<'a, 'path>(
                             }
                             EnumKind::Unit => {}
                         }
-                        writeln!(f, "}};\nreturn x as typeof x;")
+                        writeln!(f, "}};")
                     },
                 ));
                 write_enum(f, &ident, items)?;
@@ -165,8 +140,7 @@ fn write_decoders<'a, 'path>(
         }
         writeln!(f, "}},")?;
     }
-    writeln!(f, "}}")?;
-    Ok(output_unit_interface_paths)
+    writeln!(f, "}}")
 }
 
 fn write_decoder_struct(f: &mut impl Write, fields: &Vec<StructField>) -> Result {
@@ -288,7 +262,7 @@ fn fmt_ty<'a>(ty: &'a Ty, scope: &'static str) -> fmt!(type 'a) {
                 Ty::f64 => write!(f, "d.f64_arr({len})"),
                 ref ty => write!(f, "d.arr({}, {len})", fmt_ty(ty, scope)),
             },
-            Ty::Set { ty, .. } => write!(f, "d.set({})", fmt_ty(ty, scope)),
+            Ty::Set { ty, .. } => write!(f, "d.vec({})", fmt_ty(ty, scope)),
             Ty::Map { ty, .. } => write!(
                 f,
                 "d.map({}, {})",
@@ -301,14 +275,7 @@ fn fmt_ty<'a>(ty: &'a Ty, scope: &'static str) -> fmt!(type 'a) {
 }
 
 fn write_enum(f: &mut impl Write, ident: &String, items: fmt!(type)) -> Result {
-    writeln!(f, "const num = d.len_u15();")?;
-    writeln!(f, "switch (num) {{")?;
-    writeln!(f, "{items}")?;
-    writeln!(
-        f,
-        "default: throw new Error('Unknown discriminant of `{ident}`: ' + num)"
-    )?;
-    writeln!(f, "}}")
+    writeln!(f, "const num = d.len_u15();\nswitch (num) {{\n{items}default: throw use.enumErr({ident:?}, num);\n}}")
 }
 
 #[test]
@@ -328,7 +295,7 @@ fn test_fmt_tuple() {
     ];
     
     assert_eq!(
-        format!("{}", fmt_ty(&Tuple(tys), "")),
-        "d.tuple(d.option(d.bool),d.result(PathIdent.bind(0, d), d.str),d.map(d.str, d.set(d.u8)),)"
+        format!("{}", fmt_ty(&Tuple(tys), "This")),
+        "d.tuple(d.option(d.bool),d.result(This.PathIdent.bind(0, d), d.str),d.map(d.str, d.vec(d.u8)),)"
     );
 }

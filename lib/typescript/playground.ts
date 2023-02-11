@@ -1,8 +1,22 @@
-import { RPC } from "./transport.ts";
-import * as use from "./databuf/mod.ts";
+import * as use from "./mod.ts";
 
+export type BasicBez = [number, number];
+export enum BasicCar {
+  Foo = 0,
+  Bar = 1,
+}
+export type BasicFoo =
+  | { type: "Quz", x: number }
+  | { type: "Bar", 0: number, 1: BasicBez }
+  | { type: "Many", 0: [Array<BasicFoo>, Array<BasicFoo>] }
+export interface BasicUser {
+  name: string,
+  age: number,
+  car: BasicCar,
+  foo: BasicFoo,
+}
 let struct = {
-  BasicUser(d: use.Decoder) {
+  BasicUser(d: use.Decoder): BasicUser {
     return {
       name: d.str(),
       age: d.u8(),
@@ -10,51 +24,37 @@ let struct = {
       foo: struct.BasicFoo.bind(0, d)(),
     }
   },
-  BasicCar(d: use.Decoder) {
+  BasicCar(d: use.Decoder): BasicCar {
     const num = d.len_u15();
     switch (num) {
       case 0: return BasicCar.Foo;
       case 1: return BasicCar.Bar;
-
-      default: throw new Error('Unknown discriminant of `BasicCar`: ' + num)
+      default: throw use.enumErr("BasicCar", num);
     }
   },
-  BasicFoo(d: use.Decoder) {
-    let x;
+  BasicFoo(d: use.Decoder): BasicFoo {
     const num = d.len_u15();
     switch (num) {
-      case 0: x = {
-        type: "Quz" as const,
+      case 0: return {
+        type: "Quz",
         x: d.u8(),
       };
-        return x as typeof x;
-      case 1: x = {
-        type: "Bar" as const,
+      case 1: return {
+        type: "Bar",
         0: d.u8(),
         1: struct.BasicBez.bind(0, d)(),
       };
-        return x as typeof x;
-      case 2: x = {
-        type: "Many" as const,
+      case 2: return {
+        type: "Many",
         0: d.tuple(d.vec(struct.BasicFoo.bind(0, d)), d.vec(struct.BasicFoo.bind(0, d)),)(),
       };
-        return x as typeof x;
-
-      default: throw new Error('Unknown discriminant of `BasicFoo`: ' + num)
+      default: throw use.enumErr("BasicFoo", num);
     }
   },
-  BasicBez(d: use.Decoder) {
+  BasicBez(d: use.Decoder): BasicBez {
     return d.tuple(d.u8, d.u16,)();
   },
 }
-export type BasicBez = ReturnType<typeof struct.BasicBez>;
-export enum BasicCar {
-  Foo = 0,
-  Bar = 1,
-}
-export type BasicFoo = ReturnType<typeof struct.BasicFoo>;
-export type BasicUser = ReturnType<typeof struct.BasicUser>;
-
 let extern = {
   BasicUser(d: use.BufWriter, z: BasicUser) {
     d.str(z.name);
@@ -87,7 +87,7 @@ let extern = {
   },
 }
 export default class mod {
-  constructor(private rpc: RPC) { }
+  constructor(private rpc: use.RPC) { }
   static close(this: mod) { this.rpc.close() }
   user(_0: string, _1: number,) {
     const fn = this.rpc.unary_call()
@@ -99,7 +99,7 @@ export default class mod {
     return fn.output().then(buf => new use.Decoder(new Uint8Array(buf)))
       .then(d => d.str());
   }
-  demo(_0: void,): void {
+  demo(_0: void,) {
     const fn = this.rpc.unary_call()
     const d = new use.BufWriter(fn);
     d.u16(3);

@@ -42,7 +42,7 @@ pub fn gen_type(f: &mut impl Write, ident: String, kind: &CustomTypeKind) -> Res
         CustomTypeKind::Tuple(data) => {
             write_doc_comments(f, &data.doc)?;
             let fields = join(data.fields.iter().map(|f| fmt_js_ty(&f.ty)), ", ");
-            write!(f, "export type {ident} = [{fields}];")?;
+            writeln!(f, "export type {ident} = [{fields}];")?;
         }
         CustomTypeKind::Enum(data) => {
             write_doc_comments(f, &data.doc)?;
