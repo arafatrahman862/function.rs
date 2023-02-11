@@ -121,7 +121,7 @@ export class Decoder {
         }
     }
 
-    set<T>(v: Decode<T>) {
+    vec<T>(v: Decode<T>) {
         return () => {
             const len = this.len_u22();
             return this.arr(v, len)()

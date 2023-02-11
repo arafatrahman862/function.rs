@@ -1,9 +1,9 @@
 use core::fmt;
 
 #[repr(transparent)]
-pub struct Formatter<Fmt> {
-    func: Fmt,
-}
+pub struct Formatter<Fmt>(Fmt)
+where
+    Fmt: Fn(&mut fmt::Formatter) -> fmt::Result;
 
 impl<Fmt> Formatter<Fmt>
 where
@@ -11,7 +11,7 @@ where
 {
     #[inline]
     pub fn new(func: Fmt) -> Self {
-        Self { func }
+        Self(func)
     }
 }
 
@@ -21,7 +21,7 @@ where
 {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        (self.func)(f)
+        (self.0)(f)
     }
 }
 
@@ -30,6 +30,6 @@ where
     Fmt: Fn(&mut fmt::Formatter) -> fmt::Result,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        (self.func)(f)
+        (self.0)(f)
     }
 }

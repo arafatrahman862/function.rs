@@ -20,7 +20,8 @@ enum Car {
 #[derive(Message, Decoder)]
 enum Foo {
     Quz { x: u8 },
-    Bar(u8, u16, Bez),
+    Bar(u8, Bez),
+    Many((Vec<Foo>, Vec<Foo>)),
 }
 
 #[derive(Message, Decoder)]
@@ -34,7 +35,7 @@ struct User {
     foo: Foo,
 }
 
-async fn get_user(user: User) -> User {
+async fn get_user(user: (u8, User)) -> (u8, User) {
     user
 }
 
@@ -52,7 +53,10 @@ async fn user(name: String, age: u8) -> String {
 fn test_name() {
     // let typedef = procedure::;
     let typedef = procedure::type_def();
-    println!("{}", frpc_codegen::javascript::code::generate(&typedef));
+    let code = frpc_codegen::javascript::code::generate(&typedef);
+    let code = format!("{}", code);
+    println!("{code}");
+    // std::fs::write("play.ts", format!("{}", code));
 
     // println!("{typedef:#?}");
     // utils::execute_fut(async {

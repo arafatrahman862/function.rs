@@ -8,7 +8,7 @@ pub trait Message {
     fn ty(_: &mut Context) -> Ty;
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash)]
 pub struct Func {
     pub index: u16,
     pub path: String,
@@ -16,7 +16,7 @@ pub struct Func {
     pub retn: Ty,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash)]
 pub struct TypeDef {
     pub name: String,
     pub version: String,
@@ -25,8 +25,17 @@ pub struct TypeDef {
     pub funcs: Vec<Func>,
 }
 
+impl TypeDef {
+    pub fn hash(&self) -> u64 {
+        use std::hash::Hasher;
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        std::hash::Hash::hash(self, &mut hasher);
+        hasher.finish()
+    }
+}
+
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub enum Ty {
     // Never,
     u8,
@@ -82,17 +91,17 @@ impl Ty {
     pub fn is_empty_tuple(&self) -> bool {
         match self {
             Ty::Tuple(tys) => tys.is_empty(),
-            _ => false
+            _ => false,
         }
     }
 }
 
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, Clone, Hash)]
 pub struct Context {
     pub costom_types: std::collections::BTreeMap<String, CustomTypeKind>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub enum CustomTypeKind {
     Unit(CustomType<UnitField>),
     Enum(CustomType<EnumField>),
@@ -101,41 +110,41 @@ pub enum CustomTypeKind {
 }
 
 /// Any user defined type like: `struct`, `enum`
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct CustomType<Field> {
     pub doc: String,
     pub fields: Vec<Field>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct UnitField {
     pub doc: String,
     pub name: String,
     pub value: isize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct EnumField {
     pub doc: String,
     pub name: String,
     pub kind: EnumKind,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub enum EnumKind {
     Unit,
     Struct(Vec<StructField>),
     Tuple(Vec<TupleField>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct StructField {
     pub doc: String,
     pub name: String,
     pub ty: Ty,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct TupleField {
     pub doc: String,
     pub ty: Ty,
