@@ -78,6 +78,15 @@ pub enum Ty {
     CustomType(String),
 }
 
+impl Ty {
+    pub fn is_empty_tuple(&self) -> bool {
+        match self {
+            Ty::Tuple(tys) => tys.is_empty(),
+            _ => false
+        }
+    }
+}
+
 #[derive(Default, Debug, Clone)]
 pub struct Context {
     pub costom_types: std::collections::BTreeMap<String, CustomTypeKind>,

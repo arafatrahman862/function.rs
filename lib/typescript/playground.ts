@@ -112,7 +112,6 @@ export default class mod {
     extern.BasicUser(d, _0);
 
     return fn.output().then(buf => new use.Decoder(new Uint8Array(buf)))
-      // .then(d => d.str())
-      .then(d => struct.BasicUser(d))
+      .then(d => d.tuple(struct.BasicUser.bind(0, d))())
   }
 }
