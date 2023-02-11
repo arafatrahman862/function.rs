@@ -1,33 +1,28 @@
 use core::fmt;
 
-#[repr(transparent)]
-pub struct Formatter<Fmt>(Fmt)
-where
-    Fmt: Fn(&mut fmt::Formatter) -> fmt::Result;
+pub struct Fmt<F>(F);
 
-impl<Fmt> Formatter<Fmt>
+impl<F> Fmt<F>
 where
-    Fmt: Fn(&mut fmt::Formatter) -> fmt::Result,
+    F: Fn(&mut fmt::Formatter) -> fmt::Result,
 {
-    #[inline]
-    pub fn new(func: Fmt) -> Self {
+    pub fn new(func: F) -> Self {
         Self(func)
     }
 }
 
-impl<Fmt> fmt::Debug for Formatter<Fmt>
+impl<F> fmt::Debug for Fmt<F>
 where
-    Fmt: Fn(&mut fmt::Formatter) -> fmt::Result,
+    F: Fn(&mut fmt::Formatter) -> fmt::Result,
 {
-    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         (self.0)(f)
     }
 }
 
-impl<Fmt> fmt::Display for Formatter<Fmt>
+impl<F> fmt::Display for Fmt<F>
 where
-    Fmt: Fn(&mut fmt::Formatter) -> fmt::Result,
+    F: Fn(&mut fmt::Formatter) -> fmt::Result,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         (self.0)(f)

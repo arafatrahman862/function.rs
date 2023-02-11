@@ -7,10 +7,7 @@ use crate::{
 };
 use frpc_message::*;
 use interface_path::InterfacePath;
-use std::{
-    collections::BTreeSet,
-    fmt::{Debug, Result, Write},
-};
+use std::fmt::{Debug, Result, Write};
 
 pub fn generate<'def>(type_def: &'def TypeDef) -> fmt!(type 'def) {
     fmt!(|f| {
@@ -20,15 +17,9 @@ pub fn generate<'def>(type_def: &'def TypeDef) -> fmt!(type 'def) {
         input_interface.add_tys(type_def.funcs.iter().flat_map(|func| func.args.iter()));
         output_interface.add_tys(type_def.funcs.iter().map(|func| &func.retn));
 
-        let interface_paths: BTreeSet<_> = output_interface
-            .paths
-            .iter()
-            .chain(input_interface.paths.iter())
-            .collect();
-
-        for path in interface_paths {
+        for path in type_def.ctx.costom_types.keys() {
             let ident = to_camel_case(path, ':');
-            gen_type(f, ident, &type_def.ctx.costom_types[*path])?;
+            gen_type(f, ident, &type_def.ctx.costom_types[path])?;
         }
 
         write_decoders(f, output_interface.paths, type_def)?;
@@ -88,13 +79,9 @@ fn write_rpc(f: &mut impl Write, type_def: &TypeDef) -> Result {
     writeln!(f, "}}")
 }
 
-fn write_decoders<'a>(
-    f: &mut impl Write,
-    output_interface_path: Vec<&'a String>,
-    type_def: &'a TypeDef,
-) -> Result {
+fn write_decoders<'a>(f: &mut impl Write, paths: Vec<&'a String>, type_def: &'a TypeDef) -> Result {
     writeln!(f, "let struct = {{")?;
-    for path in output_interface_path {
+    for path in paths {
         let ident = to_camel_case(path, ':');
         writeln!(f, "{ident}(d: use.Decoder): {ident} {{")?;
 
@@ -150,14 +137,10 @@ fn write_decoder_struct(f: &mut impl Write, fields: &Vec<StructField>) -> Result
     })
 }
 
-fn write_encoders(
-    f: &mut impl Write,
-    input_interface_paths: Vec<&String>,
-    type_def: &TypeDef,
-) -> Result {
+fn write_encoders(f: &mut impl Write, paths: Vec<&String>, type_def: &TypeDef) -> Result {
     writeln!(f, "let extern = {{")?;
 
-    for path in input_interface_paths {
+    for path in paths {
         let ident = to_camel_case(path, ':');
         writeln!(f, "{ident}(d: use.BufWriter, z: {ident}) {{")?;
 
@@ -293,7 +276,6 @@ fn test_fmt_tuple() {
             )),
         },
     ];
-    
     assert_eq!(
         format!("{}", fmt_ty(&Tuple(tys), "This")),
         "d.tuple(d.option(d.bool),d.result(This.PathIdent.bind(0, d), d.str),d.map(d.str, d.vec(d.u8)),)"
