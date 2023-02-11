@@ -5,8 +5,11 @@ use frpc::{procedure, Message};
 
 procedure! {
     user = 6
+    demo = 3
     get_user = 2
 }
+
+async fn demo(s: ()) {}
 
 #[derive(Message, Decoder, Encoder)]
 enum Car {

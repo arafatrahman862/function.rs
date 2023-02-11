@@ -117,7 +117,13 @@ pub fn fmt_js_ty(ty: &Ty) -> String {
         Ty::Result(ty) => format!("Result<{}, {}>", fmt_js_ty(&ty.0), fmt_js_ty(&ty.1)),
 
         Ty::Map { ty, .. } => format!("Map<{}, {}>", fmt_js_ty(&ty.0), fmt_js_ty(&ty.1)),
-        Ty::Tuple(tys) => format!("[{}]", join(tys.iter().map(fmt_js_ty), ", ")),
+        Ty::Tuple(tys) => {
+            if tys.is_empty() {
+                format!("void")
+            } else {
+                format!("[{}]", join(tys.iter().map(fmt_js_ty), ", "))
+            }
+        }
         Ty::CustomType(path) => to_camel_case(path, ':'),
     }
 }

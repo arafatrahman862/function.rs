@@ -33,6 +33,7 @@ pub fn generate<'def>(type_def: &'def TypeDef) -> fmt!(type 'def) {
 
         let output_unit_interface_paths = write_decoders(f, &output_interface.paths, type_def)?;
 
+        writeln!(f, "export namespace trait {{")?;
         for path in interface_paths {
             let ident = to_camel_case(path, ':');
 
@@ -47,6 +48,7 @@ pub fn generate<'def>(type_def: &'def TypeDef) -> fmt!(type 'def) {
                 gen_type(f, ident, &type_def.ctx.costom_types[*path])?;
             }
         }
+        writeln!(f, "}}")?;
 
         write_encoders(f, input_interface.paths, type_def)?;
         write_rpc(f, type_def)
@@ -66,34 +68,35 @@ fn write_rpc(f: &mut impl Write, type_def: &TypeDef) -> Result {
              retn,
          }| {
             let ident = path.replace("::", "_");
-            write!(f, "{ident}(")?;
-            for (arg_no, ty) in args.iter().enumerate() {
-                write!(f, "_{arg_no}: {}, ", fmt_js_ty(ty))?;
+
+            fn fmt_arg(ty: &Ty) -> String {
+                match ty {
+                    Ty::CustomType(path) => format!("trait.{}", to_camel_case(path, ':')),
+                    ty => fmt_js_ty(ty),
+                }
             }
-            writeln!(f, "): {} {{", fmt_js_ty(retn))?;
+            write!(f, "{ident}(")?;
+            for (num, ty) in args.iter().enumerate() {
+                write!(f, "_{num}: {}, ", fmt_arg(ty))?;
+            }
+            writeln!(f, "): {} {{", fmt_arg(retn))?;
 
             writeln!(f, "const fn = this.rpc.unary_call()")?;
             writeln!(f, "const d = new use.BufWriter(fn);")?;
-            writeln!(f, "d.u16({index})")?;
+            writeln!(f, "d.u16({index});")?;
 
-            write!(f, "d.tuple(")?;
-            args.iter().try_for_each(|ty| match ty {
-                Ty::CustomType(path) => {
-                    let ident = to_camel_case(path, ':');
-                    write!(f, "extern.{ident}.bind(extern, d),")
-                }
-                ty => write!(f, "{},", fmt_ty(ty))
-            })?;
-            write!(f, ")")?;
-
-            // writeln!(f, "{}", fmt_tuple(args))?;
-
-            // d.tuple(d.str, d.u16)([_0, _1]);
-            // d.flush();
+            for (num, arg) in args.iter().enumerate() {
+                match arg {
+                    Ty::CustomType(path) => {
+                        writeln!(f, "extern.{}(d, _{num});", to_camel_case(path, ':'))?
+                    }
+                    ty => writeln!(f, "{}(_{num});", fmt_ty(ty))?,
+                };
+            }
+            writeln!(f, "d.flush();")?;
+            writeln!(f, "throw new Error('todo')")?;
 
             // return new use.Decoder(new Uint8Array(await fn.output())).str()
-
-            // writeln!(f, "{index};")?;
             writeln!(f, "}}")
         },
     )?;
@@ -107,10 +110,10 @@ fn write_decoders<'a, 'path>(
 ) -> std::result::Result<Vec<&'path &'a String>, std::fmt::Error> {
     let mut output_unit_interface_paths = vec![];
 
-    writeln!(f, "const struct = {{")?;
+    writeln!(f, "namespace struct {{")?;
     for path in output_interface_path {
         let ident = to_camel_case(path, ':');
-        writeln!(f, "{ident}(d: use.Decoder) {{")?;
+        writeln!(f, "export function {ident}(d: use.Decoder) {{")?;
 
         match &type_def.ctx.costom_types[*path] {
             CustomTypeKind::Unit(data) => {
@@ -121,7 +124,7 @@ fn write_decoders<'a, 'path>(
                         .iter()
                         .enumerate()
                         .try_for_each(|(i, UnitField { name, .. })| {
-                            writeln!(f, "case {i}: return {ident}.{name};")
+                            writeln!(f, "case {i}: return trait.{ident}.{name};")
                         })
                 });
                 write_enum(f, &ident, items)?;
@@ -156,7 +159,7 @@ fn write_decoders<'a, 'path>(
                 writeln!(f, "return {}();", fmt_tuple(&data.fields))?;
             }
         }
-        writeln!(f, "}},")?;
+        writeln!(f, "}}")?;
     }
     writeln!(f, "}}")?;
     Ok(output_unit_interface_paths)
@@ -174,17 +177,20 @@ fn write_encoders(
     input_interface_paths: Vec<&String>,
     type_def: &TypeDef,
 ) -> Result {
-    writeln!(f, "const extern = {{")?;
+    writeln!(f, "namespace extern {{")?;
 
     for path in input_interface_paths {
         let ident = to_camel_case(path, ':');
-        writeln!(f, "{ident}(d: use.BufWriter, z: {ident}) {{")?;
+        writeln!(
+            f,
+            "export function {ident}(d: use.BufWriter, z: trait.{ident}) {{"
+        )?;
 
         match &type_def.ctx.costom_types[path] {
             CustomTypeKind::Unit(data) => {
                 writeln!(f, "switch (z) {{")?;
                 for (i, UnitField { name, .. }) in data.fields.iter().enumerate() {
-                    writeln!(f, "case {ident}.{name}: return d.len_u15({i});")?;
+                    writeln!(f, "case trait.{ident}.{name}: return d.len_u15({i});")?;
                 }
                 writeln!(f, "}}")?;
             }
@@ -210,7 +216,7 @@ fn write_encoders(
                 writeln!(f, "return {}(z);", fmt_tuple(&data.fields))?;
             }
         }
-        writeln!(f, "}},")?;
+        writeln!(f, "}}")?;
     }
     writeln!(f, "}}")
 }
@@ -221,7 +227,7 @@ fn write_encoder_struct(f: &mut impl Write, fields: &Vec<StructField>) -> Result
         .try_for_each(|StructField { name, ty, .. }| writeln!(f, "{}(z.{name});", fmt_ty(ty)))
 }
 
-fn fmt_tuple<'a>(fields: &'a Vec<TupleField>) -> fmt!(type 'a) {
+fn fmt_tuple(fields: &Vec<TupleField>) -> fmt!(type '_) {
     fmt!(move |f| {
         write!(f, "d.tuple(")?;
         for TupleField { ty, .. } in fields.iter() {
@@ -231,7 +237,7 @@ fn fmt_tuple<'a>(fields: &'a Vec<TupleField>) -> fmt!(type 'a) {
     })
 }
 
-fn fmt_ty<'a>(ty: &'a Ty) -> fmt!(type 'a) {
+fn fmt_ty(ty: &Ty) -> fmt!(type '_) {
     fmt!(move |f| {
         match ty {
             Ty::u8 => write!(f, "d.u8"),
@@ -255,9 +261,12 @@ fn fmt_ty<'a>(ty: &'a Ty) -> fmt!(type 'a) {
             Ty::Result(ty) => write!(f, "d.result({}, {})", fmt_ty(&ty.0), fmt_ty(&ty.1)),
 
             Ty::Tuple(tys) => {
-                write!(f, "d.tuple(")?;
-                tys.iter().try_for_each(|ty| write!(f, "{},", fmt_ty(ty)))?;
-                write!(f, ")")
+                if !tys.is_empty() {
+                    write!(f, "d.tuple(")?;
+                    tys.iter().try_for_each(|ty| write!(f, "{},", fmt_ty(ty)))?;
+                    write!(f, ")")?;
+                }
+                Ok(())
             }
             Ty::Array { len, ty } => match **ty {
                 Ty::u8 => write!(f, "d.u8_arr({len})"),
@@ -274,7 +283,7 @@ fn fmt_ty<'a>(ty: &'a Ty) -> fmt!(type 'a) {
             },
             Ty::Set { ty, .. } => write!(f, "d.set({})", fmt_ty(ty)),
             Ty::Map { ty, .. } => write!(f, "d.map({}, {})", fmt_ty(&ty.0), fmt_ty(&ty.1)),
-            Ty::CustomType(path) => write!(f, "this.{}.bind(this, d)", to_camel_case(path, ':')),
+            Ty::CustomType(path) => write!(f, "{}.bind(0, d)", to_camel_case(path, ':')),
         }
     })
 }
