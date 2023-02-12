@@ -11,3 +11,6 @@ macro_rules! fmt {
     (type $lt: lifetime) => { crate::fmt::Fmt<impl Fn(&mut std::fmt::Formatter) -> std::fmt::Result + $lt> };
     (type) => { crate::fmt::Fmt<impl Fn(&mut std::fmt::Formatter) -> std::fmt::Result> };
 }
+
+// --------------------------------------------------------------
+

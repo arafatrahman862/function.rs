@@ -1,9 +1,17 @@
 use proc_macro::TokenStream;
-use quote::{format_ident, quote, quote_spanned};
-use syn::__private::TokenStream2;
-use syn::spanned::Spanned;
-use syn::*;
 
+#[cfg(not(debug_assertions))]
+#[proc_macro_derive(Message)]
+pub fn message(_: TokenStream) -> TokenStream {
+    TokenStream::new()
+}
+
+#[cfg(debug_assertions)]
+use quote::{format_ident, quote, quote_spanned};
+#[cfg(debug_assertions)]
+use syn::{*, __private::TokenStream2, spanned::Spanned};
+
+#[cfg(debug_assertions)]
 #[proc_macro_derive(Message)]
 pub fn message(input: TokenStream) -> TokenStream {
     let DeriveInput {
@@ -108,6 +116,7 @@ pub fn message(input: TokenStream) -> TokenStream {
     })
 }
 
+#[cfg(debug_assertions)]
 fn parse_tuple(fields: &FieldsUnnamed) -> TokenStream2 {
     let recurse = fields.unnamed.iter().map(|f| {
         let doc = get_comments_from(&f.attrs);
@@ -120,6 +129,7 @@ fn parse_tuple(fields: &FieldsUnnamed) -> TokenStream2 {
     quote! { #(#recurse),* }
 }
 
+#[cfg(debug_assertions)]
 fn parse_object(fields: &FieldsNamed) -> TokenStream2 {
     let recurse = fields.named.iter().map(|f| {
         let doc = get_comments_from(&f.attrs);
@@ -134,6 +144,7 @@ fn parse_object(fields: &FieldsNamed) -> TokenStream2 {
     quote! { #(#recurse),* }
 }
 
+#[cfg(debug_assertions)]
 fn parse_int(expr: &Expr) -> isize {
     match expr {
         Expr::Lit(expr_lit) => match &expr_lit.lit {
@@ -145,6 +156,7 @@ fn parse_int(expr: &Expr) -> isize {
 }
 
 #[rustfmt::skip]
+#[cfg(debug_assertions)]
 fn get_comments_from(attrs: &Vec<Attribute>) -> String {
     let mut string = String::new();
     for Attribute { style, path: Path { segments, .. }, tokens, .. } in attrs {

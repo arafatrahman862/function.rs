@@ -7,7 +7,7 @@ use crate::{
 };
 use frpc_message::*;
 use interface_path::InterfacePath;
-use std::fmt::{Debug, Result, Write};
+use std::fmt::{Result, Write};
 
 pub fn generate<'def>(type_def: &'def TypeDef) -> fmt!(type 'def) {
     fmt!(|f| {

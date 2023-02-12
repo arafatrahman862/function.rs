@@ -17,17 +17,17 @@ enum Car {
     Bar,
 }
 
-#[derive(Message, Decoder)]
+#[derive(Message, Decoder, Encoder)]
 enum Foo {
     Quz { x: u8 },
     Bar(u8, Bez),
     Many((Vec<Foo>, Vec<Foo>)),
 }
 
-#[derive(Message, Decoder)]
+#[derive(Message, Decoder, Encoder)]
 struct Bez(u8, u16);
 
-#[derive(Message, Decoder)]
+#[derive(Message, Decoder, Encoder)]
 struct User {
     name: String,
     age: u8,

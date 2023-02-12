@@ -1,6 +1,5 @@
 use super::*;
 
-#[derive(Debug)]
 pub struct InterfacePath<'a> {
     ctx: &'a Context,
     pub paths: Vec<&'a String>,

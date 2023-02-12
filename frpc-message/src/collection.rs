@@ -1,7 +1,9 @@
 use super::*;
 use std::{collections::*, hash::Hash};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+// #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "codegen", derive(Decoder))]
+#[cfg_attr(not(feature = "codegen"), derive(Encoder))]
 pub enum SetVariant {
     BTreeSet,
     HashSet,
@@ -11,7 +13,9 @@ pub enum SetVariant {
     Vec,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+// #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "codegen", derive(Decoder))]
+#[cfg_attr(not(feature = "codegen"), derive(Encoder))]
 pub enum MapVariant {
     HashMap,
     BTreeMap,

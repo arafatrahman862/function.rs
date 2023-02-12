@@ -1,9 +1,15 @@
 pub mod fn_once;
 pub mod output;
+
+#[doc(hidden)]
+#[cfg(debug_assertions)]
 pub mod util;
 
-pub use frpc_macros::Message;
+#[doc(hidden)]
+#[cfg(debug_assertions)]
 pub use frpc_message;
+
+pub use frpc_macros::Message;
 
 #[macro_export]
 macro_rules! procedure {
@@ -11,6 +17,7 @@ macro_rules! procedure {
         use super::*;
 
         #[allow(dead_code)]
+        #[cfg(debug_assertions)]
         pub fn type_def() -> $crate::frpc_message::TypeDef {
             let mut ctx = $crate::frpc_message::Context::default();
             let funcs = vec![
@@ -35,16 +42,31 @@ macro_rules! procedure {
             match id {
                 $($id => {
                     let args = ::databuf::Decoder::decode(&data).unwrap();
-                    let output = $crate::fn_once::FnOnce::call_once(user, args).await;
+                    let output = $crate::fn_once::FnOnce::call_once($func, args).await;
                     $crate::output::Output::write(&output, writer).await
                 }),*
                 _ => {
                     return ::std::result::Result::Err(::std::io::Error::new(
                         ::std::io::ErrorKind::AddrNotAvailable,
-                        "Unknown id",
+                        "Unknown ID",
                     ))
                 }
             }
         }
+    });
+}
+
+fn type_def() -> frpc_message::TypeDef {
+    todo!()
+}
+
+#[cfg(not(debug_assertions))]
+fn codegen() {}
+
+#[cfg(debug_assertions)]
+pub fn codegen() {
+    std::thread::spawn(|| {
+        let _type_def = type_def().to_bytes();
+        
     });
 }

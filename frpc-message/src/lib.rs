@@ -2,13 +2,20 @@ mod basic;
 mod collection;
 mod wrapper;
 
+#[cfg(feature = "codegen")]
+use databuf::Decoder;
+#[cfg(not(feature = "codegen"))]
+use databuf::Encoder;
+
 pub use collection::{MapVariant, SetVariant};
 
 pub trait Message {
     fn ty(_: &mut Context) -> Ty;
 }
 
-#[derive(Clone, Debug, Hash)]
+// #[derive(Clone, Debug, Hash)]
+#[cfg_attr(feature = "codegen", derive(Decoder))]
+#[cfg_attr(not(feature = "codegen"), derive(Encoder))]
 pub struct Func {
     pub index: u16,
     pub path: String,
@@ -16,7 +23,9 @@ pub struct Func {
     pub retn: Ty,
 }
 
-#[derive(Clone, Debug, Hash)]
+// #[derive(Clone, Debug, Hash)]
+#[cfg_attr(feature = "codegen", derive(Decoder))]
+#[cfg_attr(not(feature = "codegen"), derive(Encoder))]
 pub struct TypeDef {
     pub name: String,
     pub version: String,
@@ -26,16 +35,21 @@ pub struct TypeDef {
 }
 
 impl TypeDef {
-    pub fn hash(&self) -> u64 {
-        use std::hash::Hasher;
-        let mut hasher = std::collections::hash_map::DefaultHasher::new();
-        std::hash::Hash::hash(self, &mut hasher);
-        hasher.finish()
+    #[cfg(feature = "codegen")]
+    fn from_bytes(buf: impl AsRef<[u8]>) -> Self {
+        databuf::Decoder::decode(buf.as_ref()).unwrap()
+    }
+    
+    #[cfg(not(feature = "codegen"))]
+    pub fn to_bytes(&self) -> Vec<u8> {
+        TypeDef::encode(&self)
     }
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, PartialEq, Hash)]
+// #[derive(Debug, Clone, PartialEq, Hash)]
+#[cfg_attr(feature = "codegen", derive(Decoder))]
+#[cfg_attr(not(feature = "codegen"), derive(Encoder))]
 pub enum Ty {
     // Never,
     u8,
@@ -96,12 +110,17 @@ impl Ty {
     }
 }
 
-#[derive(Default, Debug, Clone, Hash)]
+// #[derive(Default, Debug, Clone, Hash)]
+#[derive(Default)]
+#[cfg_attr(feature = "codegen", derive(Decoder))]
+#[cfg_attr(not(feature = "codegen"), derive(Encoder))]
 pub struct Context {
     pub costom_types: std::collections::BTreeMap<String, CustomTypeKind>,
 }
 
-#[derive(Debug, Clone, Hash)]
+// #[derive(Debug, Clone, Hash)]
+#[cfg_attr(feature = "codegen", derive(Decoder))]
+#[cfg_attr(not(feature = "codegen"), derive(Encoder))]
 pub enum CustomTypeKind {
     Unit(CustomType<UnitField>),
     Enum(CustomType<EnumField>),
@@ -110,41 +129,53 @@ pub enum CustomTypeKind {
 }
 
 /// Any user defined type like: `struct`, `enum`
-#[derive(Debug, Clone, Hash)]
+// #[derive(Debug, Clone, Hash)]
+#[cfg_attr(feature = "codegen", derive(Decoder))]
+#[cfg_attr(not(feature = "codegen"), derive(Encoder))]
 pub struct CustomType<Field> {
     pub doc: String,
     pub fields: Vec<Field>,
 }
 
-#[derive(Debug, Clone, Hash)]
+// #[derive(Debug, Clone, Hash)]
+#[cfg_attr(feature = "codegen", derive(Decoder))]
+#[cfg_attr(not(feature = "codegen"), derive(Encoder))]
 pub struct UnitField {
     pub doc: String,
     pub name: String,
     pub value: isize,
 }
 
-#[derive(Debug, Clone, Hash)]
+// #[derive(Debug, Clone, Hash)]
+#[cfg_attr(feature = "codegen", derive(Decoder))]
+#[cfg_attr(not(feature = "codegen"), derive(Encoder))]
 pub struct EnumField {
     pub doc: String,
     pub name: String,
     pub kind: EnumKind,
 }
 
-#[derive(Debug, Clone, Hash)]
+// #[derive(Debug, Clone, Hash)]
+#[cfg_attr(feature = "codegen", derive(Decoder))]
+#[cfg_attr(not(feature = "codegen"), derive(Encoder))]
 pub enum EnumKind {
     Unit,
     Struct(Vec<StructField>),
     Tuple(Vec<TupleField>),
 }
 
-#[derive(Debug, Clone, Hash)]
+// #[derive(Debug, Clone, Hash)]
+#[cfg_attr(feature = "codegen", derive(Decoder))]
+#[cfg_attr(not(feature = "codegen"), derive(Encoder))]
 pub struct StructField {
     pub doc: String,
     pub name: String,
     pub ty: Ty,
 }
 
-#[derive(Debug, Clone, Hash)]
+// #[derive(Debug, Clone, Hash)]
+#[cfg_attr(feature = "codegen", derive(Decoder))]
+#[cfg_attr(not(feature = "codegen"), derive(Encoder))]
 pub struct TupleField {
     pub doc: String,
     pub ty: Ty,
