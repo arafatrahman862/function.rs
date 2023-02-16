@@ -1,4 +1,5 @@
 use super::*;
+use crate::utils::write_doc_comments;
 
 pub fn main<'a>(f: &mut impl Write, provider: &'a Provider) -> Result {
     writeln!(f, "let struct = {{")?;

@@ -1,5 +1,5 @@
 [workspace]
-members = ["frpc-macros", "frpc-message", "frpc-codegen"]
+members = ["frpc-macros", "frpc-message", "frpc-codegen", "cli"]
 
 [package]
 name = "frpc"

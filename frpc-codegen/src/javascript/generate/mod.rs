@@ -4,10 +4,7 @@ pub mod decoder;
 pub mod encoder;
 pub mod stub;
 
-use crate::{
-    fmt,
-    utils::{to_camel_case, write_doc_comments},
-};
+use crate::{fmt, utils::to_camel_case};
 use frpc_message::*;
 use std::fmt::{Result, Write};
 
@@ -21,7 +18,7 @@ fn fmt_tuple<'a>(fields: &'a Vec<TupleField>, scope: &'static str) -> fmt!(type 
     })
 }
 
-fn fmt_ty<'a>(ty: &'a Ty, scope: &'static str) -> fmt!(type 'a) {
+fn fmt_ty<'a>(ty: &'a Ty, scope: &'a str) -> fmt!(type 'a) {
     fmt!(move |f| {
         match ty {
             Ty::u8 => write!(f, "d.u8"),
