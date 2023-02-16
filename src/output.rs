@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use databuf::Encoder;
+use databuf::Encode;
 use std::io::Result;
 use tokio::io::{AsyncWrite, AsyncWriteExt};
 
@@ -11,12 +11,12 @@ pub trait Output {
 }
 
 #[async_trait]
-impl<T: Encoder + Sync> Output for T {
+impl<T: Encode + Sync> Output for T {
     async fn write<W>(&self, writer: &mut W) -> Result<()>
     where
         W: AsyncWrite + Unpin + Send,
     {
-        let bytes = T::encode(self);
+        let bytes = T::to_bytes::<{crate::DATABUF_CONF}>(self);
         writer.write_all(&bytes).await
     }
 }

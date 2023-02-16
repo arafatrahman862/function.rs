@@ -1,7 +1,10 @@
 [package]
-name = "frpc-codegen"
-version = "0.1.0"
+name = "codegen"
+version = "0.0.1"
 edition = "2021"
 
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
-frpc-message = { path = "../frpc-message" }
+frpc-message = { path = "../frpc-message", features = ["decode"] }

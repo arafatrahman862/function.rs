@@ -1,6 +1,6 @@
 #![allow(warnings)]
 mod utils;
-use databuf::{Decoder, Encoder};
+use databuf::{Decode, Encode};
 use frpc::{procedure, Message};
 
 procedure! {
@@ -11,23 +11,23 @@ procedure! {
 
 async fn demo(s: ()) {}
 
-#[derive(Message, Decoder, Encoder)]
+#[derive(Message, Decode, Encode)]
 enum Car {
     Foo,
     Bar,
 }
 
-#[derive(Message, Decoder, Encoder)]
+#[derive(Message, Decode, Encode)]
 enum Foo {
     Quz { x: u8 },
     Bar(u8, Bez),
     Many((Vec<Foo>, Vec<Foo>)),
 }
 
-#[derive(Message, Decoder, Encoder)]
+#[derive(Message, Decode, Encode)]
 struct Bez(u8, u16);
 
-#[derive(Message, Decoder, Encoder)]
+#[derive(Message, Decode, Encode)]
 struct User {
     name: String,
     age: u8,
@@ -52,10 +52,10 @@ async fn user(name: String, age: u8) -> String {
 #[test]
 fn test_name() {
     // let typedef = procedure::;
-    let typedef = procedure::type_def();
-    let code = frpc_codegen::javascript::code::generate(&typedef);
-    let code = format!("{}", code);
-    println!("{code}");
+    // let typedef = procedure::type_def();
+    // let code = frpc_codegen::javascript::code::generate(&typedef);
+    // let code = format!("{}", code);
+    // println!("{code}");
     // std::fs::write("play.ts", format!("{}", code));
 
     // println!("{typedef:#?}");

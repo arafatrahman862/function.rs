@@ -1,10 +1,11 @@
 [package]
 name = "frpc-message"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 
 [features]
-codegen = []
+encode = []
+decode = []
 
 [dependencies]
-databuf = "0.1.1"
+databuf = "0.2.1"

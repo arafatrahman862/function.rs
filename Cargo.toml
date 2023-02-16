@@ -3,21 +3,21 @@ members = ["frpc-macros", "frpc-message", "frpc-codegen"]
 
 [package]
 name = "frpc"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 
 [dependencies]
 tokio = { version = "1", features = ["io-util"] }
-databuf = "0.1.1"
+databuf = "0.2.1"
 
 frpc-macros = { path = "frpc-macros" }
-frpc-message = { path = "frpc-message" }
+frpc-message = { path = "frpc-message", features = ["encode"] }
 
 async-trait = "0.1.63"
+libloading = "0.7.4"
 
 # quinn = "0.9.3"
 # rustls = "0.20.7"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt"] }
-frpc-codegen = { path = "frpc-codegen" }

@@ -11,14 +11,15 @@ pub use frpc_message;
 
 pub use frpc_macros::Message;
 
+pub const DATABUF_CONF: u8 = databuf::config::num::LEB128 | databuf::config::len::LEU29;
+
 #[macro_export]
 macro_rules! procedure {
     [$($func:path = $id:literal)*] => (mod procedure {
         use super::*;
 
-        #[allow(dead_code)]
         #[cfg(debug_assertions)]
-        pub fn type_def() -> $crate::frpc_message::TypeDef {
+        pub fn __type_def() -> $crate::frpc_message::TypeDef {
             let mut ctx = $crate::frpc_message::Context::default();
             let funcs = vec![
                 $({
@@ -27,13 +28,20 @@ macro_rules! procedure {
                 }),*
             ];
             $crate::frpc_message::TypeDef {
-                name: env!("CARGO_PKG_NAME").into(),
-                version: env!("CARGO_PKG_VERSION").into(),
-                description: env!("CARGO_PKG_DESCRIPTION").into(),
                 ctx,
                 funcs,
             }
         }
+
+        #[allow(dead_code)]
+        #[cfg(debug_assertions)]
+        pub fn codegen() {
+            ::std::thread::spawn(move || unsafe { $crate::__codegen(self::__type_def()) });
+        }
+
+        #[allow(dead_code)]
+        #[cfg(not(debug_assertions))]
+        pub fn codegen() {}
 
         pub async fn execute<W>(id: u16, data: Vec<u8>, writer: &mut W) -> ::std::io::Result<()>
         where
@@ -41,7 +49,7 @@ macro_rules! procedure {
         {
             match id {
                 $($id => {
-                    let args = ::databuf::Decoder::decode(&data).unwrap();
+                    let args = ::databuf::Decode::from_bytes::<{$crate::DATABUF_CONF}>(&data).unwrap();
                     let output = $crate::fn_once::FnOnce::call_once($func, args).await;
                     $crate::output::Output::write(&output, writer).await
                 }),*
@@ -56,17 +64,59 @@ macro_rules! procedure {
     });
 }
 
-fn type_def() -> frpc_message::TypeDef {
-    todo!()
+#[doc(hidden)]
+#[cfg(debug_assertions)]
+pub unsafe fn __codegen(type_def: frpc_message::TypeDef) {
+    use libloading::{Error, Library, Symbol};
+    // use std::path::PathBuf;
+
+    #[cfg(target_os = "windows")]
+    const CODEGEN_DYLIB: &str = "codegen.dll";
+    #[cfg(target_os = "linux")]
+    const CODEGEN_DYLIB: &str = "codegen.so";
+    #[cfg(target_os = "macos")]
+    const CODEGEN_DYLIB: &str = "codegen.dylib";
+    #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
+    compile_error!("`codegen` is not available on the current operating system.");
+
+    let filename = std::env::var("FRPC_CODEGEN")
+        .unwrap_or_else(|_| format!("{}/target/frpc/{CODEGEN_DYLIB}", env!("CARGO_MANIFEST_DIR")));
+
+    let run = || -> Result<_, Error> {
+        let lib = Library::new(&filename)?;
+        let codegen_from: Symbol<unsafe extern "C" fn(*const u8, usize)> =
+            lib.get(b"codegen_from\0")?;
+
+        let bytes = type_def.as_bytes();
+        let len = bytes.len();
+        codegen_from(bytes.as_ptr(), len);
+        Ok(())
+    };
+    if let Err(msg) = run() {
+        eprintln!("[ERROR] {msg}, Path = {filename}");
+    }
 }
 
-#[cfg(not(debug_assertions))]
-fn codegen() {}
+#[test]
+fn build_codegen() {
+    let time = std::time::Instant::now();
+    println!("Building...");
+    let _ = std::process::Command::new("cargo")
+        .args(["build", "--lib", "--package", "codegen"])
+        .output()
+        .expect("failed to execute process");
 
-#[cfg(debug_assertions)]
-pub fn codegen() {
-    std::thread::spawn(|| {
-        let _type_def = type_def().to_bytes();
-        
-    });
+    println!("Done: {:?} sec\n", time.elapsed().as_secs());
+    std::env::set_var("FRPC_CODEGEN", "target/debug/codegen.dll");
+}
+
+#[test]
+fn test_name() {
+    build_codegen();
+    unsafe {
+        __codegen(frpc_message::TypeDef {
+            ctx: Default::default(),
+            funcs: Default::default(),
+        });
+    }
 }
