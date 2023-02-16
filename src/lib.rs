@@ -18,8 +18,9 @@ macro_rules! procedure {
     [$($func:path = $id:literal)*] => (mod procedure {
         use super::*;
 
+        #[allow(dead_code)]
         #[cfg(debug_assertions)]
-        pub fn __type_def() -> $crate::frpc_message::TypeDef {
+        pub fn type_def() -> $crate::frpc_message::TypeDef {
             let mut ctx = $crate::frpc_message::Context::default();
             let funcs = vec![
                 $({
@@ -36,7 +37,7 @@ macro_rules! procedure {
         #[allow(dead_code)]
         #[cfg(debug_assertions)]
         pub fn codegen() {
-            ::std::thread::spawn(move || unsafe { $crate::__codegen(self::__type_def()) });
+            ::std::thread::spawn(move || unsafe { $crate::__codegen(self::type_def()) });
         }
 
         #[allow(dead_code)]
@@ -68,7 +69,6 @@ macro_rules! procedure {
 #[cfg(debug_assertions)]
 pub unsafe fn __codegen(type_def: frpc_message::TypeDef) {
     use libloading::{Error, Library, Symbol};
-    // use std::path::PathBuf;
 
     #[cfg(target_os = "windows")]
     const CODEGEN_DYLIB: &str = "codegen.dll";

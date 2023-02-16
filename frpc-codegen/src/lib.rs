@@ -1,25 +1,33 @@
-use std::io::{Seek, SeekFrom, Write};
-use std::{env, fs::File, io::Read};
-
-use frpc_message::TypeDef;
-
-pub mod javascript;
-
 pub mod fmt;
+mod interface_path;
+pub mod javascript;
 pub mod utils;
 
-#[macro_export]
-macro_rules! fmt {
-    (box $c: expr) => { crate::fmt::Fmt::<Box<dyn Fn(&mut std::fmt::Formatter) -> std::fmt::Result>>::new(Box::new($c)) };
-    ($c: expr) => { crate::fmt::Fmt::new($c) };
+use frpc_message::TypeDef;
+use interface_path::InterfacePath;
+use std::{
+    collections::hash_map::DefaultHasher,
+    env,
+    fs::File,
+    hash::{Hash, Hasher},
+    io::{Read, Seek, SeekFrom, Write},
+};
 
-    (type $lt: lifetime) => { crate::fmt::Fmt<impl Fn(&mut std::fmt::Formatter) -> std::fmt::Result + $lt> };
-    (type) => { crate::fmt::Fmt<impl Fn(&mut std::fmt::Formatter) -> std::fmt::Result> };
+fn prev_hash() -> Result<(File, u64), Box<dyn std::error::Error>> {
+    let key = "CARGO_PKG_NAME";
+    let name = env::var(key).map_err(|msg| format!("[ERROR] {key}: {msg}"))?;
+    let path = env::temp_dir().join(format!("frpc_codegen_{name}.hex"));
+
+    let mut file = File::options()
+        .create(true)
+        .read(true)
+        .write(true)
+        .open(path)?;
+
+    let mut buf = [0; 8];
+    file.read(&mut buf)?;
+    Ok((file, u64::from_le_bytes(buf)))
 }
-
-// --------------------------------------------------------------
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 
 #[no_mangle]
 pub unsafe extern "C" fn codegen_from(raw_bytes: *const u8, len: usize) {
@@ -35,42 +43,36 @@ pub unsafe extern "C" fn codegen_from(raw_bytes: *const u8, len: usize) {
                 // println!("[SKIP]");
                 return;
             }
-            let _ = file
+            if let Err(msg) = file
                 .seek(SeekFrom::Start(0))
-                .and_then(|_| file.write_all(&hash.to_le_bytes()));
+                .and_then(|_| file.write_all(&hash.to_le_bytes()))
+            {
+                eprintln!("[ERROR] {msg}");
+            }
         }
         Err(err) => eprintln!("{err}"),
     }
     let _ = TypeDef::try_from(bytes).map(codegen);
 }
 
-fn prev_hash() -> Result<(File, u64), Box<dyn std::error::Error>> {
-    let var_key = "CARGO_PKG_NAME";
-    let name = env::var(var_key).map_err(|err| format!("[ERROR] {var_key}: {err}"))?;
-    let path = env::temp_dir().join(format!("frpc_codegen_{name}.hex"));
-    let mut file = File::options()
-        .create(true)
-        .read(true)
-        .write(true)
-        .open(path)?;
-
-    let mut buf = [0; 8];
-    file.read(&mut buf)?;
-    Ok((file, u64::from_le_bytes(buf)))
+pub struct Provider<'a> {
+    type_def: &'a TypeDef,
+    input_paths: Vec<&'a String>,
+    output_paths: Vec<&'a String>,
 }
 
-pub fn codegen(_type_def: TypeDef) {
-    println!("{:?}", "sfssad");
-    println!("{:?}", _type_def.funcs.len());
+pub fn codegen(type_def: TypeDef) {
+    let mut input = InterfacePath::new(&type_def.ctx);
+    let mut output = InterfacePath::new(&type_def.ctx);
+
+    input.add_tys(type_def.funcs.iter().flat_map(|func| func.args.iter()));
+    output.add_tys(type_def.funcs.iter().map(|func| &func.retn));
+
+    let provider = Provider {
+        input_paths: input.paths,
+        output_paths: output.paths,
+        type_def: &type_def,
+    };
+
+    javascript::generate(&provider);
 }
-
-/*
- // create_dir_all(path).unwrap();
-        // let mut log = File::options()
-        //     .create(true)
-        //     .append(true)
-        //     .open(path.join("codegen.log"))
-        //     .unwrap();
-
-        // let _ = writeln!(log, "[ERROR] {msg}, Path = {}", filename.display());
-*/

@@ -1,4 +1,4 @@
-use super::*;
+use frpc_message::*;
 
 pub struct InterfacePath<'a> {
     ctx: &'a Context,
