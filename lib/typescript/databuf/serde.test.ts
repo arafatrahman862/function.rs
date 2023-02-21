@@ -1,146 +1,171 @@
-// import { rand } from "./fuzz.ts";
-// import { BufWriter, Decoder, Option, Result, Write } from "./mod.ts";
-// import { assertEquals } from "https://deno.land/std@0.175.0/testing/asserts.ts";
+import { BufWriter, Decoder, Option, Result, Write } from "./mod.ts";
+import { assertEquals } from "https://deno.land/std@0.175.0/testing/asserts.ts";
 
-// class DefaultWriter implements Write {
-//     bytes: number[] = []
-//     write(bytes: Uint8Array) {
-//         this.bytes = this.bytes.concat(...bytes)
-//     }
-//     flush() { }
-// }
+class DefaultWriter implements Write {
+    bytes: number[] = []
+    write(bytes: Uint8Array) {
+        this.bytes = this.bytes.concat(...bytes)
+    }
+    flush() { }
+}
 
-// console.clear()
+console.clear()
 
-// Deno.test("Serde test: number", () => {
-//     const u8 = rand.u8();
-//     const u16 = rand.u16();
-//     const u32 = rand.u32();
-//     const u64 = rand.u64();
+Deno.test("Serde test: var int", () => {
+    const writer = new DefaultWriter();
+    const encoder = new BufWriter(writer);
 
-//     const i8 = rand.i8();
-//     const i16 = rand.i16();
-//     const i32 = rand.i32();
-//     const i64 = rand.i64();
+    encoder.len_u15(0); // [0]
+    encoder.len_u15(127); // [127]
+    encoder.len_u15(128); // [128, 128]
+    encoder.len_u15(32767); // [255, 255]
 
-//     const f32 = rand.f32();
-//     const f64 = rand.f64();
+    encoder.len_u30(0) // [0]
+    encoder.len_u30(63) // [63]
+    encoder.len_u30(64) // [64, 64]
+    encoder.len_u30(16383) // [127, 255]
+    encoder.len_u30(16384) // [128, 64, 0]
+    encoder.len_u30(4194303) // [191, 255, 255]
+    encoder.len_u30(4194304) // [192, 64, 0, 0]
+    encoder.len_u30(1073741823) // [255, 255, 255, 255]
 
-//     // -----------------------------------
+    encoder.flush();
+    assertEquals(writer.bytes, [
+        0, 127, 128, 128, 255, 255,
+        0, 63, 64, 64, 127, 255, 128, 64, 0, 191, 255, 255, 192, 64, 0, 0, 255, 255, 255, 255
+    ])
 
-//     const writer = new DefaultWriter();
-//     const encoder = new BufWriter(writer);
+    const decoder = new Decoder(new Uint8Array(writer.bytes));
+    assertEquals(decoder.len_u15(), 0)
+    assertEquals(decoder.len_u15(), 127)
+    assertEquals(decoder.len_u15(), 128)
+    assertEquals(decoder.len_u15(), 32767)
 
-//     encoder.u8(u8)
-//     encoder.u16(u16)
-//     encoder.u32(u32)
-//     encoder.u64(u64)
+    assertEquals(decoder.len_u30(), 0)
+    assertEquals(decoder.len_u30(), 63)
+    assertEquals(decoder.len_u30(), 64)
+    assertEquals(decoder.len_u30(), 16383)
+    assertEquals(decoder.len_u30(), 16384)
+    assertEquals(decoder.len_u30(), 4194303)
+    assertEquals(decoder.len_u30(), 4194304)
+    assertEquals(decoder.len_u30(), 1073741823)
+})
 
-//     encoder.i8(i8)
-//     encoder.i16(i16)
-//     encoder.i32(i32)
-//     encoder.i64(i64)
+Deno.test("Serde test: LEB128", () => {
+    const writer = new DefaultWriter();
+    const encoder = new BufWriter(writer);
 
-//     encoder.f32(f32)
-//     encoder.f64(f64)
+    const I16_MIN = -32768;
+    const I32_MIN = -2147483648;
+    const I64_MIN = -9223372036854775808n;
 
-//     encoder.flush()
-//     assertEquals(writer.bytes.length, 42)
+    const U16_MAX = Math.pow(2, 16) - 1;
+    const U32_MAX = Math.pow(2, 32) - 1;
+    const U64_MAX = (1n << 64n) - 1n;
+    const U128_MAX = (1n << 128n) - 1n;
 
-//     const decoder = new Decoder(new Uint8Array(writer.bytes));
+    encoder.num("U", 2)(0); // [0]
+    encoder.num("U", 2)(U16_MAX); // [255, 255, 3]
+    encoder.num("U", 4)(U32_MAX); // [255, 255, 255, 255, 15]
 
-//     assertEquals(decoder.u8(), u8)
-//     assertEquals(decoder.u16(), u16)
-//     assertEquals(decoder.u32(), u32)
-//     assertEquals(decoder.u64(), u64)
+    encoder.flush();
+    assertEquals(writer.bytes, [0, 255, 255, 3, 255, 255, 255, 255, 15]);
 
-//     assertEquals(decoder.i8(), i8)
-//     assertEquals(decoder.i16(), i16)
-//     assertEquals(decoder.i32(), i32)
-//     assertEquals(decoder.i64(), i64)
+    encoder.num("U", 8)(U64_MAX);
+    encoder.num("U", 16)(U128_MAX);
 
-//     assertEquals(decoder.f32(), f32)
-//     assertEquals(decoder.f64(), f64)
+    encoder.num("I", 2)(I16_MIN);
+    encoder.num("I", 4)(I32_MIN);
+    encoder.num("I", 8)(I64_MIN);
+    encoder.flush();
 
-//     assertEquals(decoder.offset, 42)
-// })
+    const decoder = new Decoder(new Uint8Array(writer.bytes));
+    assertEquals(decoder.num("U", 2)(), 0)
+    assertEquals(decoder.num("U", 2)(), U16_MAX)
+    assertEquals(decoder.num("U", 4)(), U32_MAX)
+    assertEquals(decoder.num("U", 8)(), U64_MAX)
+    assertEquals(decoder.num("U", 16)(), U128_MAX)
 
-// Deno.test("Serde test: string, bytes", () => {
-//     const str = rand.str(rand.u8());
-//     const bytes = [...rand.bytes(rand.u8())];
+    assertEquals(decoder.num("I", 2)(), I16_MIN)
+    assertEquals(decoder.num("I", 4)(), I32_MIN)
+    assertEquals(decoder.num("I", 8)(), I64_MIN)
+})
 
-//     const writer = new DefaultWriter();
-//     const encoder = new BufWriter(writer);
 
-//     encoder.str(str)
-//     encoder.vec(encoder.u8)(bytes)
+Deno.test("Serde test: string, bytes", () => {
+    const writer = new DefaultWriter();
+    const encoder = new BufWriter(writer);
 
-//     encoder.flush()
-//     const decoder = new Decoder(new Uint8Array(writer.bytes));
+    encoder.str("Hello, World!")
+    encoder.vec(encoder.u8)([42, 24])
 
-//     assertEquals(decoder.str(), str)
-//     assertEquals(decoder.vec(decoder.u8)(), bytes)
-// })
+    encoder.flush()
+    console.log(writer.bytes)
+    const decoder = new Decoder(new Uint8Array(writer.bytes));
 
-// Deno.test("Serde test: common type", () => {
-//     const char = '4';
-//     const bool = true;
+    assertEquals(decoder.str(), "Hello, World!")
+    assertEquals(decoder.vec(decoder.u8)(), [42, 24])
+})
 
-//     const some = "some";
-//     const none = null;
+Deno.test("Serde test: common type", () => {
+    const char = '4';
+    const bool = true;
 
-//     type Vec2d = [number, number];
-//     const ok: Result<Vec2d, string> = { type: "Ok", value: [4, 2] };
-//     const err: Result<string, Vec2d> = { type: "Err", value: [2, 4] };
+    const some = "some";
+    const none = null;
 
-//     const writer = new DefaultWriter();
-//     const encoder = new BufWriter(writer);
+    type Vec2d = [number, number];
+    const ok: Result<Vec2d, string> = { type: "Ok", value: [4, 2] };
+    const err: Result<string, Vec2d> = { type: "Err", value: [2, 4] };
 
-//     encoder.char(char)
-//     encoder.bool(bool)
+    const writer = new DefaultWriter();
+    const encoder = new BufWriter(writer);
 
-//     encoder.option(encoder.str)(some)
-//     encoder.option(encoder.str)(none)
+    encoder.char(char)
+    encoder.bool(bool)
 
-//     encoder.result(encoder.arr(encoder.u8), encoder.str)(ok);
-//     encoder.result(encoder.str, encoder.arr(encoder.u8))(err);
+    encoder.option(encoder.str)(some)
+    encoder.option(encoder.str)(none)
 
-//     encoder.flush()
-//     const decoder = new Decoder(new Uint8Array(writer.bytes));
+    encoder.result(encoder.arr(encoder.u8), encoder.str)(ok);
+    encoder.result(encoder.str, encoder.arr(encoder.u8))(err);
 
-//     assertEquals(decoder.char(), char)
-//     assertEquals(decoder.bool(), bool)
+    encoder.flush()
+    const decoder = new Decoder(new Uint8Array(writer.bytes));
 
-//     assertEquals(decoder.option(decoder.str)(), some)
-//     assertEquals(decoder.option(decoder.str)(), none)
+    assertEquals(decoder.char(), char)
+    assertEquals(decoder.bool(), bool)
 
-//     assertEquals(decoder.result(decoder.arr(decoder.u8, 2), decoder.str)(), ok);
-//     assertEquals(decoder.result(decoder.str, decoder.arr(decoder.u8, 2))(), err);
-// })
+    assertEquals(decoder.option(decoder.str)(), some)
+    assertEquals(decoder.option(decoder.str)(), none)
 
-// Deno.test("Serde test: Complex type", () => {
-//     const value = new Map();
-//     value.set(0, null)
-//     value.set(1, "some")
+    assertEquals(decoder.result(decoder.arr(decoder.u8, 2), decoder.str)(), ok);
+    assertEquals(decoder.result(decoder.str, decoder.arr(decoder.u8, 2))(), err);
+})
 
-//     type ResultTy = Result<Map<number, Option<string>>, Array<string>>;
-//     const ok: ResultTy = { type: "Ok", value };
-//     const err: ResultTy = {
-//         type: "Err",
-//         value: ["Error: 1", "Error: 2"]
-//     };
+Deno.test("Serde test: Complex type", () => {
+    const value = new Map();
+    value.set(0, null)
+    value.set(1, "some")
 
-//     const writer = new DefaultWriter();
-//     const e = new BufWriter(writer);
+    type ResultTy = Result<Map<number, Option<string>>, Array<string>>;
+    const ok: ResultTy = { type: "Ok", value };
+    const err: ResultTy = {
+        type: "Err",
+        value: ["Error: 1", "Error: 2"]
+    };
 
-//     const encode = e.result(e.map(e.u8, e.option(e.str)), e.vec(e.str))
-//     encode(ok)
-//     encode(err)
+    const writer = new DefaultWriter();
+    const e = new BufWriter(writer);
 
-//     e.flush()
-//     const d = new Decoder(new Uint8Array(writer.bytes));
+    const encode = e.result(e.map(e.u8, e.option(e.str)), e.vec(e.str))
+    encode(ok)
+    encode(err)
 
-//     const decode = d.result(d.map(d.u8, d.option(d.str)), d.vec(d.str));
-//     assertEquals(decode(), ok);
-//     assertEquals(decode(), err);
-// })
+    e.flush()
+    const d = new Decoder(new Uint8Array(writer.bytes));
+
+    const decode = d.result(d.map(d.u8, d.option(d.str)), d.vec(d.str));
+    assertEquals(decode(), ok);
+    assertEquals(decode(), err);
+})

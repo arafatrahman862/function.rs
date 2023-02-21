@@ -26,3 +26,14 @@ export interface Write {
     /** Must not call this function more then once */
     flush(): void
 }
+
+export function assertEq<T>(actual: T, expected: T) {
+    if (!Object.is(actual, expected)) {
+        throw new Error(`Assertion failed: expected ${expected}, but got ${actual}`);
+    }
+}
+
+// deno-lint-ignore no-explicit-any
+export function bytes_slice(buf: any, start = 0, end = buf.byteLength) {
+    return new Uint8Array(buf.buffer, buf.byteOffset + start, end - start)
+}

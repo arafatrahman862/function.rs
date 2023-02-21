@@ -1,6 +1,5 @@
 // deno-lint-ignore-file no-explicit-any prefer-const
-import { Result, Num, NumSize } from "./mod.ts";
-import { bytes_slice } from "./utils.ts";
+import { Result, Num, NumSize, bytes_slice } from "./mod.ts";
 
 export type Decode<T> = (this: Decoder) => T;
 
@@ -8,8 +7,8 @@ export class Decoder {
     #offset = 0;
     #view: DataView;
 
-    constructor(reader: Uint8Array) {
-        this.#view = new DataView(reader.buffer, reader.byteOffset, reader.byteLength);
+    constructor(slice: Uint8Array) {
+        this.#view = new DataView(slice.buffer, slice.byteOffset, slice.byteLength);
     }
 
     get offset() {
@@ -37,27 +36,8 @@ export class Decoder {
     u8() {
         return this.#unsafe_read(1, () => this.#view.getUint8(this.#offset))
     }
-    u16() {
-        return this.#unsafe_read(2, () => this.#view.getUint16(this.#offset, true))
-    }
-    u32() {
-        return this.#unsafe_read(4, () => this.#view.getUint32(this.#offset, true))
-    }
-    u64() {
-        return this.#unsafe_read(8, () => this.#view.getBigUint64(this.#offset, true))
-    }
-
     i8() {
         return this.#unsafe_read(1, () => this.#view.getInt8(this.#offset))
-    }
-    i16() {
-        return this.#unsafe_read(2, () => this.#view.getInt16(this.#offset, true))
-    }
-    i32() {
-        return this.#unsafe_read(4, () => this.#view.getInt32(this.#offset, true))
-    }
-    i64() {
-        return this.#unsafe_read(8, () => this.#view.getBigInt64(this.#offset, true))
     }
 
     f32() {
@@ -67,19 +47,20 @@ export class Decoder {
         return this.#unsafe_read(8, () => this.#view.getFloat64(this.#offset, true))
     }
 
-    // --------------------------------------------------------------------------------
-
     num<T extends "I" | "U" | "F", Size extends NumSize<T>>(type: T, size: Size) {
         return () => {
+            if (size == 1) {
+                return (type == "U" ? this.u8() : this.i8()) as Num<T, Size>;
+            }
             if (type == "F") {
-                return ((size == 4) ? this.u32() : this.u64()) as Num<T, Size>
+                return ((size == 4) ? this.f32() : this.f64()) as Num<T, Size>
             }
             let num = 0n;
             let shift = 0n;
             while (true) {
-                let byte = BigInt(this.u8());
-                num |= (byte & 0x7Fn) << shift;
-                if ((byte & 0x80n) == 0n) {
+                let byte = this.u8();
+                num |= BigInt((byte & 0x7F)) << shift;
+                if ((byte & 0x80) == 0) {
                     let bint = type == "I" ? (num >> 1n) ^ -(num & 1n) : num;
                     return ((size >= 8) ? bint : Number(bint)) as Num<T, Size>
                 }
@@ -91,28 +72,18 @@ export class Decoder {
     // --------------------------------------------------------------------------------
 
     str() {
-        let len = this.len_u22();
+        let len = this.len_u30();
         let buf = this.#read_slice(len);
         return new TextDecoder().decode(buf);
     }
 
     char() {
-        return String.fromCharCode(0);
+        return String.fromCharCode(this.num("U", 4)());
     }
 
     bool() {
         return !!this.u8()
     }
-
-    u8_arr(len: number) { return () => new Uint8Array(this.#read_slice(len)) }
-    u16_arr(len: number) { return () => new Uint16Array(this.#read_slice(len * 2)) }
-    u32_arr(len: number) { return () => new Uint32Array(this.#read_slice(len * 4)) }
-    u64_arr(len: number) { return () => new BigUint64Array(this.#read_slice(len * 8)) }
-
-    i8_arr(len: number) { return () => new Int8Array(this.#read_slice(len)) }
-    i16_arr(len: number) { return () => new Int16Array(this.#read_slice(len * 2)) }
-    i32_arr(len: number) { return () => new Int32Array(this.#read_slice(len * 4)) }
-    i64_arr(len: number) { return () => new BigInt64Array(this.#read_slice(len * 8)) }
 
     option<T>(v: Decode<T>) {
         return () => {
@@ -144,7 +115,7 @@ export class Decoder {
 
     vec<T>(v: Decode<T>) {
         return () => {
-            let len = this.len_u22();
+            let len = this.len_u30();
             return this.arr(v, len)()
         }
     }
@@ -152,7 +123,7 @@ export class Decoder {
     map<K, V>(k: Decode<K>, v: Decode<V>) {
         return () => {
             let map: Map<K, V> = new Map();
-            let len = this.len_u22();
+            let len = this.len_u30();
             for (let i = 0; i < len; i++) {
                 let key = k.call(this);
                 let value = v.call(this);
@@ -181,11 +152,11 @@ export class Decoder {
         return ((b1 & 0x7F) << 8) | b2
     }
 
-    len_u22() {
+    len_u30() {
         let num = this.u8();
         let len = num >> 6;
         num &= 0x3F;
-        for (let i = 0; i < (len - 1); i++) {
+        for (let i = 0; i < len; i++) {
             num = (num << 8) + this.u8()
         }
         return num

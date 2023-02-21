@@ -1,6 +1,5 @@
 // deno-lint-ignore-file no-explicit-any prefer-const
 import { Num, NumSize, Result, Write } from "./mod.ts";
-import { bytes_slice, assertEq } from "./utils.ts";
 
 type Encode<T> = (this: BufWriter, value: T) => void;
 
@@ -59,12 +58,6 @@ export class BufWriter implements Write {
     u8(num: number) {
         this.#unsafe_write(1, () => this.#view.setUint8(this.#written, num));
     }
-    u32(num: number) {
-        this.#unsafe_write(4, () => this.#view.setUint32(this.#written, num, true));
-    }
-    u64(num: bigint) {
-        this.#unsafe_write(8, () => this.#view.setBigUint64(this.#written, num, true));
-    }
     i8(num: number) {
         this.#unsafe_write(1, () => this.#view.setInt8(this.#written, num));
     }
@@ -74,25 +67,29 @@ export class BufWriter implements Write {
     f64(num: number) {
         this.#unsafe_write(8, () => this.#view.setFloat64(this.#written, num, true));
     }
-
     num<T extends "I" | "U" | "F", Size extends NumSize<T>>(type: T, size: Size) {
+        let bits = BigInt(size * 8);
+        let max = (1n << bits) - 1n;
         return (num: Num<T, Size>) => {
-            if (type == "F") {
-                return (size == 4) ? this.f32(Number(num)) : this.f64(num as bigint)
+            if (size == 1) {
+                return type == "U" ? this.u8(num as number) : this.i8(num as number);
             }
-            let vars = [0x7f, 0x80, 7, 1, (size * 8) - 1];
-            let [L7, MSB, n7, /* ZigZag shifter: */ l, m] = size >= 8 ? vars.map(BigInt) : vars as any;
+            if (type == "F") {
+                return (size == 4) ? this.f32(num as number) : this.f64(num as number)
+            }
+            let int = BigInt(num);
             if (type == "I") {
                 // Map integer with ZigZag Code
-                (<any>num) = (num << l) ^ (num >> m)
+                int = (int << 1n) ^ (int >> bits - 1n)
             }
-            let bytes = [];
-            while (num > L7) {
-                bytes.push(num | MSB);
-                (<any>num) >>= n7;
+            if (int > max) {
+                throw new Error(`Max value: ${max}, But got: ${int}`)
             }
-            bytes.push(num);
-            bytes = size >= 8 ? bytes.map(Number) : bytes;
+            while (int > 0b111_1111n) {
+                this.u8(Number((int & 0xffn) | 0x80n));
+                int >>= 7n;
+            }
+            this.u8(Number(int));
         }
     }
 
@@ -110,57 +107,6 @@ export class BufWriter implements Write {
 
     bool(bool: boolean) {
         this.u8(+bool)
-    }
-
-
-    u8_arr(len: number) {
-        return (data: Uint8Array) => {
-            assertEq(data.length, len);
-            this.write_all(data);
-        }
-    }
-    u16_arr(len: number) {
-        return (data: Uint16Array) => {
-            assertEq(data.length, len);
-            this.write_all(bytes_slice(data));
-        };
-    }
-    u32_arr(len: number) {
-        return (data: Uint32Array) => {
-            assertEq(data.length, len);
-            this.write_all(bytes_slice(data));
-        };
-    }
-    u64_arr(len: number) {
-        return (data: BigUint64Array) => {
-            assertEq(data.length, len);
-            this.write_all(bytes_slice(data));
-        };
-    }
-
-    i8_arr(len: number) {
-        return (data: Int8Array) => {
-            assertEq(data.length, len);
-            this.write_all(bytes_slice(data));
-        };
-    }
-    i16_arr(len: number) {
-        return (data: Int16Array) => {
-            assertEq(data.length, len);
-            this.write_all(bytes_slice(data));
-        };
-    }
-    i32_arr(len: number) {
-        return (data: Int32Array) => {
-            assertEq(data.length, len);
-            this.write_all(bytes_slice(data));
-        };
-    }
-    i64_arr(len: number) {
-        return (data: BigInt64Array) => {
-            assertEq(data.length, len);
-            this.write_all(bytes_slice(data));
-        };
     }
 
     option<T>(v: Encode<T>) {
@@ -221,7 +167,7 @@ export class BufWriter implements Write {
 
     len_u15(num: number) {
         let b2 = num;
-        if (num < (1 << 7)) { this.u8(b2) }
+        if (num < (1 << 7)) { return this.u8(b2) }
         if (num < (1 << 15)) {
             let b1 = (num >> 8) & 0xFF;
             return this.write_all(Uint8Array.from([0x80 | b1, b2]))
