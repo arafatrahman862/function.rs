@@ -32,12 +32,12 @@ export function bytes_slice(buf: any, start = 0, end = buf.byteLength) {
 //     }
 // }
 
-export function char_from(bytes: Uint8Array) {
-    return String.fromCharCode(
-        (bytes[0] << 24) |
-        (bytes[1] << 16) |
-        (bytes[2] << 8) |
-        bytes[3]
-    );
-}
+// export function char_from(bytes: Uint8Array) {
+//     return String.fromCharCode(
+//         (bytes[0] << 24) |
+//         (bytes[1] << 16) |
+//         (bytes[2] << 8) |
+//         bytes[3]
+//     );
+// }
 

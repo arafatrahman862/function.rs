@@ -11,7 +11,7 @@ pub use frpc_message;
 
 pub use frpc_macros::Message;
 
-pub const DATABUF_CONF: u8 = databuf::config::num::LEB128 | databuf::config::len::LEU29;
+pub const DATABUF_CONF: u8 = databuf::config::num::LEB128 | databuf::config::len::BEU30;
 
 #[macro_export]
 macro_rules! procedure {

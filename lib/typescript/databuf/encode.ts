@@ -1,5 +1,5 @@
-// deno-lint-ignore-file no-explicit-any
-import { Result, Write } from "./mod.ts";
+// deno-lint-ignore-file no-explicit-any prefer-const
+import { Num, NumSize, Result, Write } from "./mod.ts";
 import { bytes_slice, assertEq } from "./utils.ts";
 
 type Encode<T> = (this: BufWriter, value: T) => void;
@@ -21,7 +21,7 @@ export class BufWriter implements Write {
     }
 
     #unsafe_write(bytes_len: number, cb: () => void) {
-        if (bytes_len >= this.spare_capacity) {
+        if (bytes_len >= this.spareCapacity) {
             this.#write_buf();
         }
         cb.call(this)
@@ -30,7 +30,7 @@ export class BufWriter implements Write {
 
     // --------------------------------------------------------------------------
 
-    get spare_capacity() {
+    get spareCapacity() {
         return this.#view.byteLength - this.#written;
     }
 
@@ -39,7 +39,7 @@ export class BufWriter implements Write {
     }
 
     write_all(bytes: Uint8Array) {
-        if (bytes.length >= this.spare_capacity) {
+        if (bytes.length >= this.spareCapacity) {
             this.#write_buf();
         }
         if (bytes.length >= this.#view.byteLength) {
@@ -59,29 +59,15 @@ export class BufWriter implements Write {
     u8(num: number) {
         this.#unsafe_write(1, () => this.#view.setUint8(this.#written, num));
     }
-    u16(num: number) {
-        this.#unsafe_write(2, () => this.#view.setUint16(this.#written, num, true));
-    }
     u32(num: number) {
         this.#unsafe_write(4, () => this.#view.setUint32(this.#written, num, true));
     }
     u64(num: bigint) {
         this.#unsafe_write(8, () => this.#view.setBigUint64(this.#written, num, true));
     }
-
     i8(num: number) {
         this.#unsafe_write(1, () => this.#view.setInt8(this.#written, num));
     }
-    i16(num: number) {
-        this.#unsafe_write(2, () => this.#view.setInt16(this.#written, num, true));
-    }
-    i32(num: number) {
-        this.#unsafe_write(4, () => this.#view.setInt32(this.#written, num, true));
-    }
-    i64(num: bigint) {
-        this.#unsafe_write(8, () => this.#view.setBigInt64(this.#written, num, true));
-    }
-
     f32(num: number) {
         this.#unsafe_write(4, () => this.#view.setFloat32(this.#written, num, true));
     }
@@ -89,27 +75,43 @@ export class BufWriter implements Write {
         this.#unsafe_write(8, () => this.#view.setFloat64(this.#written, num, true));
     }
 
+    num<T extends "I" | "U" | "F", Size extends NumSize<T>>(type: T, size: Size) {
+        return (num: Num<T, Size>) => {
+            if (type == "F") {
+                return (size == 4) ? this.f32(Number(num)) : this.f64(num as bigint)
+            }
+            let vars = [0x7f, 0x80, 7, 1, (size * 8) - 1];
+            let [L7, MSB, n7, /* ZigZag shifter: */ l, m] = size >= 8 ? vars.map(BigInt) : vars as any;
+            if (type == "I") {
+                // Map integer with ZigZag Code
+                (<any>num) = (num << l) ^ (num >> m)
+            }
+            let bytes = [];
+            while (num > L7) {
+                bytes.push(num | MSB);
+                (<any>num) >>= n7;
+            }
+            bytes.push(num);
+            bytes = size >= 8 ? bytes.map(Number) : bytes;
+        }
+    }
+
     // -------------------------------------------------------------------------------------
 
     str(value: string) {
         const bytes = new TextEncoder().encode(value);
-        this.len_u22(bytes.byteLength);
+        this.len_u30(bytes.byteLength);
         this.write_all(bytes);
     }
 
     char(char: string) {
-        const code = char.charCodeAt(0);
-        const bytes = new Uint8Array(4);
-        bytes[0] = (code & 0xff000000) >> 24;
-        bytes[1] = (code & 0x00ff0000) >> 16;
-        bytes[2] = (code & 0x0000ff00) >> 8;
-        bytes[3] = code & 0x000000ff;
-        this.write_all(bytes);
+        this.num("U", 4)(char.charCodeAt(0))
     }
 
-    bool(ean: boolean) {
-        this.u8(+ean)
+    bool(bool: boolean) {
+        this.u8(+bool)
     }
+
 
     u8_arr(len: number) {
         return (data: Uint8Array) => {
@@ -194,14 +196,14 @@ export class BufWriter implements Write {
 
     vec<T>(v: Encode<T>) {
         return (values: T[]) => {
-            this.len_u22(values.length);
+            this.len_u30(values.length);
             this.arr(v)(values)
         }
     }
 
     map<K, V>(k: Encode<K>, v: Encode<V>) {
         return (values: Map<K, V>) => {
-            this.len_u22(values.size);
+            this.len_u30(values.size);
             for (const [key, value] of values) {
                 k.call(this, key);
                 v.call(this, value);
@@ -218,31 +220,32 @@ export class BufWriter implements Write {
     }
 
     len_u15(num: number) {
-        let b1 = num;
-        if (num < 128) { this.u8(b1) }
-        else {
-            b1 = 0x80 | b1; // 7 bits with MSB is set.
-            const b2 = Uint8Array.of(num >> 7)[0]; // next 8 bits
-            this.write_all(Uint8Array.from([b1, b2]))
+        let b2 = num;
+        if (num < (1 << 7)) { this.u8(b2) }
+        if (num < (1 << 15)) {
+            let b1 = (num >> 8) & 0xFF;
+            return this.write_all(Uint8Array.from([0x80 | b1, b2]))
         }
+        throw new Error("out of range integral type conversion attempted")
     }
 
-    len_u22(num: number) {
-        let b1 = num /* as u8 */;
-        if (num < 128) { this.u8(b1) }
-        else {
-            b1 = b1 & 0x3F; // read last 6 bits
-            const b2 = Uint8Array.of(num >> 6)[0]; // next 8 bits
-            if (num < 0x4000) {
-                // set first 2 bits  of `b1` = `10`
-                this.write_all(Uint8Array.from([0x80 | b1, b2]))
-            }
-            else {
-                // assert(num <= 0x3FFFFF);
-                const b3 = Uint8Array.of(num >> 14)[0]; // next 8 bits
-                // set first 2 bits  of `b1` to `11`
-                this.write_all(Uint8Array.from([0xC0 | b1, b2, b3]))
-            }
+    len_u30(num: number) {
+        let b4 = num & 0xff;
+        if (num < (1 << 6)) {
+            return this.write_all(Uint8Array.from([b4]));
         }
+        let b3 = (num >> 8) & 0xff;
+        if (num < (1 << 14)) {
+            return this.write_all(Uint8Array.from([0x40 | b3, b4]));
+        }
+        let b2 = (num >> 16) & 0xff;
+        if (num < (1 << 22)) {
+            return this.write_all(Uint8Array.from([0x80 | b2, b3, b4]));
+        }
+        let b1 = (num >> 24) & 0xff;
+        if (num < (1 << 30)) {
+            return this.write_all(Uint8Array.from([0xC0 | b1, b2, b3, b4]))
+        }
+        throw new Error("out of range integral type conversion attempted")
     }
 }

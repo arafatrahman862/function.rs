@@ -8,4 +8,4 @@ encode = []
 decode = []
 
 [dependencies]
-databuf = "0.2.1"
+databuf = "0.3.0"

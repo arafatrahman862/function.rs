@@ -1,5 +1,5 @@
 [workspace]
-members = ["frpc-macros", "frpc-message", "frpc-codegen", "cli"]
+members = ["frpc-macros", "frpc-message", "frpc-codegen"]
 
 [package]
 name = "frpc"
@@ -8,7 +8,7 @@ edition = "2021"
 
 [dependencies]
 tokio = { version = "1", features = ["io-util"] }
-databuf = "0.2.1"
+databuf = "0.3.0"
 
 frpc-macros = { path = "frpc-macros" }
 frpc-message = { path = "frpc-message", features = ["encode"] }

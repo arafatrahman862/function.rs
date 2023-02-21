@@ -1,6 +1,6 @@
-// deno-lint-ignore-file no-explicit-any
-import { Result } from "./mod.ts";
-import { bytes_slice, char_from } from "./utils.ts";
+// deno-lint-ignore-file no-explicit-any prefer-const
+import { Result, Num, NumSize } from "./mod.ts";
+import { bytes_slice } from "./utils.ts";
 
 export type Decode<T> = (this: Decoder) => T;
 
@@ -19,11 +19,11 @@ export class Decoder {
     // -----------------------------------------------------------------------------------
 
     #unsafe_read<T>(amt: number, cb: () => T): T {
-        const new_offset = this.#offset + amt;
+        let new_offset = this.#offset + amt;
         if (new_offset > this.#view.byteLength) {
             throw new Error("Insufficient bytes")
         }
-        const num = cb.call(this);
+        let num = cb.call(this);
         this.#offset = new_offset;
         return num
     }
@@ -69,14 +69,35 @@ export class Decoder {
 
     // --------------------------------------------------------------------------------
 
+    num<T extends "I" | "U" | "F", Size extends NumSize<T>>(type: T, size: Size) {
+        return () => {
+            if (type == "F") {
+                return ((size == 4) ? this.u32() : this.u64()) as Num<T, Size>
+            }
+            let num = 0n;
+            let shift = 0n;
+            while (true) {
+                let byte = BigInt(this.u8());
+                num |= (byte & 0x7Fn) << shift;
+                if ((byte & 0x80n) == 0n) {
+                    let bint = type == "I" ? (num >> 1n) ^ -(num & 1n) : num;
+                    return ((size >= 8) ? bint : Number(bint)) as Num<T, Size>
+                }
+                shift += 7n;
+            }
+        }
+    }
+
+    // --------------------------------------------------------------------------------
+
     str() {
-        const len = this.len_u22();
-        const buf = this.#read_slice(len);
+        let len = this.len_u22();
+        let buf = this.#read_slice(len);
         return new TextDecoder().decode(buf);
     }
 
     char() {
-        return char_from(this.#read_slice(4));
+        return String.fromCharCode(0);
     }
 
     bool() {
@@ -113,7 +134,7 @@ export class Decoder {
 
     arr<T>(v: Decode<T>, len: number) {
         return () => {
-            const values = []
+            let values = []
             for (let i = 0; i < len; i++) {
                 values.push(v.call(this))
             }
@@ -123,18 +144,18 @@ export class Decoder {
 
     vec<T>(v: Decode<T>) {
         return () => {
-            const len = this.len_u22();
+            let len = this.len_u22();
             return this.arr(v, len)()
         }
     }
 
     map<K, V>(k: Decode<K>, v: Decode<V>) {
         return () => {
-            const map: Map<K, V> = new Map();
-            const len = this.len_u22();
+            let map: Map<K, V> = new Map();
+            let len = this.len_u22();
             for (let i = 0; i < len; i++) {
-                const key = k.call(this);
-                const value = v.call(this);
+                let key = k.call(this);
+                let value = v.call(this);
                 map.set(key, value)
             }
             return map
@@ -143,8 +164,8 @@ export class Decoder {
 
     tuple<T extends Decode<any>[]>(...args: T) {
         return () => {
-            const tuples = [] as { [K in keyof T]: ReturnType<T[K]> };
-            for (const arg of args) {
+            let tuples = [] as { [K in keyof T]: ReturnType<T[K]> };
+            for (let arg of args) {
                 tuples.push(arg.call(this))
             }
             return tuples
@@ -152,29 +173,21 @@ export class Decoder {
     }
 
     len_u15() {
-        let num = this.u8();
-        if (num >> 7 == 1) {
-            const snd = this.u8();
-            num = (num & 0x7F) | snd << 7; // num <- add 8 bits
+        let b1 = this.u8();
+        if (b1 >> 7 == 0) {
+            return b1
         }
-        return num
+        let b2 = this.u8();
+        return ((b1 & 0x7F) << 8) | b2
     }
 
     len_u22() {
-        const num = this.u8();
-        // if 1st bit is `0`
-        if (num >> 7 == 0) { return num }
-        // and 2nd bit is `0`
-        else if (num >> 6 == 2) {
-            const b2 = this.u8();
-            return (num & 0x3F) | b2 << 6
-        } else {
-            // At this point, only possible first 2 bits are `11`
-            const [b2, b3] = this.#read_slice(2);
-
-            return (num & 0x3F)  // get last 6 bits
-                | (b2) << 6     // add 8 bits from 2nd byte
-                | (b3) << 14    // add 8 bits from 3rd byte
+        let num = this.u8();
+        let len = num >> 6;
+        num &= 0x3F;
+        for (let i = 0; i < (len - 1); i++) {
+            num = (num << 8) + this.u8()
         }
+        return num
     }
 }
