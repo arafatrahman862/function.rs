@@ -1,0 +1,2 @@
+[env]
+FRPC_CODEGEN = { value = "target/release/", relative = true }

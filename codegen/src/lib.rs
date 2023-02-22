@@ -10,7 +10,8 @@ use std::{
     env,
     fs::File,
     hash::{Hash, Hasher},
-    io::{Read, Seek, SeekFrom, Write},
+    io::{Read, Seek, Write},
+    str::FromStr,
 };
 
 fn prev_hash() -> Result<(File, u64), Box<dyn std::error::Error>> {
@@ -44,7 +45,7 @@ pub unsafe extern "C" fn codegen_from(raw_bytes: *const u8, len: usize) {
                 return;
             }
             if let Err(msg) = file
-                .seek(SeekFrom::Start(0))
+                .rewind()
                 .and_then(|_| file.write_all(&hash.to_le_bytes()))
             {
                 eprintln!("[ERROR] {msg}");
@@ -68,11 +69,23 @@ pub fn codegen(type_def: TypeDef) {
     input.add_tys(type_def.funcs.iter().flat_map(|func| func.args.iter()));
     output.add_tys(type_def.funcs.iter().map(|func| &func.retn));
 
-    let provider = Provider {
+    let _provider = Provider {
         input_paths: input.paths,
         output_paths: output.paths,
         type_def: &type_def,
     };
 
-    javascript::generate(&provider);
+    // env::var("key");
+
+    // std::fs::create_dir_all("path");
+    // if let Ok(path) = env::var("FRPC_BINDGEN_JS") {
+    //     println!("{:?}", javascript::generate(&provider));
+    // }
+}
+
+#[test]
+fn test_name() {
+    // let string = include_str!("E:/projects/function/Cargo.toml");
+    // let table = string.parse::<toml::Table>();
+    // println!("{:#?}", table);
 }

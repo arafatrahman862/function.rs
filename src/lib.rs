@@ -79,9 +79,13 @@ pub unsafe fn __codegen(type_def: frpc_message::TypeDef) {
     #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
     compile_error!("`codegen` is not available on the current operating system.");
 
-    let filename = std::env::var("FRPC_CODEGEN")
+    let path = std::env::var("FRPC_CODEGEN")
         .unwrap_or_else(|_| format!("{}/target/frpc/{CODEGEN_DYLIB}", env!("CARGO_MANIFEST_DIR")));
 
+    let mut filename = std::path::PathBuf::from(path);
+    if filename.is_dir() {
+        filename = filename.join(CODEGEN_DYLIB);
+    }
     let run = || -> Result<_, Error> {
         let lib = Library::new(&filename)?;
         let codegen_from: Symbol<unsafe extern "C" fn(*const u8, usize)> =
@@ -93,30 +97,6 @@ pub unsafe fn __codegen(type_def: frpc_message::TypeDef) {
         Ok(())
     };
     if let Err(msg) = run() {
-        eprintln!("[ERROR] {msg}, Path = {filename}");
-    }
-}
-
-#[test]
-fn build_codegen() {
-    let time = std::time::Instant::now();
-    println!("Building...");
-    let _ = std::process::Command::new("cargo")
-        .args(["build", "--lib", "--package", "codegen"])
-        .output()
-        .expect("failed to execute process");
-
-    println!("Done: {:?} sec\n", time.elapsed().as_secs());
-    std::env::set_var("FRPC_CODEGEN", "target/debug/codegen.dll");
-}
-
-#[test]
-fn test_name() {
-    build_codegen();
-    unsafe {
-        __codegen(frpc_message::TypeDef {
-            ctx: Default::default(),
-            funcs: Default::default(),
-        });
+        eprintln!("[ERROR] {msg}, Path = {filename:?}");
     }
 }
