@@ -1,24 +1,24 @@
+mod conf;
 pub mod fmt;
 mod interface_path;
 pub mod javascript;
+mod logger;
 pub mod utils;
 
 use frpc_message::TypeDef;
 use interface_path::InterfacePath;
+use log::{error, info};
+use logger::CodegenLogger;
 use std::{
     collections::hash_map::DefaultHasher,
     env,
-    fs::File,
+    fs::{self, File},
     hash::{Hash, Hasher},
-    io::{Read, Seek, SeekFrom, Write},
-    path::PathBuf,
+    io::{Read, Result, Seek, SeekFrom, Write},
 };
 
-fn prev_hash() -> Result<(File, u64), Box<dyn std::error::Error>> {
-    let key = "CARGO_PKG_NAME";
-    let name = env::var(key).map_err(|msg| format!("[ERROR] {key}: {msg}"))?;
-    let path = env::temp_dir().join(format!("frpc_codegen_{name}.hex"));
-
+fn prev_hash() -> Result<(File, u64)> {
+    let path = env::temp_dir().join(conf::pkg_name() + "_frpc_codegen.hex");
     let mut file = File::options()
         .create(true)
         .read(true)
@@ -26,13 +26,18 @@ fn prev_hash() -> Result<(File, u64), Box<dyn std::error::Error>> {
         .open(path)?;
 
     let mut buf = [0; 8];
-    file.read_exact(&mut buf)?;
+    let _ = file.read(&mut buf)?;
     Ok((file, u64::from_le_bytes(buf)))
 }
 
 /// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn codegen_from(raw_bytes: *const u8, len: usize) {
+    if let Ok(logger) = CodegenLogger::new(conf::manifest_dir().join("codegen.log")) {
+        log::set_max_level(log::LevelFilter::Info);
+        log::set_boxed_logger(Box::new(logger)).unwrap();
+    }
+    
     let bytes = std::slice::from_raw_parts(raw_bytes, len);
     match prev_hash() {
         Ok((mut file, prev_hash)) => {
@@ -42,19 +47,20 @@ pub unsafe extern "C" fn codegen_from(raw_bytes: *const u8, len: usize) {
                 hasher.finish()
             };
             if hash == prev_hash {
-                // println!("[SKIP]");
-                return;
+                return log::trace!("[SKIP] {hash}");
             }
             if let Err(msg) = file
                 .rewind()
                 .and_then(|_| file.write_all(&hash.to_le_bytes()))
             {
-                eprintln!("[ERROR] {msg}");
+                error!("{msg}");
             }
         }
-        Err(err) => eprintln!("{err}"),
+        Err(err) => error!("{err}"),
     }
-    let _ = TypeDef::try_from(bytes).map(codegen);
+    if let Err(msg) = TypeDef::try_from(bytes).map(codegen) {
+        error!("Unable to parse `TypeDef`, {msg}");
+    }
 }
 
 pub struct Provider<'a> {
@@ -77,40 +83,50 @@ pub fn codegen(type_def: TypeDef) {
     };
 
     if let Err(err) = javascript_codegen(&provider) {
-        eprintln!("[ERROR] {err:?}")
+        error!("{err}")
     }
 }
 
-const JS_PRELUDE: &[u8] = include_bytes!("../../lib/typescript/databuf.ts");
+fn javascript_codegen(provider: &Provider) -> Result<()> {
+    const JS_PRELUDE: &[u8] = include_bytes!("../../lib/typescript/databuf.ts");
 
-fn manifest_dir() -> PathBuf {
-    env::var("CARGO_MANIFEST_DIR")
-        .map(PathBuf::from)
-        .or_else(|_| env::current_dir())
-        .unwrap_or("./".into())
-}
+    let dir = conf::manifest_dir().join("target").join("frpc");
+    fs::create_dir_all(&dir)?;
 
-fn javascript_codegen(provider: &Provider) -> std::io::Result<()> {
-    let path = manifest_dir().join("/target/frpc/");
-    std::fs::create_dir_all(&path)?;
+    let path = dir.join(conf::pkg_name() + ".ts");
+    let code = javascript::generate(provider).to_string();
 
-    let file_path = path.join(env::var("CARGO_PKG_NAME").unwrap_or("frpc.stub".into()) + ".ts");
-    let mut file = File::options().create(true).write(true).open(&file_path)?;
+    let write_full = || {
+        info!("[JavaScript] Update: {path:?}");
+        let bytes = [JS_PRELUDE, code.as_bytes()].concat();
+        let mut file = File::options().create(true).write(true).open(&path)?;
+        file.write_all(&bytes)?;
+        file.set_len(bytes.len() as u64)
+    };
 
-    // if prelude_len > metadata.len() {
-    //     println!("ReRun...");
-    //     file.write_all(JS_PRELUDE)?;
-    // }
+    if !path.is_file() {
+        write_full()?;
+        let mut perm = path.metadata()?.permissions();
+        perm.set_readonly(true);
+        return fs::set_permissions(path, perm);
+    }
 
-    let prelude_len = JS_PRELUDE.len() as u64;
-    let offset = file.seek(SeekFrom::Start(prelude_len))?;
+    // -----------------------------------------------------------
 
-    file.write_all(javascript::generate(provider).to_string().as_bytes())?;
-    file.set_len(offset + prelude_len)
-}
+    let mut perm = path.metadata()?.permissions();
+    if perm.readonly() {
+        perm.set_readonly(false);
+        fs::set_permissions(&path, perm.clone())?;
 
+        let prelude_len = JS_PRELUDE.len() as u64;
+        let mut file = File::options().write(true).open(&path)?;
 
-#[test]
-fn test_name() {
-    
+        let offset = file.seek(SeekFrom::Start(prelude_len))?;
+        file.write_all(code.as_bytes())?;
+        file.set_len(offset + prelude_len)?;
+    } else {
+        write_full()?;
+    }
+    perm.set_readonly(true);
+    fs::set_permissions(path, perm)
 }

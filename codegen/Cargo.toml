@@ -8,4 +8,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 frpc-message = { path = "../frpc-message", features = ["decode"] }
+log = { version = "0.4.17", features = ["std"] }
 # toml = { version = "0.7", default-features = false, features = ["parse"] }
