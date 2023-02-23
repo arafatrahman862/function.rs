@@ -32,10 +32,12 @@ fn prev_hash() -> Result<(File, u64)> {
 
 /// # Safety
 #[no_mangle]
-pub unsafe extern "C" fn codegen_from(raw_bytes: *const u8, len: usize) {
-    if let Ok(logger) = CodegenLogger::new(conf::manifest_dir().join("codegen.log")) {
-        log::set_max_level(log::LevelFilter::Info);
-        log::set_boxed_logger(Box::new(logger)).unwrap();
+pub unsafe extern "C" fn main(raw_bytes: *const u8, len: usize) {
+    if !log::log_enabled!(log::Level::Info) {
+        if let Ok(logger) = CodegenLogger::new(conf::manifest_dir().join("codegen.log")) {
+            log::set_max_level(log::LevelFilter::Info);
+            log::set_boxed_logger(Box::new(logger)).unwrap();
+        }
     }
     
     let bytes = std::slice::from_raw_parts(raw_bytes, len);

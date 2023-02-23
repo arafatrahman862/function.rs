@@ -80,7 +80,7 @@ pub unsafe fn __codegen(type_def: frpc_message::TypeDef) {
     compile_error!("`codegen` is not available on the current operating system.");
 
     let path = std::env::var("FRPC_CODEGEN")
-        .unwrap_or_else(|_| format!("{}/target/frpc/{CODEGEN_DYLIB}", env!("CARGO_MANIFEST_DIR")));
+        .unwrap_or_else(|_| format!("{}/lib/{CODEGEN_DYLIB}", env!("CARGO_MANIFEST_DIR")));
 
     let mut filename = std::path::PathBuf::from(path);
     if filename.is_dir() {
@@ -89,7 +89,7 @@ pub unsafe fn __codegen(type_def: frpc_message::TypeDef) {
     let run = || -> Result<_, Error> {
         let lib = Library::new(&filename)?;
         let codegen_from: Symbol<unsafe extern "C" fn(*const u8, usize)> =
-            lib.get(b"codegen_from\0")?;
+            lib.get(b"main\0")?;
 
         let bytes = type_def.as_bytes();
         let len = bytes.len();
