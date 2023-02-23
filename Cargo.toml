@@ -6,12 +6,18 @@ name = "frpc"
 version = "0.0.1"
 edition = "2021"
 
+license = "Apache-2.0"
+authors = ["Nur <nurmohammed840@gmail.com>"]
+repository = "https://github.com/nurmohammed840/frpc.rs"
+keywords = ["rpc"]
+description = "Flash RPC framework"
+
 [dependencies]
 tokio = { version = "1", features = ["io-util"] }
 databuf = "0.3.0"
 
-frpc-macros = { path = "frpc-macros" }
-frpc-message = { path = "frpc-message", features = ["encode"] }
+frpc-macros = { version = "0.0.1", path = "frpc-macros" }
+frpc-message = { version = "0.0.1", path = "frpc-message", features = ["encode"] }
 
 async-trait = "0.1.63"
 libloading = "0.7.4"
