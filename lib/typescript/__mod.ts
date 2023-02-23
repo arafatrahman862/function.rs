@@ -1,5 +1,5 @@
-export * from "./databuf/mod.ts"
-import { Write } from "./databuf/mod.ts"
+export * from "./databuf/mod"
+import { Write } from "./databuf/mod"
 
 export interface RPC {
     unary_call(): Write & { output(): Promise<ArrayBuffer> }

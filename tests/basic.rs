@@ -40,17 +40,17 @@ async fn get_user(user: (u8, User)) -> (u8, User) {
 }
 
 /// Hello World
-async fn user(name: String, age: u16) -> String {
+async fn user(name: String, age: Unum) -> String {
     let res = match age {
         ..=18 => "We're excited to have you here!",
         ..=25 => "We're glad you joined us. Hope you find something interesting.",
         _ => "It's great to have you here.",
-    };
+    }; // 335 | 457
     format!("Hello {name}! {res}")
 }
-
+type Unum = u64;
 #[test]
 fn test_name() {
     procedure::codegen();
-    std::thread::sleep(std::time::Duration::from_secs(2))
+    std::thread::sleep(std::time::Duration::from_secs(3))
 }

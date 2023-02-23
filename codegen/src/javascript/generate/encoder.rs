@@ -42,7 +42,7 @@ pub fn main(f: &mut impl Write, provider: &Provider) -> Result {
     writeln!(f, "}}")
 }
 
-fn write_struct(f: &mut impl Write, fields: &Vec<StructField>) -> Result {
+fn write_struct(f: &mut impl Write, fields: &[StructField]) -> Result {
     fields.iter().try_for_each(|StructField { name, ty, .. }| {
         writeln!(f, "{}(z.{name});", fmt_ty(ty, "extern"))
     })

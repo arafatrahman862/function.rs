@@ -10,8 +10,8 @@ use std::{
     env,
     fs::File,
     hash::{Hash, Hasher},
-    io::{Read, Seek, Write},
-    str::FromStr,
+    io::{Read, Seek, SeekFrom, Write},
+    path::PathBuf,
 };
 
 fn prev_hash() -> Result<(File, u64), Box<dyn std::error::Error>> {
@@ -26,10 +26,11 @@ fn prev_hash() -> Result<(File, u64), Box<dyn std::error::Error>> {
         .open(path)?;
 
     let mut buf = [0; 8];
-    file.read(&mut buf)?;
+    file.read_exact(&mut buf)?;
     Ok((file, u64::from_le_bytes(buf)))
 }
 
+/// # Safety
 #[no_mangle]
 pub unsafe extern "C" fn codegen_from(raw_bytes: *const u8, len: usize) {
     let bytes = std::slice::from_raw_parts(raw_bytes, len);
@@ -69,23 +70,47 @@ pub fn codegen(type_def: TypeDef) {
     input.add_tys(type_def.funcs.iter().flat_map(|func| func.args.iter()));
     output.add_tys(type_def.funcs.iter().map(|func| &func.retn));
 
-    let _provider = Provider {
+    let provider = Provider {
         input_paths: input.paths,
         output_paths: output.paths,
         type_def: &type_def,
     };
 
-    // env::var("key");
-
-    // std::fs::create_dir_all("path");
-    // if let Ok(path) = env::var("FRPC_BINDGEN_JS") {
-    //     println!("{:?}", javascript::generate(&provider));
-    // }
+    if let Err(err) = javascript_codegen(&provider) {
+        eprintln!("[ERROR] {err:?}")
+    }
 }
+
+const JS_PRELUDE: &[u8] = include_bytes!("../../lib/typescript/databuf.ts");
+
+fn manifest_dir() -> PathBuf {
+    env::var("CARGO_MANIFEST_DIR")
+        .map(PathBuf::from)
+        .or_else(|_| env::current_dir())
+        .unwrap_or("./".into())
+}
+
+fn javascript_codegen(provider: &Provider) -> std::io::Result<()> {
+    let path = manifest_dir().join("/target/frpc/");
+    std::fs::create_dir_all(&path)?;
+
+    let file_path = path.join(env::var("CARGO_PKG_NAME").unwrap_or("frpc.stub".into()) + ".ts");
+    let mut file = File::options().create(true).write(true).open(&file_path)?;
+
+    // if prelude_len > metadata.len() {
+    //     println!("ReRun...");
+    //     file.write_all(JS_PRELUDE)?;
+    // }
+
+    let prelude_len = JS_PRELUDE.len() as u64;
+    let offset = file.seek(SeekFrom::Start(prelude_len))?;
+
+    file.write_all(javascript::generate(provider).to_string().as_bytes())?;
+    file.set_len(offset + prelude_len)
+}
+
 
 #[test]
 fn test_name() {
-    // let string = include_str!("E:/projects/function/Cargo.toml");
-    // let table = string.parse::<toml::Table>();
-    // println!("{:#?}", table);
+    
 }

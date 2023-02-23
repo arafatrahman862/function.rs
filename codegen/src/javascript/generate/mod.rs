@@ -8,7 +8,7 @@ use crate::{fmt, utils::to_camel_case};
 use frpc_message::*;
 use std::fmt::{Result, Write};
 
-fn fmt_tuple<'a>(fields: &'a Vec<TupleField>, scope: &'static str) -> fmt!(type 'a) {
+fn fmt_tuple<'a>(fields: &'a [TupleField], scope: &'static str) -> fmt!(type 'a) {
     fmt!(move |f| {
         write!(f, "d.tuple(")?;
         for TupleField { ty, .. } in fields.iter() {

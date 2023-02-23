@@ -1,7 +1,7 @@
 use super::*;
 use crate::utils::write_doc_comments;
 
-pub fn main<'a>(f: &mut impl Write, provider: &'a Provider) -> Result {
+pub fn main(f: &mut impl Write, provider: &Provider) -> Result {
     writeln!(f, "let struct = {{")?;
     for path in &provider.output_paths {
         let ident = to_camel_case(path, ':');
@@ -10,11 +10,12 @@ pub fn main<'a>(f: &mut impl Write, provider: &'a Provider) -> Result {
         match &provider.type_def.ctx.costom_types[*path] {
             CustomTypeKind::Unit(data) => {
                 let items = fmt!(|f| {
-                    data.fields.iter().enumerate().try_for_each(
-                        |(i, UnitField { name, .. })| {
+                    data.fields
+                        .iter()
+                        .enumerate()
+                        .try_for_each(|(i, UnitField { name, .. })| {
                             writeln!(f, "case {i}: return {ident}.{name};")
-                        },
-                    )
+                        })
                 });
                 write_enum(f, &ident, items)?;
             }
@@ -27,7 +28,7 @@ pub fn main<'a>(f: &mut impl Write, provider: &'a Provider) -> Result {
                             EnumKind::Tuple(fields) => {
                                 for (i, TupleField { doc, ty }) in fields.iter().enumerate() {
                                     write_doc_comments(f, doc)?;
-                                    writeln!(f, " {i}: {}(),", fmt_ty(&ty, "struct"))?;
+                                    writeln!(f, " {i}: {}(),", fmt_ty(ty, "struct"))?;
                                 }
                             }
                             EnumKind::Unit => {}
@@ -51,7 +52,7 @@ pub fn main<'a>(f: &mut impl Write, provider: &'a Provider) -> Result {
     writeln!(f, "}}")
 }
 
-fn write_struct(f: &mut impl Write, fields: &Vec<StructField>) -> Result {
+fn write_struct(f: &mut impl Write, fields: &[StructField]) -> Result {
     fields.iter().try_for_each(|StructField { doc, name, ty }| {
         write_doc_comments(f, doc)?;
         writeln!(f, "{name}: {}(),", fmt_ty(ty, "struct"))

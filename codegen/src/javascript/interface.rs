@@ -18,7 +18,7 @@ pub fn generate(w: &mut impl Write, type_def: &TypeDef) -> Result {
 }
 
 pub fn gen_type(f: &mut impl Write, ident: String, kind: &CustomTypeKind) -> Result {
-    Ok(match kind {
+    match kind {
         CustomTypeKind::Unit(unit) => {
             write_doc_comments(f, &unit.doc)?;
 
@@ -67,7 +67,8 @@ pub fn gen_type(f: &mut impl Write, ident: String, kind: &CustomTypeKind) -> Res
                 writeln!(f, "| {{ type: {name:?}, {fields}}}")?;
             }
         }
-    })
+    }
+    Ok(())
 }
 
 fn write_map<'a, I, K, V>(f: &mut impl Write, sep: &str, fields: I) -> Result
@@ -119,7 +120,7 @@ pub fn fmt_js_ty(ty: &Ty) -> String {
         Ty::Map { ty, .. } => format!("Map<{}, {}>", fmt_js_ty(&ty.0), fmt_js_ty(&ty.1)),
         Ty::Tuple(tys) => {
             if tys.is_empty() {
-                format!("void")
+                "void".to_string()
             } else {
                 format!("[{}]", join(tys.iter().map(fmt_js_ty), ", "))
             }
