@@ -1,6 +1,6 @@
 use super::*;
 
-pub fn main(f: &mut impl Write, provider: &Provider) -> Result {
+pub fn main(f: &mut impl Write, provider: &CodeGen) -> Result {
     writeln!(f, "let extern = {{")?;
 
     for path in provider.input_paths.iter() {

@@ -1,4 +1,4 @@
-use std::fmt::{Write, Result};
+use std::fmt::{Result, Write};
 
 pub struct CodeFormatter {
     pub buf: String,

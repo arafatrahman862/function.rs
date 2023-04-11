@@ -1,7 +1,7 @@
 use super::*;
 use crate::utils::write_doc_comments;
 
-pub fn main(f: &mut impl Write, provider: &Provider) -> Result {
+pub fn main(f: &mut impl Write, provider: &CodeGen) -> Result {
     writeln!(f, "let struct = {{")?;
     for path in &provider.output_paths {
         let ident = to_camel_case(path, ':');

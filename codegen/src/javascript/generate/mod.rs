@@ -1,4 +1,4 @@
-use crate::Provider;
+use crate::CodeGen;
 
 pub mod decoder;
 pub mod encoder;
