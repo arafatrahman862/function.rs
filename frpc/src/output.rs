@@ -16,7 +16,7 @@ impl<T: Encode + Sync> Output for T {
     where
         W: AsyncWrite + Unpin + Send,
     {
-        let bytes = T::to_bytes::<{crate::DATABUF_CONF}>(self);
+        let bytes = T::to_bytes::<{ crate::DATABUF_CONFIG }>(self);
         writer.write_all(&bytes).await
     }
 }

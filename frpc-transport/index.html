@@ -1,0 +1,27 @@
+<h1>Hello World!</h1>
+<script>
+    function* gen_nums() {
+        for (let i = 0; ; i++) {
+            yield i + ", "
+        }
+    }
+    function data(size) {
+        let nums = "";
+        for (const num of gen_nums()) {
+            nums += num;
+            if (nums.length >= size) {
+                return nums.slice(0, size)
+            }
+        }
+    }
+    fetch("https://127.0.0.1:4433/b", {
+        method: "GET",
+        mode: 'no-cors'
+        // body: data(1 * 1024 * 1024)
+    })
+        .then(res => res.arrayBuffer())
+        .then(data => {
+            console.log("Result: ", new TextDecoder().decode(data));
+        })
+        .catch((err) => console.error(`Error: ${err}`))
+</script>

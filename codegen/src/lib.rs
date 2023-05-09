@@ -1,12 +1,14 @@
-mod conf;
+// mod conf;
+// mod logger;
+
 pub mod fmt;
 mod interface_path;
 pub mod javascript;
-mod logger;
 pub mod utils;
 
 use frpc_message::TypeDef;
 pub use interface_path::InterfacePath;
+
 // use log::{error, info};
 // use logger::CodegenLogger;
 // use std::{
@@ -86,47 +88,3 @@ impl<'a> CodeGen<'a> {
         }
     }
 }
-
-// fn javascript_codegen(provider: &Provider) -> Result<()> {
-//     const JS_PRELUDE: &[u8] = include_bytes!("../../lib/typescript/databuf.ts");
-
-//     let dir = conf::manifest_dir().join("target").join("frpc");
-//     fs::create_dir_all(&dir)?;
-
-//     let path = dir.join(conf::pkg_name() + ".ts");
-//     let code = javascript::generate(provider).to_string();
-
-//     let write_full = || {
-//         info!("[JavaScript] Update: {path:?}");
-//         let bytes = [JS_PRELUDE, code.as_bytes()].concat();
-//         let mut file = File::options().create(true).write(true).open(&path)?;
-//         file.write_all(&bytes)?;
-//         file.set_len(bytes.len() as u64)
-//     };
-
-//     if !path.is_file() {
-//         write_full()?;
-//         let mut perm = path.metadata()?.permissions();
-//         perm.set_readonly(true);
-//         return fs::set_permissions(path, perm);
-//     }
-
-//     // -----------------------------------------------------------
-
-//     let mut perm = path.metadata()?.permissions();
-//     if perm.readonly() {
-//         perm.set_readonly(false);
-//         fs::set_permissions(&path, perm.clone())?;
-
-//         let prelude_len = JS_PRELUDE.len() as u64;
-//         let mut file = File::options().write(true).open(&path)?;
-
-//         let offset = file.seek(SeekFrom::Start(prelude_len))?;
-//         file.write_all(code.as_bytes())?;
-//         file.set_len(offset + prelude_len)?;
-//     } else {
-//         write_full()?;
-//     }
-//     perm.set_readonly(true);
-//     fs::set_permissions(path, perm)
-// }

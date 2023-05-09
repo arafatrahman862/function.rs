@@ -1,3 +1,4 @@
+mod ctx;
 pub mod fn_once;
 pub mod output;
 
@@ -9,9 +10,10 @@ pub mod util;
 #[cfg(debug_assertions)]
 pub use frpc_message;
 
+pub use ctx::Ctx;
 pub use frpc_macros::Message;
 
-pub const DATABUF_CONF: u8 = databuf::config::num::LEB128 | databuf::config::len::BEU30;
+pub const DATABUF_CONFIG: u8 = databuf::config::num::LEB128 | databuf::config::len::BEU30;
 
 #[macro_export]
 macro_rules! procedure {
@@ -50,7 +52,7 @@ macro_rules! procedure {
         {
             match id {
                 $($id => {
-                    let args = ::databuf::Decode::from_bytes::<{$crate::DATABUF_CONF}>(&data).unwrap();
+                    let args = ::databuf::Decode::from_bytes::<{$crate::DATABUF_CONFIG}>(&data).unwrap();
                     let output = $crate::fn_once::FnOnce::call_once($func, args).await;
                     $crate::output::Output::write(&output, writer).await
                 }),*
@@ -88,8 +90,7 @@ pub unsafe fn __codegen(type_def: frpc_message::TypeDef) {
     }
     let run = || -> Result<_, Error> {
         let lib = Library::new(&filename)?;
-        let codegen_from: Symbol<unsafe extern "C" fn(*const u8, usize)> =
-            lib.get(b"main\0")?;
+        let codegen_from: Symbol<unsafe extern "C" fn(*const u8, usize)> = lib.get(b"main\0")?;
 
         let bytes = type_def.as_bytes();
         let len = bytes.len();

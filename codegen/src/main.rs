@@ -35,12 +35,7 @@ fn run() -> Result<()> {
         let mut buf = Vec::new();
         stream.read_to_end(&mut buf)?;
         let Ok(type_def) = TypeDef::try_from(&buf) else { continue };
-
-        // let provider = codegen::Provider {
-        //     input_paths: input.paths,
-        //     output_paths: output.paths,
-        //     type_def: &type_def,
-        // };
+        let _s = codegen::CodeGen::new(&type_def);
     }
 }
 
