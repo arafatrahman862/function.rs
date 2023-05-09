@@ -1,4 +1,5 @@
 use super::*;
+use frpc::Ctx;
 use h2_plus::{
     http::{method::Method, StatusCode},
     *,
@@ -14,6 +15,10 @@ pub struct H2Transport {
 }
 
 impl H2Transport {
+    // pub fn on_accept(_: SocketAddr) -> Ctx<()> {
+    //     Ctx::from(())
+    // }
+
     pub async fn bind(
         addr: impl ToSocketAddrs,
         cert: impl AsRef<Path>,
@@ -29,52 +34,49 @@ impl H2Transport {
         }
     }
 
-    pub async fn serve<Cx, Fut>(
+    pub async fn serve<T, Rpc, Stream>(
         mut self,
-        rpc: fn(u16, Vec<u8>),
-        on_accept: fn(SocketAddr) -> Cx,
-        mut on_stream: fn(Arc<Cx>, Request, Response) -> Fut,
+        rpc: fn(Ctx<T>, u16, Vec<u8>) -> Rpc,
+        on_accept: fn(SocketAddr) -> Ctx<T>,
+        on_stream: fn(Ctx<T>, Request, Response) -> Stream,
     ) where
-        Cx: Send + Sync + 'static,
-        Fut: Future + Send + 'static,
+        T: Send + Sync + 'static,
+        Rpc: Future + Send + 'static,
+        Stream: Future + Send + 'static,
     {
         loop {
             let Ok(((mut conn, addr))) = self.server.accept().await else { continue };
             let ctx = on_accept(addr);
-            let ctx = Arc::new(ctx);
             tokio::spawn(async move {
                 while let Some(Ok((mut req, mut res))) = conn.accept().await {
-                    let ctx = Arc::clone(&ctx);
+                    let ctx = ctx.clone();
                     tokio::spawn(async move {
-                        match (&req.method, req.uri.path()) {
-                            (&Method::POST, "/rpc") => {
-                                match req.headers.get("content-length") {
-                                    Some(len) => {
-                                        let Ok(Ok(len)) = len.to_str().map(str::parse::<u32>) else { return };
-                                        if len > self.max_payload_len {
-                                            res.status = StatusCode::PAYLOAD_TOO_LARGE;
+                        if let (&Method::POST, "/rpc") = (&req.method, req.uri.path()) {
+                            match req.headers.get("content-length") {
+                                Some(len) => {
+                                    let Ok(Ok(len)) = len.to_str().map(str::parse::<u32>) else { return };
+                                    if len > self.max_payload_len {
+                                        res.status = StatusCode::PAYLOAD_TOO_LARGE;
+                                        res.send_headers();
+                                        return;
+                                    }
+                                    let mut buf = Vec::with_capacity(len as usize);
+                                    while let Some(Ok(bytes)) = req.data().await {
+                                        buf.extend_from_slice(&bytes);
+                                        if buf.len() > len as usize {
+                                            res.status = StatusCode::BAD_REQUEST;
                                             res.send_headers();
                                             return;
                                         }
-                                        let mut buf = Vec::with_capacity(len as usize);
-                                        while let Some(Ok(bytes)) = req.data().await {
-                                            buf.extend_from_slice(&bytes);
-                                            if buf.len() > len as usize {
-                                                res.status = StatusCode::BAD_REQUEST;
-                                                res.send_headers();
-                                                return;
-                                            }
-                                        }
-                                        rpc(0, buf);
                                     }
-                                    None => {
-                                        // Stream ...
-                                    }
+                                    rpc(ctx, 0, buf).await;
+                                }
+                                None => {
+                                    // Stream ...
                                 }
                             }
-                            _ => {
-                                on_stream(ctx, req, res).await;
-                            }
+                        } else {
+                            on_stream(ctx, req, res).await;
                         }
                     });
                 }
@@ -86,18 +88,20 @@ impl H2Transport {
 async fn test() {
     let mut transport = H2Transport::bind("addr", "cert", "key").await;
     transport.max_payload_len = 545;
-    transport.serve(
-        |_, _| {},
-        |_addr| {
-            // ...
-            ()
-        },
-        |ctx, req, mut res| async move {
-            println!("{:?}", req.method);
-            res.status = StatusCode::OK;
-            let mut f = res.send_stream().unwrap();
-            f.write("bytes").await;
-            f.end_write("bytes");
-        },
-    );
+    transport
+        .serve(
+            |_, _, _| async {},
+            |_addr| {
+                // ...
+                Ctx::from(42)
+            },
+            |ctx, req, mut res| async move {
+                println!("{:?}", req.method);
+                res.status = StatusCode::OK;
+                let mut f = res.send_stream().unwrap();
+                f.write("bytes").await;
+                f.end_write("bytes");
+            },
+        )
+        .await;
 }

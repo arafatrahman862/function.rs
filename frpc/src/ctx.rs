@@ -2,7 +2,7 @@ use std::{ops::Deref, sync::Arc};
 
 #[derive(Debug, Default)]
 pub struct Ctx<T: ?Sized> {
-    pub inner: Arc<T>,
+    inner: Arc<T>,
 }
 
 impl<T: ?Sized> Ctx<T> {
