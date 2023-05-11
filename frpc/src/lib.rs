@@ -1,6 +1,5 @@
 mod ctx;
 pub mod fn_once;
-pub mod output;
 
 #[doc(hidden)]
 #[cfg(debug_assertions)]
@@ -14,6 +13,9 @@ pub use ctx::Ctx;
 pub use frpc_macros::Message;
 
 pub const DATABUF_CONFIG: u8 = databuf::config::num::LEB128 | databuf::config::len::BEU30;
+
+#[doc(hidden)]
+pub use databuf;
 
 #[macro_export]
 macro_rules! procedure {
@@ -37,29 +39,26 @@ macro_rules! procedure {
         }
 
         #[allow(dead_code)]
+        #[cfg(not(debug_assertions))]
+        pub fn codegen() {}
+
+        #[allow(dead_code)]
         #[cfg(debug_assertions)]
         pub fn codegen() {
             ::std::thread::spawn(move || unsafe { $crate::__codegen(self::type_def()) });
         }
 
-        #[allow(dead_code)]
-        #[cfg(not(debug_assertions))]
-        pub fn codegen() {}
-
-        pub async fn execute<W>(id: u16, data: Vec<u8>, writer: &mut W) -> ::std::io::Result<()>
-        where
-            W: ::tokio::io::AsyncWrite + ::std::marker::Unpin + ::std::marker::Send,
-        {
+        pub async fn execute<T>(ctx: $crate::Ctx<T>, id: u16, data: Vec<u8>) -> ::std::io::Result<()> {
             match id {
                 $($id => {
-                    let args = ::databuf::Decode::from_bytes::<{$crate::DATABUF_CONFIG}>(&data).unwrap();
+                    let args = $crate::databuf::Decode::from_bytes::<{$crate::DATABUF_CONFIG}>(&data).unwrap();
                     let output = $crate::fn_once::FnOnce::call_once($func, args).await;
-                    $crate::output::Output::write(&output, writer).await
+                    todo!()
                 }),*
                 _ => {
                     return ::std::result::Result::Err(::std::io::Error::new(
                         ::std::io::ErrorKind::AddrNotAvailable,
-                        "Unknown ID",
+                        "unknown id",
                     ))
                 }
             }
