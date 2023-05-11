@@ -1,6 +1,7 @@
 use super::*;
 use frpc::Ctx;
 use h2_plus::{
+    bytes::Bytes,
     http::{method::Method, StatusCode},
     *,
 };
@@ -32,7 +33,7 @@ impl H2Transport {
 
     pub async fn serve<T, Rpc, Stream>(
         mut self,
-        rpc: fn(Ctx<T>, u16, Vec<u8>) -> Rpc,
+        rpc: fn(Ctx<T>, u16, Vec<u8>, Writer) -> Rpc,
         on_accept: fn(SocketAddr) -> Ctx<T>,
         on_stream: fn(Ctx<T>, Request, Response) -> Stream,
     ) where
@@ -65,12 +66,9 @@ impl H2Transport {
                                             return;
                                         }
                                     }
-                                    match rpc(ctx, 0, buf).await {
-                                        Ok(_) => {}
-                                        Err(_) => {
-                                            res.status = StatusCode::BAD_REQUEST;
-                                            res.send_headers();
-                                        }
+                                    if let Ok(sender) = res.send_stream() {
+                                        let mut writer = Writer { sender };
+                                        rpc(ctx, 0, buf, writer).await;
                                     }
                                 }
                                 None => {
@@ -87,28 +85,54 @@ impl H2Transport {
     }
 }
 
+struct Writer {
+    sender: Sender,
+}
+
+#[async_trait::async_trait]
+impl frpc::output::AsyncWriter for Writer {
+    async fn write_boxed_slice(&mut self, buf: Box<[u8]>) -> std::io::Result<()> {
+        self.sender
+            .write_bytes(buf.into(), false)
+            .await
+            .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err))
+    }
+
+    fn end(&mut self) {
+        self.sender.inner.send_data(Bytes::new(), true);
+    }
+
+    async fn end_write(&mut self, bytes: Box<[u8]>) -> std::io::Result<()> {
+        self.sender.write_bytes(bytes.into(), true).await;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
     async fn awd() {}
 
     frpc::procedure! {
         awd = 1
     }
 
+    fn rpc<T, Ret>(
+        call: fn(Ctx<T>, u16, Vec<u8>, &mut Writer) -> Ret,
+    ) -> impl FnOnce(Ctx<T>, u16, Vec<u8>, Writer) -> Ret {
+        move |ctx, id, data, mut writer| call(ctx, id, data, &mut writer)
+    }
+
     async fn test_name() {
-        let mut transport = H2Transport::bind("addr", "cert", "key").await;
+        let mut transport: H2Transport = H2Transport::bind("addr", "cert", "key").await;
         transport
             .serve(
-                procedure::execute,
+                |ctx, id, data, mut writer| async move {
+                    procedure::execute(ctx, id, data, &mut writer).await
+                },
                 |_addr| Ctx::from(()),
                 move |ctx, req, mut res| async move {
                     println!("{:?}", req.method);
-                    res.status = StatusCode::OK;
-                    let mut f = res.send_stream().unwrap();
-                    f.write("Bye").await;
-                    f.end_write("!");
                 },
             )
             .await;

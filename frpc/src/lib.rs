@@ -1,5 +1,6 @@
 mod ctx;
 pub mod fn_once;
+pub mod output;
 
 #[doc(hidden)]
 #[cfg(debug_assertions)]
@@ -48,12 +49,15 @@ macro_rules! procedure {
             ::std::thread::spawn(move || unsafe { $crate::__codegen(self::type_def()) });
         }
 
-        pub async fn execute<T>(ctx: $crate::Ctx<T>, id: u16, data: Vec<u8>) -> ::std::io::Result<()> {
+        pub async fn execute<T, W>(ctx: $crate::Ctx<T>, id: u16, data: Vec<u8>, w: &mut W) -> ::std::io::Result<()>
+        where
+            W: $crate::output::AsyncWriter + ::std::marker::Unpin + ::std::marker::Send,
+        {
             match id {
                 $($id => {
                     let args = $crate::databuf::Decode::from_bytes::<{$crate::DATABUF_CONFIG}>(&data).unwrap();
-                    let output = $crate::fn_once::FnOnce::call_once($func, args).await;
-                    todo!()
+                    let output = $crate::fn_once::FnOnce::call_once($func, args);
+                    $crate::output::Output::send_output(output, w).await
                 }),*
                 _ => {
                     return ::std::result::Result::Err(::std::io::Error::new(

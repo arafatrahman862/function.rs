@@ -48,7 +48,9 @@ async fn user(name: String, age: Unum) -> String {
     }; // 335 | 457
     format!("Hello {name}! {res}")
 }
+
 type Unum = u16;
+
 #[test]
 fn test_name() {
     build_codegen();
@@ -58,13 +60,7 @@ fn test_name() {
 
 fn build_codegen() {
     let mut f = std::process::Command::new("cargo")
-        .args([
-            "build",
-            "--lib",
-            "--package",
-            "codegen",
-            "--release",
-        ])
+        .args(["build", "--lib", "--package", "codegen", "--release"])
         .spawn()
         .unwrap();
 

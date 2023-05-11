@@ -17,8 +17,8 @@ frpc-message = { version = "0.0.1", path = "../frpc-message", features = ["encod
 
 libloading = "0.7.4"
 
-# async-trait = "0.1"
-# tokio = { version = "1", features = ["io-util"] }
+async-trait = "0.1"
+tokio = { version = "1", features = ["io-util"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt"] }
