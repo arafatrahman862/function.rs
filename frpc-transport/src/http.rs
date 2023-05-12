@@ -1,5 +1,4 @@
 use super::*;
-use frpc::Ctx;
 use h2_plus::{
     bytes::Bytes,
     http::{method::Method, StatusCode},
@@ -31,19 +30,19 @@ impl H2Transport {
         }
     }
 
-    pub async fn serve<T, Rpc, Stream>(
+    pub async fn serve<Ctx, Rpc, Stream>(
         mut self,
-        rpc: fn(Ctx<T>, u16, Vec<u8>, Writer) -> Rpc,
-        on_accept: fn(SocketAddr) -> Ctx<T>,
-        on_stream: fn(Ctx<T>, Request, Response) -> Stream,
+        rpc: fn(Ctx, u16, Vec<u8>, Writer) -> Rpc,
+        on_accept: fn(SocketAddr) -> Option<Ctx>,
+        on_stream: fn(Ctx, Request, Response) -> Stream,
     ) where
-        T: Send + Sync + 'static,
+        Ctx: Clone + Send + 'static,
         Rpc: Future<Output = std::io::Result<()>> + Send + 'static,
         Stream: Future + Send + 'static,
     {
         loop {
             let Ok(((mut conn, addr))) = self.server.accept().await else { continue };
-            let ctx = on_accept(addr);
+            let Some(ctx) = on_accept(addr) else { continue };
             tokio::spawn(async move {
                 while let Some(Ok((mut req, mut res))) = conn.accept().await {
                     let ctx = ctx.clone();
@@ -112,15 +111,11 @@ impl frpc::output::AsyncWriter for Writer {
 mod tests {
     use super::*;
     async fn awd() {}
+    async fn awds() {}
 
     frpc::procedure! {
         awd = 1
-    }
-
-    fn rpc<T, Ret>(
-        call: fn(Ctx<T>, u16, Vec<u8>, &mut Writer) -> Ret,
-    ) -> impl FnOnce(Ctx<T>, u16, Vec<u8>, Writer) -> Ret {
-        move |ctx, id, data, mut writer| call(ctx, id, data, &mut writer)
+        awds = 2
     }
 
     async fn test_name() {
@@ -130,7 +125,7 @@ mod tests {
                 |ctx, id, data, mut writer| async move {
                     procedure::execute(ctx, id, data, &mut writer).await
                 },
-                |_addr| Ctx::from(()),
+                |_addr| Some(()),
                 move |ctx, req, mut res| async move {
                     println!("{:?}", req.method);
                 },

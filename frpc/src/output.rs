@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use std::io;
+use std::{future::Future, io};
 
 #[async_trait]
 pub trait AsyncWriter: Sized {
@@ -22,7 +22,7 @@ where
 }
 
 #[async_trait]
-pub trait Output {
+pub trait Output: crate::private::Sealed {
     async fn send_output<W>(self, _: &mut W) -> io::Result<()>
     where
         W: AsyncWriter + Unpin + Send;
@@ -31,7 +31,7 @@ pub trait Output {
 #[async_trait]
 impl<Fut, T> Output for Fut
 where
-    Fut: std::future::Future<Output = T> + Send,
+    Fut: Future<Output = T> + Send,
     T: databuf::Encode,
 {
     async fn send_output<W>(self, writer: &mut W) -> io::Result<()>

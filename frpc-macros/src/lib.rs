@@ -9,7 +9,7 @@ pub fn message(_: TokenStream) -> TokenStream {
 #[cfg(debug_assertions)]
 use quote::{format_ident, quote, quote_spanned};
 #[cfg(debug_assertions)]
-use syn::{*, __private::TokenStream2, spanned::Spanned};
+use syn::{__private::TokenStream2, spanned::Spanned, *};
 
 #[cfg(debug_assertions)]
 #[proc_macro_derive(Message)]
@@ -96,7 +96,7 @@ pub fn message(input: TokenStream) -> TokenStream {
 
     TokenStream::from(quote! {
         const _: () = {
-            use ::frpc::frpc_message as ___m;
+            use ::frpc::__private::frpc_message as ___m;
             use ___m::_utils::{s,c};
             impl #impl_generics ___m::Message for #ident #ty_generics #where_clause {
                 fn ty(ctx: &mut ___m::Context) -> ___m::Ty {
