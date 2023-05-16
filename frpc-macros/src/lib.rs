@@ -1,3 +1,6 @@
+#![allow(warnings)]
+mod rpc;
+
 use proc_macro::TokenStream;
 
 #[cfg(not(debug_assertions))]
@@ -8,6 +11,7 @@ pub fn message(_: TokenStream) -> TokenStream {
 
 #[cfg(debug_assertions)]
 use quote::{format_ident, quote, quote_spanned};
+use syn::Error;
 #[cfg(debug_assertions)]
 use syn::{__private::TokenStream2, spanned::Spanned, *};
 
@@ -26,7 +30,7 @@ pub fn message(input: TokenStream) -> TokenStream {
     let name = format!("{{}}::{ident}");
 
     if let Some(param) = generics.type_params().next() {
-        return syn::Error::new(
+        return Error::new(
             param.span(),
             "Generic type support isn't complete yet, But it's on our roadmap.",
         )
@@ -155,20 +159,26 @@ fn parse_int(expr: &Expr) -> isize {
     }
 }
 
-#[rustfmt::skip]
 #[cfg(debug_assertions)]
 fn get_comments_from(attrs: &Vec<Attribute>) -> String {
     let mut string = String::new();
-    for Attribute { style, path: Path { segments, .. }, tokens, .. } in attrs {
-        if let (AttrStyle::Outer, 1, "doc") = (style, segments.len(), segments[0].ident.to_string().as_ref()) {
-            string += tokens
-                .to_string()
-                .trim_start_matches('=')
-                .trim_start()
-                .trim_matches('"');
-
+    for attr in attrs {
+        let segments = &attr.path().segments;
+        if let (AttrStyle::Outer, 1, "doc") = (
+            attr.style,
+            segments.len(),
+            segments[0].ident.to_string().as_ref(),
+        ) {
+            // string += tokens.to_string().trim_start_matches('=').trim_start().trim_matches('"');
             string += "\n";
         }
     }
     string
+}
+
+// -------------------------------------------------------------
+
+#[proc_macro]
+pub fn procedure(tokens: TokenStream) -> TokenStream {
+    parse_macro_input!(tokens as rpc::Rpc).gen_code().into()
 }

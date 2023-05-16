@@ -30,13 +30,13 @@ impl H2Transport {
         }
     }
 
-    pub async fn serve<Ctx, Rpc, Stream>(
+    pub async fn serve<State, Rpc, Stream>(
         mut self,
-        rpc: fn(Ctx, u16, Vec<u8>, Writer) -> Rpc,
-        on_accept: fn(SocketAddr) -> Option<Ctx>,
-        on_stream: fn(Ctx, Request, Response) -> Stream,
+        rpc: fn(State, u16, Vec<u8>, Writer) -> Rpc,
+        on_accept: fn(SocketAddr) -> Option<State>,
+        on_stream: fn(State, Request, Response) -> Stream,
     ) where
-        Ctx: Clone + Send + 'static,
+        State: Clone + Send + 'static,
         Rpc: Future<Output = std::io::Result<()>> + Send + 'static,
         Stream: Future + Send + 'static,
     {
@@ -109,24 +109,62 @@ impl frpc::output::AsyncWriter for Writer {
 
 #[cfg(test)]
 mod tests {
+    use frpc::State;
+
+    pub trait Ctx {
+        fn run(&self) {}
+    }
+
+    #[derive(Clone)]
+    pub struct ST;
+    #[derive(Clone)]
+    struct SR;
+    impl Ctx for ST {}
+
     use super::*;
     async fn awd() {}
-    async fn awds() {}
+    async fn awds(s: State<ST>) {}
 
-    frpc::procedure! {
-        awd = 1
-        awds = 2
+    pub async fn execute<W>(state: ST, id: u16, data: Vec<u8>, w: &mut W) -> ::std::io::Result<()>
+    where
+        W: frpc::output::AsyncWriter + ::std::marker::Unpin + ::std::marker::Send,
+        // State: std::marker::Send + Ctx,
+    {
+        let mut reader = data.as_slice();
+        match id {
+            1 => {
+                let args = frpc::input::Input::decode(state, &mut reader).unwrap();
+                let output = frpc::fn_once::FnOnce::call_once(awd, args);
+                frpc::output::Output::send_output(output, w).await
+            }
+            2 => {
+                let args = frpc::input::Input::decode(state, &mut reader).unwrap();
+                let output = frpc::fn_once::FnOnce::call_once(awds, args);
+                frpc::output::Output::send_output(output, w).await
+            }
+            _ => {
+                return ::std::result::Result::Err(::std::io::Error::new(
+                    ::std::io::ErrorKind::AddrNotAvailable,
+                    "unknown id",
+                ))
+            }
+        }
     }
+
+    // frpc::procedure! {
+    //     awd = 1
+    //     awds = 2
+    // }
 
     async fn test_name() {
         let mut transport: H2Transport = H2Transport::bind("addr", "cert", "key").await;
         transport
             .serve(
                 |ctx, id, data, mut writer| async move {
-                    procedure::execute(ctx, id, data, &mut writer).await
+                    execute(ctx, id, data, &mut writer).await
                 },
-                |_addr| Some(()),
-                move |ctx, req, mut res| async move {
+                |_addr| Some(ST),
+                move |state, req, mut res| async move {
                     println!("{:?}", req.method);
                 },
             )

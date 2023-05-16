@@ -1,3 +1,4 @@
 [workspace]
 # members = [ "frpc", "frpc-macros", "frpc-message", "codegen"]
-members = [ "frpc-transport", "frpc"]
+# members = [ "frpc-transport", "frpc"]
+members = [ "frpc-macros", "frpc" ]

@@ -2,62 +2,35 @@ pub mod fn_once;
 pub mod input;
 pub mod output;
 mod private;
+// mod beta;
 mod state;
 
 #[doc(hidden)]
-#[cfg(debug_assertions)]
 pub mod __private;
 
+pub use frpc_macros::procedure;
 pub use frpc_macros::Message;
+pub use state::State;
 
 pub const DATABUF_CONFIG: u8 = databuf::config::num::LEB128 | databuf::config::len::BEU30;
 
 #[doc(hidden)]
 pub use databuf;
 
-#[macro_export]
-macro_rules! procedure {
-    [$($func:path = $id:literal)*] => (mod procedure {
-        use super::*;
-
-        #[allow(dead_code)]
-        pub fn type_def() -> impl ::std::any::Any {
-            #[cfg(debug_assertions)]
-            {
-                let mut ctx = $crate::__private::frpc_message::Context::default();
-                let funcs = vec![
-                    $({
-                        let (args, retn) = $crate::__private::async_fn_ty(&$func, &mut ctx);
-                        $crate::__private::frpc_message::Func { index: $id, path: stringify!($func).into(), args, retn }
-                    }),*
-                ];
-                $crate::__private::frpc_message::TypeDef {
-                    ctx,
-                    funcs,
-                }
-            }
-        }
-
-        pub async fn execute<Ctx, W>(ctx: Ctx, id: u16, data: Vec<u8>, w: &mut W) -> ::std::io::Result<()>
-        where
-            W: $crate::output::AsyncWriter + ::std::marker::Unpin + ::std::marker::Send,
-        {
-            let mut reader = data.as_slice();
-            match id {
-                $($id => {
-                    let args = $crate::input::Input::decode(ctx, &mut reader).unwrap();
-                    let output = $crate::fn_once::FnOnce::call_once($func, args);
-                    $crate::output::Output::send_output(output, w).await
-                }),*
-                _ => {
-                    return ::std::result::Result::Err(::std::io::Error::new(
-                        ::std::io::ErrorKind::AddrNotAvailable,
-                        "unknown id",
-                    ))
-                }
-            }
-        }
-    });
+#[doc(hidden)]
+pub async fn run<'de, Args, Ret, State>(
+    func: impl crate::fn_once::FnOnce<Args, Output = Ret>,
+    state: State,
+    reader: &mut &'de [u8],
+    w: &mut (impl crate::output::AsyncWriter + Unpin + Send),
+) -> std::io::Result<()>
+where
+    Args: crate::input::Input<'de, State>,
+    Ret: crate::output::Output,
+{
+    let args = Args::decode(state, reader).unwrap();
+    let output = func.call_once(args);
+    Ret::send_output(output, w).await
 }
 
 // #[doc(hidden)]

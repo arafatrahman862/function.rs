@@ -2,11 +2,11 @@ mod basic;
 mod collection;
 mod wrapper;
 
+use databuf::config::num::LEB128;
 #[cfg(feature = "decode")]
 use databuf::Decode;
 #[cfg(feature = "encode")]
 use databuf::Encode;
-use databuf::config::num::LEB128;
 
 pub use collection::{MapVariant, SetVariant};
 
@@ -29,7 +29,7 @@ pub struct Func {
 #[cfg_attr(feature = "encode", derive(Encode))]
 pub struct TypeDef {
     pub ctx: Context,
-    pub funcs: Vec<Func>,
+    pub funcs: Box<[Func]>,
 }
 
 impl TypeDef {
@@ -37,7 +37,7 @@ impl TypeDef {
     pub fn try_from(bytes: impl AsRef<[u8]>) -> databuf::Result<Self> {
         databuf::Decode::from_bytes::<LEB128>(bytes.as_ref())
     }
-    
+
     #[cfg(feature = "encode")]
     pub fn as_bytes(&self) -> Vec<u8> {
         Encode::to_bytes::<LEB128>(&self)
