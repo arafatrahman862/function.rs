@@ -14,7 +14,9 @@ pub trait Message {
     fn ty(_: &mut Context) -> Ty;
 }
 
-// #[derive(Clone, Debug, Hash)]
+#[cfg_attr(feature = "hash", derive(Hash))]
+#[cfg_attr(feature = "clone", derive(Clone))]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(feature = "decode", derive(Decode))]
 #[cfg_attr(feature = "encode", derive(Encode))]
 pub struct Func {
@@ -24,12 +26,14 @@ pub struct Func {
     pub retn: Ty,
 }
 
-// #[derive(Clone, Debug, Hash)]
+#[cfg_attr(feature = "hash", derive(Hash))]
+#[cfg_attr(feature = "clone", derive(Clone))]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(feature = "decode", derive(Decode))]
 #[cfg_attr(feature = "encode", derive(Encode))]
 pub struct TypeDef {
     pub ctx: Context,
-    pub funcs: Box<[Func]>,
+    pub funcs: Vec<Func>,
 }
 
 impl TypeDef {
@@ -45,11 +49,14 @@ impl TypeDef {
 }
 
 #[allow(non_camel_case_types)]
-// #[derive(Debug, Clone, PartialEq, Hash)]
+#[cfg_attr(feature = "eq", derive(PartialEq, Eq))]
+#[cfg_attr(feature = "hash", derive(Hash))]
+#[cfg_attr(feature = "clone", derive(Clone))]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(feature = "decode", derive(Decode))]
 #[cfg_attr(feature = "encode", derive(Encode))]
 pub enum Ty {
-    // Never,
+    // Never,debug
     u8,
     u16,
     u32,
@@ -108,15 +115,28 @@ impl Ty {
     }
 }
 
-// #[derive(Default, Debug, Clone, Hash)]
 #[derive(Default)]
+#[cfg_attr(feature = "hash", derive(Hash))]
+#[cfg_attr(feature = "clone", derive(Clone))]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(feature = "decode", derive(Decode))]
 #[cfg_attr(feature = "encode", derive(Encode))]
 pub struct Context {
     pub costom_types: std::collections::BTreeMap<String, CustomTypeKind>,
 }
 
-// #[derive(Debug, Clone, Hash)]
+impl Default for CustomTypeKind {
+    fn default() -> Self {
+        Self::Unit(CustomType {
+            doc: "".into(),
+            fields: vec![],
+        })
+    }
+}
+
+#[cfg_attr(feature = "hash", derive(Hash))]
+#[cfg_attr(feature = "clone", derive(Clone))]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(feature = "decode", derive(Decode))]
 #[cfg_attr(feature = "encode", derive(Encode))]
 pub enum CustomTypeKind {
@@ -126,16 +146,20 @@ pub enum CustomTypeKind {
     Struct(CustomType<StructField>),
 }
 
-/// Any user defined type like: `struct`, `enum`
-// #[derive(Debug, Clone, Hash)]
+#[cfg_attr(feature = "hash", derive(Hash))]
+#[cfg_attr(feature = "clone", derive(Clone))]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(feature = "decode", derive(Decode))]
 #[cfg_attr(feature = "encode", derive(Encode))]
+/// Any user defined type like: `struct`, `enum`
 pub struct CustomType<Field> {
     pub doc: String,
     pub fields: Vec<Field>,
 }
 
-// #[derive(Debug, Clone, Hash)]
+#[cfg_attr(feature = "hash", derive(Hash))]
+#[cfg_attr(feature = "clone", derive(Clone))]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(feature = "decode", derive(Decode))]
 #[cfg_attr(feature = "encode", derive(Encode))]
 pub struct UnitField {
@@ -144,7 +168,9 @@ pub struct UnitField {
     pub value: isize,
 }
 
-// #[derive(Debug, Clone, Hash)]
+#[cfg_attr(feature = "hash", derive(Hash))]
+#[cfg_attr(feature = "clone", derive(Clone))]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(feature = "decode", derive(Decode))]
 #[cfg_attr(feature = "encode", derive(Encode))]
 pub struct EnumField {
@@ -153,7 +179,9 @@ pub struct EnumField {
     pub kind: EnumKind,
 }
 
-// #[derive(Debug, Clone, Hash)]
+#[cfg_attr(feature = "hash", derive(Hash))]
+#[cfg_attr(feature = "clone", derive(Clone))]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(feature = "decode", derive(Decode))]
 #[cfg_attr(feature = "encode", derive(Encode))]
 pub enum EnumKind {
@@ -162,7 +190,9 @@ pub enum EnumKind {
     Tuple(Vec<TupleField>),
 }
 
-// #[derive(Debug, Clone, Hash)]
+#[cfg_attr(feature = "hash", derive(Hash))]
+#[cfg_attr(feature = "clone", derive(Clone))]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(feature = "decode", derive(Decode))]
 #[cfg_attr(feature = "encode", derive(Encode))]
 pub struct StructField {
@@ -171,23 +201,14 @@ pub struct StructField {
     pub ty: Ty,
 }
 
-// #[derive(Debug, Clone, Hash)]
+#[cfg_attr(feature = "hash", derive(Hash))]
+#[cfg_attr(feature = "clone", derive(Clone))]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(feature = "decode", derive(Decode))]
 #[cfg_attr(feature = "encode", derive(Encode))]
 pub struct TupleField {
     pub doc: String,
     pub ty: Ty,
-}
-
-//   -------------------------------------------------------------
-
-impl Default for CustomTypeKind {
-    fn default() -> Self {
-        Self::Unit(CustomType {
-            doc: "".into(),
-            fields: vec![],
-        })
-    }
 }
 
 //   -------------------------------------------------------------

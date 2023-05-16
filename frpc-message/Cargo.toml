@@ -4,8 +4,14 @@ version = "0.0.1"
 edition = "2021"
 
 [features]
+default = []
+
+eq = []
+hash = []
+clone = []
+debug = []
 encode = []
 decode = []
 
 [dependencies]
-databuf = "0.3.0"
+databuf = "0.3"

@@ -3,7 +3,6 @@ use std::{future::Future, io};
 
 #[async_trait]
 pub trait AsyncWriter: Sized {
-    async fn write_boxed_slice(&mut self, _: Box<[u8]>) -> std::io::Result<()>;
     async fn end_write(&mut self, _: Box<[u8]>) -> std::io::Result<()>;
     fn end(&mut self) {}
 }
@@ -13,9 +12,6 @@ impl<T> AsyncWriter for T
 where
     T: std::io::Write + Send,
 {
-    async fn write_boxed_slice(&mut self, buf: Box<[u8]>) -> io::Result<()> {
-        self.write_all(&buf)
-    }
     async fn end_write(&mut self, buf: Box<[u8]>) -> std::io::Result<()> {
         self.write_all(&buf)
     }

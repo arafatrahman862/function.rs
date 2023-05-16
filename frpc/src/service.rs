@@ -1,5 +1,11 @@
-#![allow(dead_code)]
-//! Prototype API
+//! Alternative service API
+//!
+//! ### Down Side
+//!
+//! - Runtime is required to initialize functions (no compile time check).
+//! - There is some runtime cost (hashing + dynamic dispatch) for calling functions.
+//! - More verbose then `declare!` macro
+//! - ...
 
 use super::*;
 use crate::{
@@ -11,10 +17,8 @@ use std::{collections::HashMap, future::Future, marker::PhantomData, pin::Pin};
 type RpcFutute<'a, Output = std::io::Result<()>> =
     Pin<Box<dyn Future<Output = Output> + Send + 'a>>;
 
-trait RPC<State, AsyncWriter> {
-    // type Output;
-    // type Future<'a>: Future<Output = Self::Output> + Send + 'a;
-    fn call<'a>(&self, state: State, data: Box<[u8]>, w: &'a mut AsyncWriter) -> RpcFutute<'a>;
+trait RpcHandler<State, AsyncWriter> {
+    fn call<'w>(&self, state: State, data: Box<[u8]>, _: &'w mut AsyncWriter) -> RpcFutute<'w>;
 }
 
 struct Handler<Func, Args> {
@@ -22,16 +26,23 @@ struct Handler<Func, Args> {
     _phantom_args: PhantomData<Args>,
 }
 
-impl<State, Writer, Func, Args, Ret> RPC<State, Writer> for Handler<Func, Args>
+impl<Func, Args> From<Func> for Handler<Func, Args> {
+    fn from(func: Func) -> Self {
+        Self {
+            func,
+            _phantom_args: PhantomData,
+        }
+    }
+}
+
+impl<State, Writer, Func, Args, Ret> RpcHandler<State, Writer> for Handler<Func, Args>
 where
     Func: fn_once::FnOnce<Args, Output = Ret> + Clone,
     Args: for<'de> Input<'de, State>,
     Ret: Output + 'static,
     Writer: AsyncWriter + Unpin + Send,
 {
-    // type Output = Result<()>;
-    // type Future<'a> = RpcFutute<'a>;
-    fn call<'f>(&self, state: State, data: Box<[u8]>, w: &'f mut Writer) -> RpcFutute<'f> {
+    fn call<'w>(&self, state: State, data: Box<[u8]>, w: &'w mut Writer) -> RpcFutute<'w> {
         let mut reader = &*data;
         let args = Args::decode(state, &mut reader).unwrap();
         let output = self.func.clone().call_once(args);
@@ -39,11 +50,11 @@ where
     }
 }
 
-pub struct Rpc<Writer, State = ()> {
-    handlers: HashMap<u16, Box<dyn RPC<State, Writer>>>,
+pub struct Service<Writer, State = ()> {
+    handlers: HashMap<u16, Box<dyn RpcHandler<State, Writer>>>,
 }
 
-impl<Writer, State> Rpc<Writer, State>
+impl<Writer, State> Service<Writer, State>
 where
     Writer: AsyncWriter + Unpin + Send,
 {
@@ -53,20 +64,14 @@ where
         }
     }
 
-    pub fn export<Func, Args, Ret>(mut self, id: u16, _name: &str, func: Func) -> Self
+    pub fn rpc<Func, Args, Ret>(mut self, id: u16, _name: &str, func: Func) -> Self
     where
         Func: fn_once::FnOnce<Args, Output = Ret> + Clone + 'static,
         Args: for<'de> Input<'de, State> + 'static,
         Ret: Future + Send + 'static,
         Ret::Output: databuf::Encode,
     {
-        self.handlers.insert(
-            id,
-            Box::new(Handler {
-                func,
-                _phantom_args: PhantomData::<Args>,
-            }),
-        );
+        self.handlers.insert(id, Box::new(Handler::from(func)));
         self
     }
 
@@ -92,12 +97,17 @@ mod tests {
 
     #[tokio::test]
     async fn run() {
-        let rpc = Rpc::new()
-            .export(1, "foo", foo)
-            .export(2, "get_num", get_num);
+        let service = Service::new()
+            .rpc(1, "foo", foo)
+            .rpc(2, "get_num", get_num)
+            .rpc(3, "bar", || async {});
 
         let mut output = vec![];
-        let _ = rpc.call((), 2, Box::new([]), &mut output).unwrap().await;
+        let _ = service
+            .call((), 2, Box::new([]), &mut output)
+            .expect("no function found")
+            .await;
+
         assert_eq!(output, [2, b'4', b'2']);
     }
 }

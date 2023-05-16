@@ -9,12 +9,6 @@ impl<T> crate::input::FirstArg<'_, T> for State<T> {
     }
 }
 
-// impl<S: 'static> crate::input::FirstArg<'_, Box<dyn std::any::Any>> for State<S> {
-//     fn decode(state: Box<dyn std::any::Any>, _: &mut &[u8]) -> databuf::Result<Self> {
-//         Ok(Self(*state.downcast::<S>().unwrap()))
-//     }
-// }
-
 impl<T> Deref for State<T> {
     type Target = T;
 

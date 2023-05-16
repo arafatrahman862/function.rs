@@ -1,13 +1,11 @@
 #![allow(dead_code)]
-
-use frpc::procedure;
+use frpc::declare;
 
 async fn foo() {}
-
 async fn bar() {}
 
-procedure! {
-    rpc Prc {
+declare! {
+    service Prc {
         foo = 15,
         bar = 14,
     }

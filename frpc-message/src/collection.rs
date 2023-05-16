@@ -1,7 +1,10 @@
 use super::*;
 use std::{collections::*, hash::Hash};
 
-// #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "eq", derive(PartialEq, Eq))]
+#[cfg_attr(feature = "clone", derive(Clone))]
+#[cfg_attr(feature = "hash", derive(Hash))]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(feature = "decode", derive(Decode))]
 #[cfg_attr(feature = "encode", derive(Encode))]
 pub enum SetVariant {
@@ -13,7 +16,10 @@ pub enum SetVariant {
     Vec,
 }
 
-// #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "eq", derive(PartialEq, Eq))]
+#[cfg_attr(feature = "clone", derive(Clone))]
+#[cfg_attr(feature = "hash", derive(Hash))]
+#[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(feature = "decode", derive(Decode))]
 #[cfg_attr(feature = "encode", derive(Encode))]
 pub enum MapVariant {

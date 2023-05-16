@@ -3,20 +3,26 @@ pub mod input;
 pub mod output;
 mod private;
 mod state;
-// mod rpc;
+
+// mod service;
+// pub use service::Service;
 
 #[doc(hidden)]
 #[cfg(debug_assertions)]
 pub mod __private;
 
-pub use frpc_macros::procedure;
+#[cfg(debug_assertions)]
 pub use frpc_macros::Message;
-pub use state::State;
 
-pub const DATABUF_CONFIG: u8 = databuf::config::num::LEB128 | databuf::config::len::BEU30;
+#[cfg(not(debug_assertions))]
+pub use frpc_macros::Noop as Message;
 
 #[doc(hidden)]
 pub use databuf;
+pub use frpc_macros::declare;
+pub use state::State;
+
+pub const DATABUF_CONFIG: u8 = databuf::config::num::LEB128 | databuf::config::len::BEU30;
 
 #[doc(hidden)]
 pub async fn run<'de, Args, Ret, State>(
