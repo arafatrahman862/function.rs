@@ -2,10 +2,11 @@ pub mod fn_once;
 pub mod input;
 pub mod output;
 mod private;
-// mod beta;
 mod state;
+// mod rpc;
 
 #[doc(hidden)]
+#[cfg(debug_assertions)]
 pub mod __private;
 
 pub use frpc_macros::procedure;

@@ -30,10 +30,3 @@ impl<T> DerefMut for State<T> {
         &mut self.0
     }
 }
-
-#[cfg(debug_assertions)]
-impl<T> frpc_message::Message for State<T> {
-    fn ty(_: &mut frpc_message::Context) -> frpc_message::Ty {
-        frpc_message::Ty::Tuple(vec![])
-    }
-}

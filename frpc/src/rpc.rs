@@ -1,4 +1,6 @@
-#![allow(warnings)]
+#![allow(dead_code)]
+//! Prototype API
+
 use super::*;
 use crate::{
     input::Input,
@@ -20,44 +22,41 @@ struct Handler<Func, Args> {
     _phantom_args: PhantomData<Args>,
 }
 
-impl<State, Func, Args, Ret, Writer> RPC<State, Writer> for Handler<Func, Args>
+impl<State, Writer, Func, Args, Ret> RPC<State, Writer> for Handler<Func, Args>
 where
-    Func: fn_once::FnOnce<Args, Output = Ret> + Copy,
+    Func: fn_once::FnOnce<Args, Output = Ret> + Clone,
     Args: for<'de> Input<'de, State>,
     Ret: Output + 'static,
     Writer: AsyncWriter + Unpin + Send,
 {
     // type Output = Result<()>;
     // type Future<'a> = RpcFutute<'a>;
-    fn call<'a>(&self, state: State, data: Box<[u8]>, w: &'a mut Writer) -> RpcFutute<'a> {
+    fn call<'f>(&self, state: State, data: Box<[u8]>, w: &'f mut Writer) -> RpcFutute<'f> {
         let mut reader = &*data;
         let args = Args::decode(state, &mut reader).unwrap();
-        let output = self.func.call_once(args);
+        let output = self.func.clone().call_once(args);
         Output::send_output(output, w)
     }
 }
 
-struct Route<CreateStare, State, Writer> {
-    pub create_state: CreateStare,
-    pub handlers: HashMap<u16, Box<dyn RPC<State, Writer>>>,
+pub struct Rpc<Writer, State = ()> {
+    handlers: HashMap<u16, Box<dyn RPC<State, Writer>>>,
 }
 
-impl<CreateStare, State, Writer> Route<CreateStare, State, Writer>
+impl<Writer, State> Rpc<Writer, State>
 where
-    CreateStare: FnOnce() -> State,
     Writer: AsyncWriter + Unpin + Send,
 {
-    fn new(ctx: CreateStare) -> Self {
+    pub fn new() -> Self {
         Self {
-            create_state: ctx,
             handlers: Default::default(),
         }
     }
 
-    fn export<Func, Args, Ret>(mut self, id: u16, name: &str, func: Func) -> Self
+    pub fn export<Func, Args, Ret>(mut self, id: u16, _name: &str, func: Func) -> Self
     where
-        Func: fn_once::FnOnce<Args, Output = Ret> + Copy + 'static,
-        Args: for<'de> input::Input<'de, State> + 'static,
+        Func: fn_once::FnOnce<Args, Output = Ret> + Clone + 'static,
+        Args: for<'de> Input<'de, State> + 'static,
         Ret: Future + Send + 'static,
         Ret::Output: databuf::Encode,
     {
@@ -71,7 +70,7 @@ where
         self
     }
 
-    fn call<'a>(
+    pub fn call<'a>(
         &self,
         state: State,
         id: u16,
@@ -82,15 +81,23 @@ where
     }
 }
 
-#[derive(Clone)]
-struct A;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-async fn a(a: State<A>, data: Box<[u8]>) {}
+    async fn foo(_: State<()>) {}
+    async fn get_num() -> &'static str {
+        "42"
+    }
 
-#[test]
-fn test_name() {
-    let route: Route<_, _, Vec<u8>> = Route::new(|| A)
-        .export(0, "name", a)
-        .export(0, "name", a)
-        .export(0, "name", a);
+    #[tokio::test]
+    async fn run() {
+        let rpc = Rpc::new()
+            .export(1, "foo", foo)
+            .export(2, "get_num", get_num);
+
+        let mut output = vec![];
+        let _ = rpc.call((), 2, Box::new([]), &mut output).unwrap().await;
+        assert_eq!(output, [2, b'4', b'2']);
+    }
 }

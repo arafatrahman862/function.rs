@@ -1,4 +1,5 @@
 #![doc(hidden)]
+
 pub use frpc_message;
 use frpc_message::{Context, Message, Ty};
 
@@ -20,5 +21,11 @@ where
         path: path.into(),
         args,
         retn: Ret::ty(ctx),
+    }
+}
+
+impl<T> Message for crate::State<T> {
+    fn ty(_: &mut Context) -> frpc_message::Ty {
+        Ty::Tuple(vec![])
     }
 }
