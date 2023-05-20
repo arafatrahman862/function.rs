@@ -148,12 +148,12 @@ impl Declare {
 
             let func_ty = funcs.iter().map(|Func { name, id, .. }| {
                 let path = name.to_string();
-                quote_spanned!(name.span()=> frpc::__private::fn_ty(&#name, &mut ___c, #id,  #path))
+                quote_spanned!(name.span()=> ::frpc::__private::fn_ty(&#name, &mut ___c, #id,  #path))
             });
 
             let func = funcs.iter().map(|Func { name, id, .. }| {
                 quote_spanned!(name.span()=>
-                    #id => frpc::run(#name, state, &mut reader, w).await
+                    #id => ::frpc::run(#name, state, &mut reader, w).await
                 )
             });        
             quote_spanned!(ident.span()=>
@@ -172,7 +172,7 @@ impl Declare {
                 impl #ident {
                     pub async fn execute<W>(state: #state, id: u16, data: Box<[u8]>, w: &mut W) -> ::std::io::Result<()>
                     where
-                        W: ::frpc::output::AsyncWriter + Unpin + Send,
+                        W: ::frpc::Transport + Unpin + Send,
                     {
                         let mut reader = &*data;
                         match id {

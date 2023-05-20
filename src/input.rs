@@ -1,16 +1,16 @@
-use databuf::Decode;
+use databuf::{Decode, Result};
 
 // ----------------------------------------------------------------------
 
 pub trait FirstArg<'de, State>: Sized {
-    fn decode(state: State, _: &mut &'de [u8]) -> databuf::Result<Self>;
+    fn decode(state: State, _: &mut &'de [u8]) -> Result<Self>;
 }
 
 impl<'de, State, Args> FirstArg<'de, State> for Args
 where
     Args: Decode<'de>,
 {
-    fn decode(_: State, data: &mut &'de [u8]) -> databuf::Result<Self> {
+    fn decode(_: State, data: &mut &'de [u8]) -> Result<Self> {
         Args::decode::<{ crate::DATABUF_CONFIG }>(data)
     }
 }
@@ -18,7 +18,7 @@ where
 // ----------------------------------------------------------------------
 
 pub trait Input<'de, State>: Sized {
-    fn decode(state: State, _: &mut &'de [u8]) -> databuf::Result<Self>;
+    fn decode(state: State, _: &mut &'de [u8]) -> Result<Self>;
 }
 
 macro_rules! args_with_ctx {
@@ -29,7 +29,7 @@ macro_rules! args_with_ctx {
                 T0: FirstArg<'de, State>,
                 $($name: Decode<'de>,)*
             {
-                fn decode(state: State, data: &mut &'de [u8]) -> databuf::Result<Self> {
+                fn decode(state: State, data: &mut &'de [u8]) -> Result<Self> {
                     Ok((
                         T0::decode(state, data)?,
                         $($name::decode::<{ crate::DATABUF_CONFIG }>(data)?,)*
@@ -41,7 +41,7 @@ macro_rules! args_with_ctx {
 }
 
 impl<State> Input<'_, State> for () {
-    fn decode(_: State, _: &mut &[u8]) -> databuf::Result<Self> {
+    fn decode(_: State, _: &mut &[u8]) -> Result<Self> {
         Ok(())
     }
 }

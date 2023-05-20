@@ -1,5 +1,5 @@
 [workspace]
-# members = ["frpc-macros", "frpc-message", "codegen"]
+# members = ["lib/*"]
 
 [package]
 name = "frpc"
@@ -13,13 +13,11 @@ keywords = ["rpc"]
 description = "Flash RPC framework"
 
 [dependencies]
+async-trait = "0.1"
 databuf = "0.3"
 
 frpc-macros = { version = "0.0.1", path = "lib/frpc-macros" }
 frpc-message = { version = "0.0.1", path = "lib/frpc-message", features = ["encode"] }
-
-tokio = { version = "1", features = ["io-util"] }
-async-trait = "0.1"
 
 [dev-dependencies]
 # libloading = "0.7.4"

@@ -1,27 +1,30 @@
 use async_trait::async_trait;
 use std::{future::Future, io};
 
+/// It defines the behavior for sending responses over a transport channel.
 #[async_trait]
-pub trait AsyncWriter: Sized {
-    async fn end_write(&mut self, _: Box<[u8]>) -> std::io::Result<()>;
-    fn end(&mut self) {}
+pub trait Transport {
+    /// Sends a response in a unary request.
+    async fn send_unary_response(&mut self, _: Box<[u8]>) -> std::io::Result<()>;
 }
 
 #[async_trait]
-impl<T> AsyncWriter for T
+impl<T> Transport for T
 where
     T: std::io::Write + Send,
 {
-    async fn end_write(&mut self, buf: Box<[u8]>) -> std::io::Result<()> {
+    async fn send_unary_response(&mut self, buf: Box<[u8]>) -> std::io::Result<()> {
         self.write_all(&buf)
     }
 }
 
+/// It implemented by different types representing various output formats.
 #[async_trait]
 pub trait Output: crate::private::Sealed {
-    async fn send_output<W>(self, _: &mut W) -> io::Result<()>
+    /// It produces the output data and sends it over the specified transport.
+    async fn produce<T>(self, _: &mut T) -> io::Result<()>
     where
-        W: AsyncWriter + Unpin + Send;
+        T: Transport + Unpin + Send;
 }
 
 #[async_trait]
@@ -30,12 +33,12 @@ where
     Fut: Future<Output = T> + Send,
     T: databuf::Encode,
 {
-    async fn send_output<W>(self, writer: &mut W) -> io::Result<()>
+    async fn produce<W>(self, transport: &mut W) -> io::Result<()>
     where
-        W: AsyncWriter + Unpin + Send,
+        W: Transport + Unpin + Send,
     {
         let mut buf = Vec::new();
         T::encode::<{ crate::DATABUF_CONFIG }>(&self.await, &mut buf)?;
-        writer.end_write(buf.into_boxed_slice()).await
+        transport.send_unary_response(buf.into_boxed_slice()).await
     }
 }

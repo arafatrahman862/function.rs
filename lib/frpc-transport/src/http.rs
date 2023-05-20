@@ -90,12 +90,12 @@ struct Writer {
 
 #[async_trait::async_trait]
 impl frpc::output::AsyncWriter for Writer {
-    async fn write_boxed_slice(&mut self, buf: Box<[u8]>) -> std::io::Result<()> {
-        self.sender
-            .write_bytes(buf.into(), false)
-            .await
-            .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err))
-    }
+    // async fn write_boxed_slice(&mut self, buf: Box<[u8]>) -> std::io::Result<()> {
+    //     self.sender
+    //         .write_bytes(buf.into(), false)
+    //         .await
+    //         .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err))
+    // }
 
     fn end(&mut self) {
         self.sender.inner.send_data(Bytes::new(), true);

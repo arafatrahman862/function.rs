@@ -5,7 +5,7 @@ async fn foo() {}
 async fn bar() {}
 
 declare! {
-    service Prc {
+    service Bar {
         foo = 15,
         bar = 14,
     }

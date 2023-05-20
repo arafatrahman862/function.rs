@@ -1,5 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
+/// Typically used to manage and share the state of a service.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct State<T>(pub T);
 

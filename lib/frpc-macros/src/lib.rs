@@ -1,8 +1,8 @@
+use proc_macro::TokenStream;
+
 mod declare;
 #[cfg(debug_assertions)]
 mod message;
-
-use proc_macro::TokenStream;
 
 #[cfg(debug_assertions)]
 #[proc_macro_derive(Message)]
@@ -10,6 +10,7 @@ pub fn message(input: TokenStream) -> TokenStream {
     message::new(input)
 }
 
+#[doc(hidden)]
 #[proc_macro_derive(Noop)]
 pub fn noop(_: TokenStream) -> TokenStream {
     TokenStream::new()
