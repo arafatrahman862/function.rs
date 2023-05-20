@@ -1,3 +1,2 @@
 [env]
-# FRPC_CODEGEN = { value = "target/release/", relative = true }
 # SSLKEYLOGFILE = { value = "./sslkeylog.log", relative = true }

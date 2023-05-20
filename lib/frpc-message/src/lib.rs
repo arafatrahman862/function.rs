@@ -49,7 +49,6 @@ impl TypeDef {
 }
 
 #[allow(non_camel_case_types)]
-#[cfg_attr(feature = "eq", derive(PartialEq, Eq))]
 #[cfg_attr(feature = "hash", derive(Hash))]
 #[cfg_attr(feature = "clone", derive(Clone))]
 #[cfg_attr(feature = "debug", derive(Debug))]

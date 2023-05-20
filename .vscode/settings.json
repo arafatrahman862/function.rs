@@ -1,4 +1,0 @@
-{
-    "deno.enable": true,
-    "rust-analyzer.showUnlinkedFileNotification": false,
-}

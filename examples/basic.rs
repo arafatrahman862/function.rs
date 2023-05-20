@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(warnings)]
 use frpc::declare;
 
 async fn foo() {}
@@ -10,3 +10,5 @@ declare! {
         bar = 14,
     }
 }
+
+fn main() {}

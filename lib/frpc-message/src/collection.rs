@@ -1,7 +1,6 @@
 use super::*;
 use std::{collections::*, hash::Hash};
 
-#[cfg_attr(feature = "eq", derive(PartialEq, Eq))]
 #[cfg_attr(feature = "clone", derive(Clone))]
 #[cfg_attr(feature = "hash", derive(Hash))]
 #[cfg_attr(feature = "debug", derive(Debug))]
@@ -16,7 +15,6 @@ pub enum SetVariant {
     Vec,
 }
 
-#[cfg_attr(feature = "eq", derive(PartialEq, Eq))]
 #[cfg_attr(feature = "clone", derive(Clone))]
 #[cfg_attr(feature = "hash", derive(Hash))]
 #[cfg_attr(feature = "debug", derive(Debug))]

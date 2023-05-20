@@ -155,25 +155,21 @@ impl Declare {
                 quote_spanned!(name.span()=>
                     #id => frpc::run(#name, state, &mut reader, w).await
                 )
-            });
-
+            });        
             quote_spanned!(ident.span()=>
                 struct #ident;
-                impl #ident {
-                    #[allow(dead_code)]
-                    pub fn type_def() -> impl ::std::any::Any {
+
+                #[cfg(debug_assertions)]
+                impl ::std::convert::From<#ident> for ::frpc::__private::frpc_message::TypeDef {
+                    fn from(_: #ident) -> Self {
                         #(#use_func;)*
-                        #[cfg(debug_assertions)]
-                        {
-                            let mut ___c = frpc::__private::frpc_message::Context::default();
-                            let funcs = ::std::vec::Vec::from([#(#func_ty,)*]);
-                            frpc::__private::frpc_message::TypeDef {
-                                ctx: ___c,
-                                funcs,
-                            }
-                        }
+                        let mut ___c = ::frpc::__private::frpc_message::Context::default();
+                        let funcs = ::std::vec::Vec::from([#(#func_ty,)*]);
+                        Self { ctx: ___c, funcs }
                     }
-    
+                }
+                
+                impl #ident {
                     pub async fn execute<W>(state: #state, id: u16, data: Box<[u8]>, w: &mut W) -> ::std::io::Result<()>
                     where
                         W: ::frpc::output::AsyncWriter + Unpin + Send,
