@@ -1,10 +1,10 @@
 #![doc(hidden)]
 pub use frpc_message;
-use frpc_message::{Context, Message, Ty};
+use frpc_message::{CostomTypes, Message, Ty};
 
 pub fn fn_ty<Func, Args, Ret>(
     _: &Func,
-    ctx: &mut Context,
+    costom_types: &mut CostomTypes,
     index: u16,
     path: impl Into<String>,
 ) -> frpc_message::Func
@@ -14,17 +14,17 @@ where
     Args: Message,
     Ret: Message,
 {
-    let Ty::Tuple(args) = Args::ty(ctx) else { unreachable!() };
+    let Ty::Tuple(args) = Args::ty(costom_types) else { unreachable!() };
     frpc_message::Func {
         index,
         path: path.into(),
         args,
-        retn: Ret::ty(ctx),
+        retn: Ret::ty(costom_types),
     }
 }
 
 impl<T> Message for crate::State<T> {
-    fn ty(_: &mut Context) -> frpc_message::Ty {
+    fn ty(_: &mut CostomTypes) -> frpc_message::Ty {
         Ty::Tuple(vec![])
     }
 }

@@ -11,7 +11,7 @@ use databuf::Encode;
 pub use collection::{MapVariant, SetVariant};
 
 pub trait Message {
-    fn ty(_: &mut Context) -> Ty;
+    fn ty(_: &mut CostomTypes) -> Ty;
 }
 
 #[cfg_attr(feature = "hash", derive(Hash))]
@@ -26,13 +26,14 @@ pub struct Func {
     pub retn: Ty,
 }
 
+#[derive(Default)]
 #[cfg_attr(feature = "hash", derive(Hash))]
 #[cfg_attr(feature = "clone", derive(Clone))]
 #[cfg_attr(feature = "debug", derive(Debug))]
 #[cfg_attr(feature = "decode", derive(Decode))]
 #[cfg_attr(feature = "encode", derive(Encode))]
 pub struct TypeDef {
-    pub ctx: Context,
+    pub costom_types: CostomTypes,
     pub funcs: Vec<Func>,
 }
 
@@ -82,8 +83,8 @@ pub enum Ty {
     Tuple(Vec<Ty>),
 
     Array {
-        len: usize,
         ty: Box<Ty>,
+        len: usize,
     },
     Set {
         variant: SetVariant,
@@ -114,15 +115,7 @@ impl Ty {
     }
 }
 
-#[derive(Default)]
-#[cfg_attr(feature = "hash", derive(Hash))]
-#[cfg_attr(feature = "clone", derive(Clone))]
-#[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(feature = "decode", derive(Decode))]
-#[cfg_attr(feature = "encode", derive(Encode))]
-pub struct Context {
-    pub costom_types: std::collections::BTreeMap<String, CustomTypeKind>,
-}
+pub type CostomTypes = std::collections::BTreeMap<String, CustomTypeKind>;
 
 impl Default for CustomTypeKind {
     fn default() -> Self {

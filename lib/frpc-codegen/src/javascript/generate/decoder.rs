@@ -7,7 +7,7 @@ pub fn main(f: &mut impl Write, provider: &CodeGen) -> Result {
         let ident = to_camel_case(path, ':');
         writeln!(f, "{ident}(d: use.Decoder): {ident} {{")?;
 
-        match &provider.type_def.ctx.costom_types[*path] {
+        match &provider.type_def.costom_types[*path] {
             CustomTypeKind::Unit(data) => {
                 let items = fmt!(|f| {
                     data.fields

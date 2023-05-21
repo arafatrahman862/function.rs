@@ -28,20 +28,20 @@ pub enum MapVariant {
 macro_rules! impl_ty_class {
     [Set for $name: tt <$($ty_arg: ty),*> where $($ty: tt)*] => {
         impl<$($ty)*> Message for $name<$($ty_arg),*> {
-            fn ty(ctx: &mut Context) -> Ty {
+            fn ty(costom_types: &mut CostomTypes) -> Ty {
                 Ty::Set {
                     variant: SetVariant::$name,
-                    ty: Box::new(T::ty(ctx)),
+                    ty: Box::new(T::ty(costom_types)),
                 }
             }
         }
     };
     [Map for $name: tt <$($ty_arg: ty),*> where $($ty: tt)*] => {
         impl<$($ty)*> Message for $name<$($ty_arg),*> {
-            fn ty(ctx: &mut Context) -> Ty {
+            fn ty(costom_types: &mut CostomTypes) -> Ty {
                 Ty::Map {
                     variant: MapVariant::$name,
-                    ty: Box::new((K::ty(ctx), V::ty(ctx))),
+                    ty: Box::new((K::ty(costom_types), V::ty(costom_types))),
                 }
             }
         }
@@ -58,10 +58,10 @@ impl_ty_class!(Map for BTreeMap<K, V>     where K: Message + Ord, V: Message);
 impl_ty_class!(Map for HashMap<K, V>      where K: Message + Eq + Hash, V: Message);
 
 impl<T: Message> Message for &[T] {
-    fn ty(ctx: &mut Context) -> Ty {
+    fn ty(costom_types: &mut CostomTypes) -> Ty {
         Ty::Set {
             variant: SetVariant::Vec,
-            ty: Box::new(T::ty(ctx)),
+            ty: Box::new(T::ty(costom_types)),
         }
     }
 }

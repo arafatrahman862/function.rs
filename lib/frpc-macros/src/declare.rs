@@ -148,7 +148,7 @@ impl Declare {
 
             let func_ty = funcs.iter().map(|Func { name, id, .. }| {
                 let path = name.to_string();
-                quote_spanned!(name.span()=> ::frpc::__private::fn_ty(&#name, &mut ___c, #id,  #path))
+                quote_spanned!(name.span()=> ::frpc::__private::fn_ty(&#name, &mut __costom_types, #id,  #path))
             });
 
             let func = funcs.iter().map(|Func { name, id, .. }| {
@@ -163,9 +163,9 @@ impl Declare {
                 impl ::std::convert::From<#ident> for ::frpc::__private::frpc_message::TypeDef {
                     fn from(_: #ident) -> Self {
                         #(#use_func;)*
-                        let mut ___c = ::frpc::__private::frpc_message::Context::default();
+                        let mut __costom_types = ::frpc::__private::frpc_message::CostomTypes::default();
                         let funcs = ::std::vec::Vec::from([#(#func_ty,)*]);
-                        Self { ctx: ___c, funcs }
+                        Self { costom_types: __costom_types, funcs }
                     }
                 }
                 

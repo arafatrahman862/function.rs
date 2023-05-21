@@ -7,7 +7,7 @@ pub fn main(f: &mut impl Write, provider: &CodeGen) -> Result {
         let ident = to_camel_case(path, ':');
         writeln!(f, "{ident}(d: use.BufWriter, z: {ident}) {{")?;
 
-        match &provider.type_def.ctx.costom_types[*path] {
+        match &provider.type_def.costom_types[*path] {
             CustomTypeKind::Unit(data) => {
                 writeln!(f, "switch (z) {{")?;
                 for (i, UnitField { name, .. }) in data.fields.iter().enumerate() {

@@ -7,13 +7,13 @@ use super::*;
 // }
 
 impl<T: Message> Message for &T {
-    fn ty(def: &mut Context) -> Ty {
+    fn ty(def: &mut CostomTypes) -> Ty {
         T::ty(def)
     }
 }
 
 impl<T: Message> Message for Box<T> {
-    fn ty(def: &mut Context) -> Ty {
+    fn ty(def: &mut CostomTypes) -> Ty {
         T::ty(def)
     }
 }
@@ -24,8 +24,8 @@ macro_rules! impl_for_typles {
         where
             $($ty: Message),*
         {
-            fn ty(_ctx: &mut Context) -> Ty {
-                Ty::Tuple(vec![$($ty::ty(_ctx)),*])
+            fn ty(_costom_types: &mut CostomTypes) -> Ty {
+                Ty::Tuple(vec![$($ty::ty(_costom_types)),*])
             }
         }
     )*);

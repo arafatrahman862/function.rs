@@ -88,15 +88,15 @@ pub fn new(input: TokenStream) -> TokenStream {
             use ::frpc::__private::frpc_message as ___m;
             use ___m::_utils::{s,c};
             impl #impl_generics ___m::Message for #ident #ty_generics #where_clause {
-                fn ty(ctx: &mut ___m::Context) -> ___m::Ty {
+                fn ty(__costom_types: &mut ___m::CostomTypes) -> ___m::Ty {
                     let name = ::std::format!(#name, ::std::module_path!());
-                    if let ::std::collections::btree_map::Entry::Vacant(entry) = ctx.costom_types.entry(c(&name)) {
+                    if let ::std::collections::btree_map::Entry::Vacant(entry) = __costom_types.entry(c(&name)) {
                         entry.insert(::std::default::Default::default());
                         let costom_type = ___m::CustomType {
                             doc: s(#doc),
                             fields: ::std::vec![#body]
                         };
-                        ctx.costom_types.insert(c(&name), ___m::CustomTypeKind::#kind(costom_type));
+                        __costom_types.insert(c(&name), ___m::CustomTypeKind::#kind(costom_type));
                     }
                     ___m::Ty::CustomType (name)
                 }
@@ -111,7 +111,7 @@ fn parse_tuple(fields: &FieldsUnnamed) -> TokenStream2 {
         let ty = &f.ty;
         quote_spanned! (f.span()=> ___m::TupleField {
             doc: s(#doc),
-            ty: <#ty as ___m::Message>::ty(ctx),
+            ty: <#ty as ___m::Message>::ty(__costom_types),
         })
     });
     quote! { #(#recurse),* }
@@ -125,7 +125,7 @@ fn parse_object(fields: &FieldsNamed) -> TokenStream2 {
         quote_spanned! (f.span()=> ___m::StructField {
             doc: s(#doc),
             name: s(#name),
-            ty: <#ty as ___m::Message>::ty(ctx)
+            ty: <#ty as ___m::Message>::ty(__costom_types)
         })
     });
     quote! { #(#recurse),* }

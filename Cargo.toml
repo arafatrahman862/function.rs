@@ -20,5 +20,4 @@ frpc-macros = { version = "0.0.1", path = "lib/frpc-macros" }
 frpc-message = { version = "0.0.1", path = "lib/frpc-message", features = ["encode"] }
 
 [dev-dependencies]
-# libloading = "0.7.4"
-tokio = { version = "1", features = ["macros", "rt"] }
+frpc-codegen = { path = "lib/frpc-codegen" }
