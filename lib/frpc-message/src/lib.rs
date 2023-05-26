@@ -33,6 +33,7 @@ pub struct Func {
 #[cfg_attr(feature = "decode", derive(Decode))]
 #[cfg_attr(feature = "encode", derive(Encode))]
 pub struct TypeDef {
+    pub name: String,
     pub costom_types: CostomTypes,
     pub funcs: Vec<Func>,
 }
@@ -40,7 +41,7 @@ pub struct TypeDef {
 impl TypeDef {
     #[cfg(feature = "decode")]
     pub fn try_from(bytes: impl AsRef<[u8]>) -> databuf::Result<Self> {
-        databuf::Decode::from_bytes::<LEB128>(bytes.as_ref())
+        Self::from_bytes::<LEB128>(bytes.as_ref())
     }
 
     #[cfg(feature = "encode")]
@@ -56,7 +57,7 @@ impl TypeDef {
 #[cfg_attr(feature = "decode", derive(Decode))]
 #[cfg_attr(feature = "encode", derive(Encode))]
 pub enum Ty {
-    // Never,debug
+    // Never, // debug
     u8,
     u16,
     u32,

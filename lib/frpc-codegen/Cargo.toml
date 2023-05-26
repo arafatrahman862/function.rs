@@ -5,4 +5,3 @@ edition = "2021"
 
 [dependencies]
 frpc-message = { path = "../frpc-message", features = ["decode"] }
-log = { version = "0.4", features = ["std"] }

@@ -2,18 +2,16 @@ pub mod generate;
 pub mod interface;
 use crate::CodeGen;
 use crate::{fmt, utils::to_camel_case};
-use interface::gen_type;
 
-impl<'a> CodeGen<'a> {
-    pub fn javascript(&self) -> fmt!(type '_) {
+impl CodeGen {
+    pub fn typescript(&self) -> fmt!(type '_) {
         fmt!(move |f| {
-            for path in self.type_def.costom_types.keys() {
-                let ident = to_camel_case(path, ':');
-                gen_type(f, ident, &self.type_def.costom_types[path])?;
+            for (path, value) in &self.type_def.costom_types {
+                interface::gen_type(f, to_camel_case(path, ':'), value)?;
             }
             generate::decoder::main(f, self)?;
             generate::encoder::main(f, self)?;
-            generate::stub::main(f, self.type_def)
+            generate::stub::main(f, &self.type_def)
         })
     }
 }

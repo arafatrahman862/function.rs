@@ -2,7 +2,7 @@ use frpc_message::*;
 
 pub struct Path<'a> {
     costom_types: &'a CostomTypes,
-    pub paths: Vec<&'a String>,
+    pub paths: Vec<String>,
 }
 
 impl<'a> Path<'a> {
@@ -31,7 +31,7 @@ impl<'a> Path<'a> {
             Ty::Tuple(tys) => self.add_tys(tys.iter()),
             Ty::Option(ty) | Ty::Array { ty, .. } | Ty::Set { ty, .. } => self.add_ty(ty),
             Ty::CustomType(path) if !self.paths.contains(&path) => {
-                self.paths.push(path);
+                self.paths.push(path.clone());
                 match &self.costom_types[path] {
                     CustomTypeKind::Enum(data) => {
                         for data in data.fields.iter() {

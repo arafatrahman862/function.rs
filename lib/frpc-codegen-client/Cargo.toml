@@ -1,0 +1,11 @@
+[package]
+name = "frpc-codegen-client"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0.163", features = ["derive"] }
+
+frpc-codegen = { path = "../frpc-codegen" }
+frpc-message = { path = "../frpc-message", features = ["encode", "decode"] }
+toml = "0.7.4"

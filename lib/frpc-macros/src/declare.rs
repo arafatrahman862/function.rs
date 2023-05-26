@@ -8,11 +8,10 @@ use syn::{
 };
 
 pub enum State {
-    #[allow(dead_code)]
-    Trait {
-        span: Span,
-        params: Punctuated<TypeParamBound, Token![+]>,
-    },
+    // Trait {
+    //     span: Span,
+    //     params: Punctuated<TypeParamBound, Token![+]>,
+    // },
     Type {
         span: Span,
         ty: Type,
@@ -57,18 +56,14 @@ impl Parse for State {
         let span = name.span();
         let punct: Punct = input.parse()?;
         let state = match punct.as_char() {
-            ':' => {
-                return Err(input.error("todo!"));
-                // Self::Trait {
-                //     span,
-                //     params: input.parse_terminated(TypeParamBound::parse, Token![+])?,
-                // }
-            }
+            // ':' => {
+            //     todo!()
+            // }
             '=' => Self::Type {
                 span,
                 ty: input.parse()?,
             },
-            _ => err!(punct.span(), "expected `:` or `=`"),
+            _ => err!(punct.span(), "expected `=`"),
         };
         input.parse::<Token![;]>()?;
         Ok(state)
@@ -109,11 +104,11 @@ impl Parse for Declare {
                 let state = input.parse()?;
                 if let Some(old_state) = declare.state {
                     let type_value = match old_state {
-                        State::Trait { .. } => unreachable!(),
+                        // State::Trait { .. } => unreachable!(),
                         State::Type { ty, .. } => ty.into_token_stream().to_string(),
                     };
                     let span = match state {
-                        State::Trait { span, .. } | State::Type { span, .. } => span,
+                        State::Type { span, .. } => span,
                     };
                     err!(
                         span,
@@ -136,7 +131,7 @@ impl Declare {
         let state = self
             .state
             .map(|state| match state {
-                State::Trait { .. } => unreachable!(),
+                // State::Trait { .. } => unreachable!(),
                 State::Type { ty, .. } => quote! { #ty },
             })
             .unwrap_or(quote! { () });
@@ -155,7 +150,8 @@ impl Declare {
                 quote_spanned!(name.span()=>
                     #id => ::frpc::run(#name, state, &mut reader, w).await
                 )
-            });        
+            });
+            let name = ident.to_string();
             quote_spanned!(ident.span()=>
                 struct #ident;
 
@@ -165,7 +161,11 @@ impl Declare {
                         #(#use_func;)*
                         let mut __costom_types = ::frpc::__private::frpc_message::CostomTypes::default();
                         let funcs = ::std::vec::Vec::from([#(#func_ty,)*]);
-                        Self { costom_types: __costom_types, funcs }
+                        Self { 
+                            name: ::std::string::String::from(#name), 
+                            costom_types: __costom_types,
+                            funcs
+                        }
                     }
                 }
                 
