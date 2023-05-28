@@ -2,9 +2,9 @@ use super::*;
 use crate::javascript::interface::fmt_js_ty;
 
 pub fn main(f: &mut impl Write, type_def: &TypeDef) -> Result {
-    writeln!(f, "export default class mod {{")?;
-    writeln!(f, "constructor(private rpc: use.RPC) {{}}")?;
-    writeln!(f, "static close(this: mod) {{ this.rpc.close() }}")?;
+    writeln!(f, "export default class Self {{")?;
+    writeln!(f, "constructor(private rpc: use.RpcTransport) {{}}")?;
+    writeln!(f, "static close(this: Self) {{ this.rpc.close() }}")?;
 
     type_def.funcs.iter().try_for_each(
         |Func {

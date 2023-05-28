@@ -1,25 +1,32 @@
-use std::{fs, path::Path};
-
-use frpc_codegen::CodeGen;
-pub use frpc_message::TypeDef;
+mod code_writer;
 pub mod config;
-pub use config::Config;
 
-pub fn init(_td: impl Into<TypeDef>) {
-    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let config_file_path = manifest_dir.join("codegen.toml");
+use config::Config;
+use frpc_codegen::CodeGen;
+use frpc_message::TypeDef;
+
+use std::{fmt::Write, fs};
+
+type Result<T = (), E = Box<dyn std::error::Error>> = std::result::Result<T, E>;
+
+pub fn init(service: impl Into<TypeDef>) {
+    let type_def = service.into();
+    let config_file_path = config::manifest_dir().join("codegen.toml");
 
     let config = match fs::read_to_string(config_file_path).map(|s| toml::from_str(&s)) {
         Ok(Ok(config)) => config,
         _ => Config::default(),
     };
-    init_with_config(_td.into(), config)
+    if let Some(err) = init_with_config(type_def, config).err() {
+        eprintln!("{err:#?}");
+        std::process::exit(1);
+    }
 }
 
-fn init_with_config(type_def: TypeDef, config: Config) {
-    let codegen = CodeGen::from(type_def);
-    if let Some(_conf) = config.typescript {
-        _conf.import_with_extension;
-        codegen.typescript();
+fn init_with_config(type_def: TypeDef, config: Config) -> Result {
+    let writer = code_writer::CodeWriter::from(type_def);
+    if let Some(config) = config.typescript {
+        writer.generate_typescript_binding(config)?;
     }
+    Ok(())
 }

@@ -2,9 +2,8 @@ export module use {
 	export type Option<T> = T | null;
 	export type Result<T, E> = | { type: "Ok", value: T } | { type: "Err", value: E };
 
-	export type Num<T extends "I" | "U", Size extends NumSize<T>> = Size extends 16 | 32 ? number : bigint;
-
-	export type NumSize<T extends "U" | "I"> =
+	export type Num<T extends "I" | "U", Size extends NumSize<T>> = Size extends 16 | 32 ? number : bigint
+	export type NumSize<T extends "U" | "I" | "F"> =
 		T extends "U" ? 16 | 32 | 64 | 128 :
 		T extends "I" ? 16 | 32 | 64 | 128 :
 		never;
@@ -13,12 +12,6 @@ export module use {
 		write(bytes: Uint8Array): void
 		/** Must not call this function more then once */
 		flush(): void
-	}
-
-	export interface RpcTransport {
-		unary(): Write & { call(): Promise<Uint8Array> }
-		sse(): Write & { call(): AsyncGenerator<Uint8Array> }
-		close(): Promise<void>
 	}
 
 	function assertEq<T>(actual: T, expected: T) {

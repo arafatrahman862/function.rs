@@ -3,15 +3,15 @@ export interface Write {
     flush(): void
 }
 
-export interface RPC {
-    unary(): Write & { call(): Promise<ArrayBuffer> }
+export interface RpcTransport {
+    unary(): Write & { call(): Promise<Uint8Array> }
     sse(): Write & { call(): AsyncGenerator<Uint8Array> }
-    close(): void
+    close(): Promise<void>
 }
 
-export class HttpTransport implements RPC {
+export class HttpTransport implements RpcTransport {
     constructor(public url: URL | RequestInfo) { }
-    unary(): Write & { call(): Promise<ArrayBuffer> } {
+    unary(): Write & { call(): Promise<Uint8Array> } {
         let url = this.url;
         let chunks: Uint8Array[] = [];
         return {
@@ -22,7 +22,7 @@ export class HttpTransport implements RPC {
             async call() {
                 let body = concat_uint8(chunks);
                 let res = await fetch(url, { method: "POST", body });
-                return res.arrayBuffer();
+                return new Uint8Array(await res.arrayBuffer());
             }
         }
     }
@@ -51,10 +51,13 @@ export class HttpTransport implements RPC {
         }
     }
 
-    close() { }
+    async close() { }
 }
 
 function concat_uint8(chunks: Uint8Array[]) {
+    if (chunks.length == 1) {
+        return chunks[0]
+    }
     let size = 0;
     for (const chunk of chunks) {
         size += chunk.byteLength;

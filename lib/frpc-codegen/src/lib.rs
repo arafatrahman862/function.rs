@@ -7,7 +7,7 @@ use frpc_message::TypeDef;
 use path::Path;
 
 pub struct CodeGen {
-    type_def: TypeDef,
+    pub type_def: TypeDef,
     input_paths: Vec<String>,
     output_paths: Vec<String>,
 }

@@ -90,11 +90,8 @@ pub fn fmt_js_ty(ty: &Ty) -> String {
         Ty::u8 | Ty::u16 | Ty::u32 | Ty::i8 | Ty::i16 | Ty::i32 | Ty::f32 | Ty::f64 => {
             "number".into()
         }
-        Ty::u64 | Ty::i64 => "bigint".into(),
-        Ty::u128 | Ty::i128 => unimplemented!(),
-
+        Ty::u64 | Ty::i64 | Ty::u128 | Ty::i128 => "bigint".into(),
         Ty::bool => "bool".into(),
-
         Ty::char | Ty::String => "string".into(),
 
         Ty::Array { ty, .. } | Ty::Set { ty, .. } => match **ty {

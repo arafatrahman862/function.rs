@@ -1,6 +1,6 @@
 [workspace]
 # members = ["lib/*"]
-members = ["examples/example"]
+members = ["example"]
 
 [package]
 name = "frpc"
@@ -23,3 +23,6 @@ frpc-message = { version = "0.0.1", path = "lib/frpc-message", features = ["enco
 [dev-dependencies]
 frpc-codegen = { path = "lib/frpc-codegen" }
 frpc-codegen-client = { path = "lib/frpc-codegen-client" }
+
+[profile.dev.package."frpc-codegen-client"]
+opt-level = 3

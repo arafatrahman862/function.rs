@@ -22,16 +22,19 @@ fn fmt_ty<'a>(ty: &'a Ty, scope: &'a str) -> fmt!(type 'a) {
     fmt!(move |f| {
         match ty {
             Ty::u8 => write!(f, "d.u8"),
-            Ty::u16 => write!(f, "d.u16"),
-            Ty::u32 => write!(f, "d.u32"),
-            Ty::u64 => write!(f, "d.u64"),
+            Ty::u16 => write!(f, "d.num('U', 16)"),
+            Ty::u32 => write!(f, "d.num('U', 32)"),
+            Ty::u64 => write!(f, "d.num('U', 64)"),
+            Ty::u128 => write!(f, "d.num('U', 128)"),
+
             Ty::i8 => write!(f, "d.i8"),
-            Ty::i16 => write!(f, "d.i16"),
-            Ty::i32 => write!(f, "d.i32"),
-            Ty::i64 => write!(f, "d.i64"),
+            Ty::i16 => write!(f, "d.num('I', 16)"),
+            Ty::i32 => write!(f, "d.num('I', 32)"),
+            Ty::i64 => write!(f, "d.num('I', 64)"),
+            Ty::i128 => write!(f, "d.num('I', 128)"),
+
             Ty::f32 => write!(f, "d.f32"),
             Ty::f64 => write!(f, "d.f64"),
-            Ty::i128 | Ty::u128 => unimplemented!(),
 
             Ty::bool => write!(f, "d.bool"),
 
@@ -89,10 +92,7 @@ fn test_fmt_tuple() {
         Result(Box::new((CustomType("::path::ident".into()), String))),
         Map {
             variant: MapVariant::BTreeMap,
-            ty: Box::new((
-                String,
-                Set { variant: SetVariant::BTreeSet, ty: Box::new(u8), },
-            )),
+            ty: Box::new((String, Set { variant: SetVariant::BTreeSet, ty: Box::new(u8), })),
         },
     ];
     assert_eq!(

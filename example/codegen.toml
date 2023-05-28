@@ -1,0 +1,3 @@
+[typescript]
+out-dir = "./target"
+import-with-extension = false
