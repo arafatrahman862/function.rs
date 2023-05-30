@@ -1,9 +1,6 @@
-#![allow(dead_code)]
-
-async fn add(a: i32, b: i32) -> i32 {
-    a + b
-}
-async fn print(_msg: String) {}
+#![allow(warnings)]
+use example::*;
+use frpc_transport::H2Transport;
 
 frpc::declare! {
     service Example {
@@ -12,6 +9,20 @@ frpc::declare! {
     }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
+    #[cfg(debug_assertions)]
     frpc_codegen_client::init(Example);
+
+    H2Transport::bind("127.0.0.1", "../cert/cert.pem", "../cert/key.pem")
+        .await
+        .unwrap()
+        .serve(
+            |_| Some(()),
+            Example::execute,
+            |_state, req, res| async move {
+                let _ = res.write(format!("{}", req.uri)).await;
+            },
+        )
+        .await;
 }

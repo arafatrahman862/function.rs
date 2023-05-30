@@ -1,3 +1,2 @@
 [typescript]
-out-dir = "./target"
-import-with-extension = false
+out-dir = "../target/frpc/"

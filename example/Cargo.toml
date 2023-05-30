@@ -4,5 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+tokio = { version = "1.28.2", features = ["macros", "rt-multi-thread"] }
+
 frpc = { path = "../" }
+frpc-transport = { path = "../lib/frpc-transport" }
 frpc-codegen-client = { path = "../lib/frpc-codegen-client" }

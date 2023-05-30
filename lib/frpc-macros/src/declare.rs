@@ -170,11 +170,11 @@ impl Declare {
                 }
                 
                 impl #ident {
-                    pub async fn execute<W>(state: #state, id: u16, data: Box<[u8]>, w: &mut W) -> ::std::io::Result<()>
+                    pub async fn execute<W>(state: #state, id: u16, data: &[u8], w: &mut W) -> ::std::io::Result<()>
                     where
                         W: ::frpc::Transport + Unpin + Send,
                     {
-                        let mut reader = &*data;
+                        let mut reader = data;
                         match id {
                             #(#func,)*
                             _ => {
