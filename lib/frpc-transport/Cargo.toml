@@ -6,5 +6,5 @@ edition = "2021"
 [dependencies]
 async-trait = "0.1"
 frpc = { path = "../../" }
-h2-plus = { git = "https://github.com/nurmohammed840/h2-plus" }
+h2x = "0.3"
 tokio = { version = "1", features = ["io-util", "net", "rt-multi-thread", "macros"] }
