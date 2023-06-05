@@ -9,7 +9,7 @@ pub fn fn_ty<Func, Args, Ret>(
     path: impl Into<String>,
 ) -> frpc_message::Func
 where
-    Func: crate::fn_once::FnOnce<Args>,
+    Func: std_lib::FnOnce<Args>,
     Func::Output: std::future::Future<Output = Ret>,
     Args: Message,
     Ret: Message,

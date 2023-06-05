@@ -1,5 +1,5 @@
 use proc_macro2::{Literal, Punct, Span};
-use quote::{quote, quote_spanned, ToTokens};
+use quote::{ToTokens, TokenStreamExt};
 use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
@@ -7,15 +7,14 @@ use syn::{
     *,
 };
 
+use crate::utils::ToToken;
+
 pub enum State {
     // Trait {
     //     span: Span,
     //     params: Punctuated<TypeParamBound, Token![+]>,
     // },
-    Type {
-        span: Span,
-        ty: Type,
-    },
+    Type { span: Span, ty: Type },
 }
 
 pub struct Func {
@@ -25,6 +24,8 @@ pub struct Func {
 }
 
 pub struct Service {
+    attrs: Vec<Attribute>,
+    vis: Visibility,
     _service_token: Ident,
     ident: Ident,
     _brace_token: token::Brace,
@@ -36,6 +37,8 @@ pub struct Declare {
     pub state: Option<State>,
     pub services: Vec<Service>,
 }
+
+// ------------------------------------------------------------------------------
 
 macro_rules! err {
     [$span: expr, $msg: expr] => {
@@ -73,12 +76,16 @@ impl Parse for State {
 impl Parse for Service {
     fn parse(input: ParseStream) -> Result<Self> {
         let content;
-        let service_token: Ident = input.parse()?;
-        if service_token != "service" {
-            err!(service_token.span(), "expected `service` keyword");
-        }
         Ok(Service {
-            _service_token: service_token,
+            attrs: input.call(Attribute::parse_outer)?,
+            vis: input.parse()?,
+            _service_token: {
+                let token: Ident = input.parse()?;
+                if token != "service" {
+                    err!(token.span(), "expected `service` keyword");
+                }
+                token
+            },
             ident: input.parse()?,
             _brace_token: braced!(content in input),
             funcs: content.parse_terminated(Func::parse, Token![,])?,
@@ -104,7 +111,6 @@ impl Parse for Declare {
                 let state = input.parse()?;
                 if let Some(old_state) = declare.state {
                     let type_value = match old_state {
-                        // State::Trait { .. } => unreachable!(),
                         State::Type { ty, .. } => ty.into_token_stream().to_string(),
                     };
                     let span = match state {
@@ -116,7 +122,7 @@ impl Parse for Declare {
                     );
                 }
                 declare.state = Some(state);
-            } else if input.peek(Ident::peek_any) {
+            } else if input.peek(Ident::peek_any) || input.peek(Token![#]) {
                 declare.services.push(input.parse()?);
             } else {
                 return Err(input.error("unexpected token"));
@@ -126,68 +132,84 @@ impl Parse for Declare {
     }
 }
 
-impl Declare {
-    pub fn gen_code(self) -> proc_macro2::TokenStream {
-        let state = self
-            .state
-            .map(|state| match state {
-                // State::Trait { .. } => unreachable!(),
-                State::Type { ty, .. } => quote! { #ty },
-            })
-            .unwrap_or(quote! { () });
+impl ToTokens for Declare {
+    fn to_tokens(&self, mut tokens: &mut proc_macro2::TokenStream) {
+        let Self { state, services } = self;
 
-        let services = self.services.iter().map(|Service { ident, funcs, .. }| {
-            let use_func = funcs
-                .iter()
-                .map(|Func { name, .. }| quote_spanned!(name.span()=> use #name ));
+        let state = ToToken(|mut tokens| match state {
+            Some(State::Type { ty, .. }) => ty.to_tokens(tokens),
+            None => {
+                quote::quote_each_token! {tokens () }
+            }
+        });
 
-            let func_ty = funcs.iter().map(|Func { name, id, .. }| {
-                let path = name.to_string();
-                quote_spanned!(name.span()=> ::frpc::__private::fn_ty(&#name, &mut __costom_types, #id,  #path))
+        for Service {
+            attrs,
+            vis,
+            ident,
+            funcs,
+            ..
+        } in services
+        {
+            let import_funcs = ToToken(|mut tokens| {
+                for Func { name, .. } in funcs {
+                    let span = name.span();
+                    quote::quote_each_token_spanned!(tokens span
+                        use #name;
+                    );
+                }
+            });
+            let func_types = ToToken(|mut tokens| {
+                for Func { name, id, .. } in funcs {
+                    let path = name.to_string();
+                    let span = name.span();
+                    quote::quote_each_token_spanned!(tokens span
+                        ::frpc::__private::fn_ty(&#name, &mut __costom_types, #id,  #path),
+                    );
+                }
+            });
+            let funcs = ToToken(|mut tokens| {
+                for Func { name, id, .. } in funcs {
+                    let span = name.span();
+                    quote::quote_each_token_spanned!(tokens span
+                        #id => ::frpc::run(#name, state, &mut reader, w).await,
+                    );
+                }
             });
 
-            let func = funcs.iter().map(|Func { name, id, .. }| {
-                quote_spanned!(name.span()=>
-                    #id => ::frpc::run(#name, state, &mut reader, w).await
-                )
-            });
-            let name = ident.to_string();
-            quote_spanned!(ident.span()=>
-                struct #ident;
+            let (name, span) = (ident.to_string(), ident.span());
+
+            tokens.append_all(attrs);
+            quote::quote_each_token_spanned!(tokens span
+                #vis struct #ident;
 
                 #[cfg(debug_assertions)]
                 impl ::std::convert::From<#ident> for ::frpc::__private::frpc_message::TypeDef {
                     fn from(_: #ident) -> Self {
-                        #(#use_func;)*
+                        #import_funcs
                         let mut __costom_types = ::frpc::__private::frpc_message::CostomTypes::default();
-                        let funcs = ::std::vec::Vec::from([#(#func_ty,)*]);
-                        Self { 
-                            name: ::std::string::String::from(#name), 
+                        let funcs = ::std::vec::Vec::from([#func_types]);
+                        Self {
+                            name: ::std::string::String::from(#name),
                             costom_types: __costom_types,
                             funcs
                         }
                     }
                 }
-                
+
                 impl #ident {
-                    pub async fn execute<W>(state: #state, id: u16, data: &[u8], w: &mut W) -> ::std::io::Result<()>
+                    pub async fn execute<W>(state: #state, id: u16, data: &[u8], w: &mut W) -> ::std::result::Result<(), ::std::boxed::Box<dyn ::std::error::Error + ::std::marker::Send + ::std::marker::Sync>>
                     where
                         W: ::frpc::Transport + Unpin + Send,
                     {
                         let mut reader = data;
                         match id {
-                            #(#func,)*
-                            _ => {
-                                return ::std::result::Result::Err(::std::io::Error::new(
-                                    ::std::io::ErrorKind::AddrNotAvailable,
-                                    "unknown id",
-                                ))
-                            }
+                            #funcs
+                            _ => ::std::result::Result::Err(::std::convert::From::from("unknown id"))
                         }
                     }
                 }
-            )
-        });
-        quote! { #(#services)* }
+            );
+        }
     }
 }

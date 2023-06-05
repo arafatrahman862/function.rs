@@ -1,2 +1,2 @@
 [typescript]
-out-dir = "../target/frpc/"
+out-dir = "example/client/lib/"

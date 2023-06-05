@@ -1,8 +1,6 @@
 //!~
 #![warn(missing_docs)]
 
-#[doc(hidden)]
-pub mod fn_once;
 mod input;
 mod output;
 mod private;
@@ -32,16 +30,41 @@ pub const DATABUF_CONFIG: u8 = databuf::config::num::LEB128 | databuf::config::l
 
 #[doc(hidden)]
 pub async fn run<'de, Args, Ret, State>(
-    func: impl crate::fn_once::FnOnce<Args, Output = Ret>,
+    func: impl std_lib::FnOnce<Args, Output = Ret>,
     state: State,
     reader: &mut &'de [u8],
     w: &mut (impl crate::output::Transport + Unpin + Send),
-) -> std::io::Result<()>
+) -> databuf::Result<()>
 where
     Args: Input<'de, State>,
     Ret: Output,
 {
-    let args = Args::decode(state, reader).unwrap();
+    let args = Args::decode(state, reader)?;
     let output = func.call_once(args);
-    Ret::produce(output, w).await
+    Ret::produce(output, w).await?;
+    Ok(())
 }
+
+// #[cfg(test)]
+// mod tests {
+//     #![allow(warnings)]
+//     use databuf::{Decode, Encode};
+
+//     use super::*;
+
+//     #[test]
+//     fn test_name() {
+//         let mut data = vec![];
+//         10_i32.encode::<{ DATABUF_CONFIG }>(&mut data);
+//         20_i32.encode::<{ DATABUF_CONFIG }>(&mut data);
+//         println!("{:?}", data);
+
+//         let data = &mut &*data;
+
+//         let f: (i32, i32) = Input::decode((), data).unwrap();
+//         println!("{:?}", f);
+//         // println!("{:?}", i32::decode::<{ DATABUF_CONFIG }>(data));
+//         // println!("{:?}", i32::decode::<{ DATABUF_CONFIG }>(data));
+//         // println!("{:?}", i32::decode::<{ DATABUF_CONFIG }>(data));
+//     }
+// }
