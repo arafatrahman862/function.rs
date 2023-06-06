@@ -1,2 +1,3 @@
 [typescript]
 out-dir = "example/client/lib/"
+preserve-import-extension = true

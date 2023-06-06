@@ -12,36 +12,36 @@ export interface RpcTransport {
 export class HttpTransport implements RpcTransport {
     constructor(public url: URL | RequestInfo) { }
     unary(): Write & { call(): Promise<Uint8Array> } {
-        let url = this.url;
-        let chunks: Uint8Array[] = [];
+        const url = this.url;
+        const chunks: Uint8Array[] = [];
         return {
             write(bytes: Uint8Array) {
                 chunks.push(bytes)
             },
             flush() { },
             async call() {
-                let body = concat_uint8(chunks);
-                let res = await fetch(url, { method: "POST", body });
+                const body = concat_uint8(chunks);
+                const res = await fetch(url, { method: "POST", body });
                 return new Uint8Array(await res.arrayBuffer());
             }
         }
     }
 
     sse() {
-        let url = this.url;
-        let chunks: Uint8Array[] = [];
+        const url = this.url;
+        const chunks: Uint8Array[] = [];
         return {
             write(bytes: Uint8Array) {
                 chunks.push(bytes)
             },
             flush() { },
             async *call() {
-                let body = concat_uint8(chunks);
-                let res = await fetch(url, { method: "POST", body });
+                const body = concat_uint8(chunks);
+                const res = await fetch(url, { method: "POST", body });
                 if (!res.body) {
                     throw new Error("not expected empty body");
                 }
-                let reader = res.body.getReader();
+                const reader = res.body.getReader();
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) return value

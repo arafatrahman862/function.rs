@@ -1,5 +1,6 @@
+//@ts-ignore
 import { deferred, Deferred } from "https://deno.land/std@0.158.0/async/mod.ts";
-import { RPC } from "./mod.ts";
+import { RpcTransport } from "./http.transport";
 
 export interface Option {
     protocols?: string | string[],
@@ -65,33 +66,31 @@ export class Socket {
     }
 }
 
-export class WebSocketTransport implements RPC {
-    static async connect(url: string) {
-        const socket = await Socket.connect(url, { binaryType: "arraybuffer" });
-        return new WebSocketTransport(socket)
-    }
-    constructor(private socket: Socket) { }
-
-    unary_call() {
-        return {
-            flush() { /* noop */ },
-            write: (bytes: Uint8Array) => this.socket.send(bytes),
-            output: async () => {
-                try {
-                    const { done, value } = await this.socket.read();
-                    if (done || !(value.data instanceof ArrayBuffer)) {
-                        throw new Error("Invalid data type: " + typeof value?.data);
-                    }
-                    return value.data;
-                } catch (error) {
-                    this.socket.close()
-                    throw error
-                }
-            }
-        }
-    }
-
-    close() {
-        this.socket.close()
-    }
-}
+// export class WebSocketTransport implements RpcTransport {
+//     static async connect(url: string) {
+//         const socket = await Socket.connect(url, { binaryType: "arraybuffer" });
+//         return new WebSocketTransport(socket)
+//     }
+//     constructor(private socket: Socket) { }
+//     unary() {
+//         return {
+//             flush() { /* noop */ },
+//             write: (bytes: Uint8Array) => this.socket.send(bytes),
+//             output: async () => {
+//                 try {
+//                     const { done, value } = await this.socket.read();
+//                     if (done || !(value.data instanceof ArrayBuffer)) {
+//                         throw new Error("Invalid data type: " + typeof value?.data);
+//                     }
+//                     return value.data;
+//                 } catch (error) {
+//                     this.socket.close()
+//                     throw error
+//                 }
+//             }
+//         }
+//     }
+//     async close() {
+//         this.socket.close()
+//     }
+// }

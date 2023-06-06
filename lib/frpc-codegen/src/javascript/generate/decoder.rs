@@ -9,7 +9,7 @@ pub fn main(f: &mut impl Write, provider: &CodeGen) -> Result {
 
         match &provider.type_def.costom_types[path] {
             CustomTypeKind::Unit(data) => {
-                let items = fmt!(|f| {
+                let items = Fmt(|f| {
                     data.fields
                         .iter()
                         .enumerate()
@@ -20,22 +20,24 @@ pub fn main(f: &mut impl Write, provider: &CodeGen) -> Result {
                 write_enum(f, &ident, items)?;
             }
             CustomTypeKind::Enum(data) => {
-                let items = fmt!(|f| data.fields.iter().enumerate().try_for_each(
-                    |(i, EnumField { name, kind, .. })| {
-                        writeln!(f, "case {i}: return {{\ntype: {name:?},")?;
-                        match kind {
-                            EnumKind::Struct(fields) => write_struct(f, fields)?,
-                            EnumKind::Tuple(fields) => {
-                                for (i, TupleField { doc, ty }) in fields.iter().enumerate() {
-                                    write_doc_comments(f, doc)?;
-                                    writeln!(f, " {i}: {}(),", fmt_ty(ty, "struct"))?;
+                let items = Fmt(|f| {
+                    data.fields.iter().enumerate().try_for_each(
+                        |(i, EnumField { name, kind, .. })| {
+                            writeln!(f, "case {i}: return {{\ntype: {name:?},")?;
+                            match kind {
+                                EnumKind::Struct(fields) => write_struct(f, fields)?,
+                                EnumKind::Tuple(fields) => {
+                                    for (i, TupleField { doc, ty }) in fields.iter().enumerate() {
+                                        write_doc_comments(f, doc)?;
+                                        writeln!(f, " {i}: {}(),", fmt_ty(ty, "struct"))?;
+                                    }
                                 }
+                                EnumKind::Unit => {}
                             }
-                            EnumKind::Unit => {}
-                        }
-                        writeln!(f, "}};")
-                    },
-                ));
+                            writeln!(f, "}};")
+                        },
+                    )
+                });
                 write_enum(f, &ident, items)?;
             }
             CustomTypeKind::Struct(data) => {

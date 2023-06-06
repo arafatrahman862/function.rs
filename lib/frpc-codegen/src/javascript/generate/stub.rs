@@ -21,7 +21,7 @@ pub fn main(f: &mut impl Write, type_def: &TypeDef) -> Result {
             }
             writeln!(f, ") {{")?;
 
-            writeln!(f, "const fn = this.rpc.unary_call()")?;
+            writeln!(f, "const fn = this.rpc.unary()")?;
             writeln!(f, "const d = new use.BufWriter(fn);")?;
             writeln!(f, "d.u16({index});")?;
 
@@ -36,10 +36,7 @@ pub fn main(f: &mut impl Write, type_def: &TypeDef) -> Result {
             writeln!(f, "d.flush();")?;
 
             if !retn.is_empty_tuple() {
-                writeln!(
-                    f,
-                    "return fn.output().then(buf => new use.Decoder(new Uint8Array(buf)))"
-                )?;
+                writeln!(f, "return fn.call().then(buf => new use.Decoder(buf))")?;
                 let res = match retn {
                     Ty::CustomType(path) => format!("struct.{}", to_camel_case(path, ':')),
                     ty => format!("d => {}()", fmt_ty(ty, "struct")),

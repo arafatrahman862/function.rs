@@ -1,4 +1,5 @@
-pub mod fmt;
+use std_lib::fmt::{fmt, Fmt};
+
 pub mod javascript;
 mod path;
 pub mod utils;

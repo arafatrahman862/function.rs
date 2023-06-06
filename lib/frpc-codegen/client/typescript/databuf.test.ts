@@ -1,5 +1,5 @@
-import { BufWriter, Decoder, Option, Result, Write } from "./mod.ts";
 import { assertEquals } from "https://deno.land/std@0.175.0/testing/asserts.ts";
+import { BufWriter, Decoder, Result, Write, Option } from "./databuf.ts";
 
 class DefaultWriter implements Write {
     bytes: number[] = []
@@ -64,31 +64,31 @@ Deno.test("Serde test: LEB128", () => {
     const U64_MAX = (1n << 64n) - 1n;
     const U128_MAX = (1n << 128n) - 1n;
 
-    encoder.num("U", 2)(0); // [0]
-    encoder.num("U", 2)(U16_MAX); // [255, 255, 3]
-    encoder.num("U", 4)(U32_MAX); // [255, 255, 255, 255, 15]
+    encoder.num("U", 16)(0); // [0]
+    encoder.num("U", 16)(U16_MAX); // [255, 255, 3]
+    encoder.num("U", 32)(U32_MAX); // [255, 255, 255, 255, 15]
 
     encoder.flush();
     assertEquals(writer.bytes, [0, 255, 255, 3, 255, 255, 255, 255, 15]);
 
-    encoder.num("U", 8)(U64_MAX);
-    encoder.num("U", 16)(U128_MAX);
+    encoder.num("U", 64)(U64_MAX);
+    encoder.num("U", 128)(U128_MAX);
 
-    encoder.num("I", 2)(I16_MIN);
-    encoder.num("I", 4)(I32_MIN);
-    encoder.num("I", 8)(I64_MIN);
+    encoder.num("I", 16)(I16_MIN);
+    encoder.num("I", 32)(I32_MIN);
+    encoder.num("I", 64)(I64_MIN);
     encoder.flush();
 
     const decoder = new Decoder(new Uint8Array(writer.bytes));
-    assertEquals(decoder.num("U", 2)(), 0)
-    assertEquals(decoder.num("U", 2)(), U16_MAX)
-    assertEquals(decoder.num("U", 4)(), U32_MAX)
-    assertEquals(decoder.num("U", 8)(), U64_MAX)
-    assertEquals(decoder.num("U", 16)(), U128_MAX)
+    assertEquals(decoder.num("U", 16)(), 0)
+    assertEquals(decoder.num("U", 16)(), U16_MAX)
+    assertEquals(decoder.num("U", 32)(), U32_MAX)
+    assertEquals(decoder.num("U", 64)(), U64_MAX)
+    assertEquals(decoder.num("U", 128)(), U128_MAX)
 
-    assertEquals(decoder.num("I", 2)(), I16_MIN)
-    assertEquals(decoder.num("I", 4)(), I32_MIN)
-    assertEquals(decoder.num("I", 8)(), I64_MIN)
+    assertEquals(decoder.num("I", 16)(), I16_MIN)
+    assertEquals(decoder.num("I", 32)(), I32_MIN)
+    assertEquals(decoder.num("I", 64)(), I64_MIN)
 })
 
 
@@ -100,7 +100,6 @@ Deno.test("Serde test: string, bytes", () => {
     encoder.vec(encoder.u8)([42, 24])
 
     encoder.flush()
-    console.log(writer.bytes)
     const decoder = new Decoder(new Uint8Array(writer.bytes));
 
     assertEquals(decoder.str(), "Hello, World!")

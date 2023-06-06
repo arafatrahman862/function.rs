@@ -11,15 +11,15 @@ pub mod typescript {
         #[serde(rename = "out-dir")]
         pub out_dir: PathBuf,
         #[serde(default)]
-        #[serde(rename = "import-with-extension")]
-        pub import_with_extension: bool,
+        #[serde(rename = "preserve-import-extension")]
+        pub preserve_import_extension: bool,
     }
 
     impl Default for Config {
         fn default() -> Self {
             Self {
                 out_dir: out_dir(),
-                import_with_extension: Default::default(),
+                preserve_import_extension: Default::default(),
             }
         }
     }

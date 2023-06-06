@@ -1,4 +1,4 @@
-import { use } from './databuf.lib'
+import * as use from './databuf.lib.ts'
 let struct = {
 }
 let extern = {
@@ -19,7 +19,7 @@ export default class Self {
     print(_0: string,) {
         const fn = this.rpc.unary()
         const d = new use.BufWriter(fn);
-        d.u16(5);
+        d.u16(2);
         d.str(_0);
         d.flush();
     }

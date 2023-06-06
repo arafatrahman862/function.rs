@@ -22,11 +22,11 @@ impl CodeWriter {
             fs::write(prelude_path, prelude)?;
         }
 
-        let ext = match config.import_with_extension {
+        let ext = match config.preserve_import_extension {
             true => ".ts",
             false => "",
         };
-        let mut code = format!("import {{ use }} from './databuf.lib{ext}'\n");
+        let mut code = format!("import* as use from './databuf.lib{ext}'\n");
         write!(code, "{}", self.codegen.typescript())?;
         let filename = format!("{}.ts", self.codegen.type_def.name);
         Ok(fs::write(config.out_dir.join(filename), code)?)
