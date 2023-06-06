@@ -137,9 +137,7 @@ impl ToTokens for Declare {
 
         let state = ToToken(|mut tokens| match state {
             Some(State::Type { ty, .. }) => ty.to_tokens(tokens),
-            None => {
-                quote_each_token! {tokens () }
-            }
+            None => quote::quote_token!(() tokens),
         });
 
         for Service {

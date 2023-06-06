@@ -1,7 +1,6 @@
 use crate::utils::ToToken;
 use proc_macro::TokenStream;
-use proc_macro2::Span;
-use quote::{quote, quote_each_token, ToTokens};
+use quote::{quote, quote_each_token};
 use syn::{spanned::Spanned, *};
 
 pub fn new(input: TokenStream) -> TokenStream {
@@ -76,10 +75,10 @@ pub fn new(input: TokenStream) -> TokenStream {
                 }
                 "Enum" => {
                     for (doc, name, v) in variants {
-                        let kind = ToToken(|tokens| match &v.fields {
+                        let kind = ToToken(|mut tokens| match &v.fields {
                             Fields::Named(fields) => to_object(fields, tokens),
                             Fields::Unnamed(fields) => to_tuple(fields, tokens),
-                            Fields::Unit => Ident::new("Unit", Span::call_site()).to_tokens(tokens),
+                            Fields::Unit => quote::quote_token!(Unit tokens),
                         });
                         quote_each_token! {tokens
                             ___m::EnumField {
