@@ -1,5 +1,5 @@
 use proc_macro2::{Literal, Punct, Span};
-use quote::{ToTokens, TokenStreamExt};
+use quote::{quote_each_token, ToTokens, TokenStreamExt};
 use syn::{
     ext::IdentExt,
     parse::{Parse, ParseStream},
@@ -75,16 +75,15 @@ impl Parse for State {
 
 impl Parse for Service {
     fn parse(input: ParseStream) -> Result<Self> {
+        let err_msg = "expected `service` keyword";
         let content;
         Ok(Service {
             attrs: input.call(Attribute::parse_outer)?,
             vis: input.parse()?,
-            _service_token: {
-                let token: Ident = input.parse()?;
-                if token != "service" {
-                    err!(token.span(), "expected `service` keyword");
-                }
-                token
+            _service_token: match input.parse::<Ident>() {
+                Err(e) => err!(e.span(), err_msg),
+                Ok(e) if e != "service" => err!(e.span(), err_msg),
+                Ok(token) => token,
             },
             ident: input.parse()?,
             _brace_token: braced!(content in input),
@@ -139,7 +138,7 @@ impl ToTokens for Declare {
         let state = ToToken(|mut tokens| match state {
             Some(State::Type { ty, .. }) => ty.to_tokens(tokens),
             None => {
-                quote::quote_each_token! {tokens () }
+                quote_each_token! {tokens () }
             }
         });
 
@@ -153,8 +152,7 @@ impl ToTokens for Declare {
         {
             let import_funcs = ToToken(|mut tokens| {
                 for Func { name, .. } in funcs {
-                    let span = name.span();
-                    quote::quote_each_token_spanned!(tokens span
+                    quote_each_token!(tokens
                         use #name;
                     );
                 }
@@ -162,25 +160,23 @@ impl ToTokens for Declare {
             let func_types = ToToken(|mut tokens| {
                 for Func { name, id, .. } in funcs {
                     let path = name.to_string();
-                    let span = name.span();
-                    quote::quote_each_token_spanned!(tokens span
+                    quote_each_token!(tokens
                         ::frpc::__private::fn_ty(&#name, &mut __costom_types, #id,  #path),
                     );
                 }
             });
             let funcs = ToToken(|mut tokens| {
                 for Func { name, id, .. } in funcs {
-                    let span = name.span();
-                    quote::quote_each_token_spanned!(tokens span
+                    quote_each_token!(tokens
                         #id => ::frpc::run(#name, state, &mut reader, w).await,
                     );
                 }
             });
 
-            let (name, span) = (ident.to_string(), ident.span());
-
+            let name = ident.to_string();
             tokens.append_all(attrs);
-            quote::quote_each_token_spanned!(tokens span
+
+            quote_each_token!(tokens
                 #vis struct #ident;
 
                 #[cfg(debug_assertions)]

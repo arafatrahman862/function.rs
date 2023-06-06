@@ -1,6 +1,8 @@
+use crate::utils::ToToken;
 use proc_macro::TokenStream;
-use quote::{format_ident, quote, quote_spanned};
-use syn::{__private::TokenStream2, spanned::Spanned, *};
+use proc_macro2::Span;
+use quote::{quote, quote_each_token, ToTokens};
+use syn::{spanned::Spanned, *};
 
 pub fn new(input: TokenStream) -> TokenStream {
     let DeriveInput {
@@ -17,76 +19,89 @@ pub fn new(input: TokenStream) -> TokenStream {
     if let Some(param) = generics.type_params().next() {
         return Error::new(
             param.span(),
-            "Generic type support isn't complete yet, But it's on our roadmap.",
+            "Support for generic type isn't complete yet, But it's on our roadmap.",
         )
         .to_compile_error()
         .into();
     }
 
-    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-
-    let (kind, body) = match data {
-        Data::Struct(data_struct) => match data_struct.fields {
-            Fields::Named(fields) => ("Struct", parse_object(&fields)),
-            Fields::Unnamed(fields) => ("Tuple", parse_tuple(&fields)),
+    let kind = match &data {
+        Data::Struct(data) => match data.fields {
+            Fields::Named(_) => "Struct",
+            Fields::Unnamed(_) => "Tuple",
             Fields::Unit => panic!("`Message` struct needs at most one field"),
         },
-        Data::Enum(mut data) => {
-            let is_unit_enum_variant = data
+        Data::Enum(data) => {
+            if data
                 .variants
                 .iter()
-                .all(|v| v.discriminant.is_some() || matches!(v.fields, Fields::Unit));
-
-            let variants = data
-                .variants
-                .iter_mut()
-                .map(|v| (get_comments_from(&v.attrs), v.ident.to_string(), v));
-
-            if is_unit_enum_variant {
-                let mut value: isize = -1;
-                let recurse = variants.map(|(doc, name, v)| {
-                    value = match &v.discriminant {
-                        Some((_, expr)) => parse_int(expr),
-                        None => value + 1,
-                    };
-                    quote_spanned! (v.span()=> ___m::UnitField {
-                        doc: s(#doc),
-                        name: s(#name),
-                        value: #value
-                    })
-                });
-                ("Unit", quote! { #(#recurse),* })
+                .all(|v| v.discriminant.is_some() || matches!(v.fields, Fields::Unit))
+            {
+                "Unit"
             } else {
-                let recurse = variants.map(|(doc, name, v)| {
-                    let kind = match &mut v.fields {
-                        Fields::Named(fields) => {
-                            let body = parse_object(fields);
-                            quote! { Struct(::std::vec![#body]) }
-                        }
-                        Fields::Unnamed(fields) => {
-                            let body = parse_tuple(fields);
-                            quote! { Tuple(::std::vec![#body]) }
-                        }
-                        Fields::Unit => quote! { Unit },
-                    };
-                    quote_spanned! (v.span()=> ___m::EnumField {
-                        doc: s(#doc),
-                        name: s(#name),
-                        kind: ___m::EnumKind::#kind
-                    })
-                });
-                ("Enum", quote! {  #(#recurse),* })
+                "Enum"
             }
         }
         Data::Union(_) => panic!("`Message` implementation for `union` is not yet stabilized"),
     };
 
-    let kind = format_ident!("{kind}");
+    let body = ToToken(|mut tokens| match &data {
+        Data::Struct(data) => match &data.fields {
+            Fields::Named(fields) => to_object(fields, tokens),
+            Fields::Unnamed(fields) => to_tuple(fields, tokens),
+            Fields::Unit => unreachable!(),
+        },
+        Data::Enum(data) => {
+            let variants = data
+                .variants
+                .iter()
+                .map(|v| (get_comments_from(&v.attrs), v.ident.to_string(), v));
+
+            match kind {
+                "Unit" => {
+                    let mut value: isize = -1;
+                    for (doc, name, v) in variants {
+                        value = match &v.discriminant {
+                            Some((_, expr)) => parse_int(expr),
+                            None => value + 1,
+                        };
+                        quote_each_token! {tokens
+                            ___m::UnitField {
+                                doc: s(#doc),
+                                name: s(#name),
+                                value: #value
+                            },
+                        }
+                    }
+                }
+                "Enum" => {
+                    for (doc, name, v) in variants {
+                        let kind = ToToken(|tokens| match &v.fields {
+                            Fields::Named(fields) => to_object(fields, tokens),
+                            Fields::Unnamed(fields) => to_tuple(fields, tokens),
+                            Fields::Unit => Ident::new("Unit", Span::call_site()).to_tokens(tokens),
+                        });
+                        quote_each_token! {tokens
+                            ___m::EnumField {
+                                doc: s(#doc),
+                                name: s(#name),
+                                kind: ___m::EnumKind::#kind
+                            },
+                        }
+                    }
+                }
+                _ => unreachable!(),
+            }
+        }
+        Data::Union(_) => unreachable!(),
+    });
+
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     TokenStream::from(quote! {
         const _: () = {
             use ::frpc::__private::frpc_message as ___m;
-            use ___m::_utils::{s,c};
+            use ___m::_utils::{ s, c };
             impl #impl_generics ___m::Message for #ident #ty_generics #where_clause {
                 fn ty(__costom_types: &mut ___m::CostomTypes) -> ___m::Ty {
                     let name = ::std::format!(#name, ::std::module_path!());
@@ -105,30 +120,35 @@ pub fn new(input: TokenStream) -> TokenStream {
     })
 }
 
-fn parse_tuple(fields: &FieldsUnnamed) -> TokenStream2 {
-    let recurse = fields.unnamed.iter().map(|f| {
-        let doc = get_comments_from(&f.attrs);
-        let ty = &f.ty;
-        quote_spanned! (f.span()=> ___m::TupleField {
-            doc: s(#doc),
-            ty: <#ty as ___m::Message>::ty(__costom_types),
-        })
-    });
-    quote! { #(#recurse),* }
+fn to_tuple(fields: &FieldsUnnamed, mut tokens: &mut proc_macro2::TokenStream) {
+    for field in &fields.unnamed {
+        let doc = get_comments_from(&field.attrs);
+        let ty = &field.ty;
+        quote_each_token! {tokens
+            ___m::TupleField {
+                doc: s(#doc),
+                ty: <#ty as ___m::Message>::ty(__costom_types)
+            },
+        }
+    }
 }
 
-fn parse_object(fields: &FieldsNamed) -> TokenStream2 {
-    let recurse = fields.named.iter().map(|f| {
-        let doc = get_comments_from(&f.attrs);
-        let name = f.ident.clone().unwrap().to_string();
-        let ty = &f.ty;
-        quote_spanned! (f.span()=> ___m::StructField {
-            doc: s(#doc),
-            name: s(#name),
-            ty: <#ty as ___m::Message>::ty(__costom_types)
-        })
-    });
-    quote! { #(#recurse),* }
+fn to_object(fields: &FieldsNamed, mut tokens: &mut proc_macro2::TokenStream) {
+    for field in &fields.named {
+        let doc = get_comments_from(&field.attrs);
+        let name = match &field.ident {
+            Some(ident) => ident.to_string(),
+            None => String::new(),
+        };
+        let ty = &field.ty;
+        quote_each_token! {tokens
+            ___m::StructField {
+                doc: s(#doc),
+                name: s(#name),
+                ty: <#ty as ___m::Message>::ty(__costom_types)
+            },
+        }
+    }
 }
 
 fn parse_int(expr: &Expr) -> isize {
