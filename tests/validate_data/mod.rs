@@ -12,9 +12,9 @@ type DataType<'a> = (
     ),
     (bool, bool),
     (String, &'a str, char),
-    // ((), ((), ())),
-    // (Option<&'a str>, Option<String>),
-    // (Result<i32, &'a str>, Result<i32, &'a str>),
+    ((), ((), ())),
+    (Option<Option<&'a str>>, Option<Option<String>>),
+    (Result<i32, &'a str>, Result<i32, &'a str>),
 );
 
 fn data() -> DataType<'static> {
@@ -39,14 +39,14 @@ fn data() -> DataType<'static> {
         // String
         (String::from("Hello"), "World", '!'),
         // Empty typles
-        // ((), ((), ())),
-        // // Option
-        // (Some("Some Data"), Option::<String>::None),
-        // // Result
-        // (
-        //     Result::<_, &str>::Ok(42),
-        //     Result::<i32, _>::Err("Invalid Number!"),
-        // ),
+        ((), ((), ())),
+        // Option
+        (Some(Some("Some Data")), Some(None)),
+        // Result
+        (
+            Result::<_, &str>::Ok(42),
+            Result::<i32, _>::Err("Invalid Number!"),
+        ),
     )
 }
 

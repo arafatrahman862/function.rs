@@ -1,5 +1,5 @@
-export type Option<T> = T | null;
-export type Result<T, E> = | { type: "Ok", value: T } | { type: "Err", value: E };
+export type Option<T> = { type: "Some", value: T } | { type: "None" };
+export type Result<T, E> = { type: "Ok", value: T } | { type: "Err", value: E };
 
 export type Num<T extends "I" | "U", Size extends NumSize<T>> = Size extends 16 | 32 ? number : bigint;
 
@@ -84,12 +84,14 @@ export class Decoder {
 		return new TextDecoder().decode(buf);
 	}
 
-	option<T>(v: Decode<T>) {
+	null() { return null }
+
+	option<T>(v: Decode<T>): () => Option<T> {
 		return () => {
 			if (this.bool()) {
-				return v.call(this)
+				return { type: "Some", value: v.call(this) }
 			}
-			return null
+			return { type: "None" }
 		}
 	}
 
@@ -241,13 +243,15 @@ export class BufWriter implements Write {
 		this.write(bytes);
 	}
 
+	null(_: null) { }
+
 	option<T>(v: Encode<T>) {
-		return (value: null | T) => {
-			if (value === null) {
+		return (data: Option<T>) => {
+			if (data.type === "None") {
 				this.u8(0);
 			} else {
 				this.u8(1);
-				v.call(this, value)
+				v.call(this, data.value)
 			}
 		}
 	}

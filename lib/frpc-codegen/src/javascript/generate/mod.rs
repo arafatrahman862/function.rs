@@ -49,13 +49,14 @@ fn fmt_ty<'a>(ty: &'a Ty, scope: &'a str) -> fmt!(type 'a) {
         ),
 
         Ty::Tuple(tys) => {
-            if !tys.is_empty() {
+            if tys.is_empty() {
+                write!(f, "d.null")
+            } else {
                 write!(f, "d.tuple(")?;
                 tys.iter()
                     .try_for_each(|ty| write!(f, "{},", fmt_ty(ty, scope)))?;
-                write!(f, ")")?;
+                write!(f, ")")
             }
-            Ok(())
         }
         Ty::Array { len, ty } => match **ty {
             Ty::u8 => write!(f, "d.u8_arr({len})"),

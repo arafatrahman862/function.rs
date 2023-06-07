@@ -111,13 +111,13 @@ pub fn fmt_js_ty(ty: &Ty) -> String {
         }
         .to_string(),
 
-        Ty::Option(ty) => format!("{} | null", fmt_js_ty(ty)),
+        Ty::Option(ty) => format!("use.Option<{}>", fmt_js_ty(ty)),
         Ty::Result(ty) => format!("use.Result<{}, {}>", fmt_js_ty(&ty.0), fmt_js_ty(&ty.1)),
 
         Ty::Map { ty, .. } => format!("Map<{}, {}>", fmt_js_ty(&ty.0), fmt_js_ty(&ty.1)),
         Ty::Tuple(tys) => {
             if tys.is_empty() {
-                "void".to_string()
+                "null".to_string()
             } else {
                 format!("[{}]", join(tys.iter().map(fmt_js_ty), ", "))
             }
