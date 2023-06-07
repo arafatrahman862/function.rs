@@ -39,10 +39,10 @@ pub fn main(f: &mut impl Write, type_def: &TypeDef) -> Result {
                 writeln!(f, "{{")?;
                 writeln!(f, "let d = new use.Decoder(_d);")?;
                 let res = match retn {
-                    Ty::CustomType(path) => format!("struct.{}", to_camel_case(path, ':')),
-                    ty => fmt_ty(ty, "struct").to_string(),
+                    Ty::CustomType(path) => format!("struct.{}(d)", to_camel_case(path, ':')),
+                    ty => format!("{}()", fmt_ty(ty, "struct")),
                 };
-                writeln!(f, "return {res}()")?;
+                writeln!(f, "return {res}")?;
                 writeln!(f, "}}")?;
             }
             writeln!(f, "}}")

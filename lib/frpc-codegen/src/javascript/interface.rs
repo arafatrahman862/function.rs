@@ -91,7 +91,7 @@ pub fn fmt_js_ty(ty: &Ty) -> String {
             "number".into()
         }
         Ty::u64 | Ty::i64 | Ty::u128 | Ty::i128 => "bigint".into(),
-        Ty::bool => "bool".into(),
+        Ty::bool => "boolean".into(),
         Ty::char | Ty::String => "string".into(),
 
         Ty::Array { ty, .. } | Ty::Set { ty, .. } => match **ty {
@@ -112,7 +112,7 @@ pub fn fmt_js_ty(ty: &Ty) -> String {
         .to_string(),
 
         Ty::Option(ty) => format!("{} | null", fmt_js_ty(ty)),
-        Ty::Result(ty) => format!("Result<{}, {}>", fmt_js_ty(&ty.0), fmt_js_ty(&ty.1)),
+        Ty::Result(ty) => format!("use.Result<{}, {}>", fmt_js_ty(&ty.0), fmt_js_ty(&ty.1)),
 
         Ty::Map { ty, .. } => format!("Map<{}, {}>", fmt_js_ty(&ty.0), fmt_js_ty(&ty.1)),
         Ty::Tuple(tys) => {

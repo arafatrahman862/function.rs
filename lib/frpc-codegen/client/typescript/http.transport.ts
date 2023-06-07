@@ -22,6 +22,9 @@ export class HttpTransport implements RpcTransport {
             async call() {
                 const body = concat_uint8(chunks);
                 const res = await fetch(url, { method: "POST", body });
+                if (!res.ok) {
+                    throw new Error("Bad request");
+                }
                 return new Uint8Array(await res.arrayBuffer());
             }
         }
@@ -41,7 +44,7 @@ export class HttpTransport implements RpcTransport {
                 if (!res.body) {
                     throw new Error("not expected empty body");
                 }
-                const reader = res.body.getReader();
+                let reader = res.body.getReader();
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) return value
@@ -53,6 +56,7 @@ export class HttpTransport implements RpcTransport {
 
     async close() { }
 }
+
 
 function concat_uint8(chunks: Uint8Array[]) {
     if (chunks.length == 1) {
@@ -70,3 +74,4 @@ function concat_uint8(chunks: Uint8Array[]) {
     }
     return bytes;
 }
+

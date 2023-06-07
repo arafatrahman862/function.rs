@@ -1,5 +1,5 @@
 #![allow(warnings)]
-mod echo_data;
+mod validate_data;
 
 use frpc_transport::http2::{
     http::{HeaderValue, Method},
@@ -7,14 +7,18 @@ use frpc_transport::http2::{
 };
 use std::{fs, io::Result, ops::ControlFlow};
 
-use echo_data::Example;
+use validate_data::ValidateData;
 
 static RPC: TransportConfig = TransportConfig::new();
 
+#[test]
+fn codegen() {
+    frpc_codegen_client::init(ValidateData);
+}
+
 #[tokio::test]
-async fn main() -> Result<()> {
-    #[cfg(debug_assertions)]
-    frpc_codegen_client::init(Example);
+async fn run() -> Result<()> {
+    codegen();
 
     // let addr = "127.0.0.1:4433";
     // let cert = fs::read("example/cert/cert.pem")?;
