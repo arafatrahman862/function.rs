@@ -1,1 +1,0 @@
-deno run -A --unsafely-ignore-certificate-errors ./client/main.ts

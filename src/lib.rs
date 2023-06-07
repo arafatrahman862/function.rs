@@ -13,7 +13,7 @@ mod state;
 #[cfg(debug_assertions)]
 pub mod __private;
 
-pub use databuf;
+use databuf;
 
 pub use frpc_macros::declare;
 #[cfg(debug_assertions)]
@@ -44,27 +44,3 @@ where
     Ret::produce(output, w).await?;
     Ok(())
 }
-
-// #[cfg(test)]
-// mod tests {
-//     #![allow(warnings)]
-//     use databuf::{Decode, Encode};
-
-//     use super::*;
-
-//     #[test]
-//     fn test_name() {
-//         let mut data = vec![];
-//         10_i32.encode::<{ DATABUF_CONFIG }>(&mut data);
-//         20_i32.encode::<{ DATABUF_CONFIG }>(&mut data);
-//         println!("{:?}", data);
-
-//         let data = &mut &*data;
-
-//         let f: (i32, i32) = Input::decode((), data).unwrap();
-//         println!("{:?}", f);
-//         // println!("{:?}", i32::decode::<{ DATABUF_CONFIG }>(data));
-//         // println!("{:?}", i32::decode::<{ DATABUF_CONFIG }>(data));
-//         // println!("{:?}", i32::decode::<{ DATABUF_CONFIG }>(data));
-//     }
-// }

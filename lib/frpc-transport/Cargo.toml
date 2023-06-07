@@ -7,5 +7,5 @@ edition = "2021"
 async-trait = "0.1"
 std-lib = { path = "../std-lib" }
 frpc = { path = "../../" }
-h2x = "0.3"
+h2x = "0.3.1"
 tokio = { version = "1", features = ["io-util", "net", "rt-multi-thread", "macros"] }

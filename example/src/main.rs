@@ -7,6 +7,8 @@ use std::{fs, io::Result, ops::ControlFlow};
 
 use example::Example;
 
+static RPC: TransportConfig = TransportConfig::new();
+
 #[tokio::main]
 async fn main() -> Result<()> {
     #[cfg(debug_assertions)]
@@ -27,23 +29,9 @@ async fn main() -> Result<()> {
                 res.headers
                     .append("access-control-allow-origin", HeaderValue::from_static("*"));
 
-                let rpc = TransportConfig::new();
-
-                println!("{:#?}", req);
-
                 match (&req.method, req.uri.path()) {
-                    (&Method::POST, "/rpc") => {
-                        rpc.service(Example::execute, state, req, res).await;
-                    }
-                    _ => {
-                        let mut stream = res.send_stream().unwrap();
-                        stream.write(format!("{req:#?}\n\n")).await;
-
-                        while let Some(Ok(bytes)) = req.data().await {
-                            stream.write(bytes).await;
-                        }
-                        stream.end();
-                    }
+                    (&Method::POST, "/rpc") => RPC.service(Example::execute, state, req, res).await,
+                    _ => {}
                 }
             },
             |_| async {},

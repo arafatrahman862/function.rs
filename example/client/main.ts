@@ -1,11 +1,14 @@
-// import { use } from "./lib/databuf.lib.ts";
-// import { HttpTransport } from "./transport.ts";
-// let { log: println } = console;
+#!/usr/bin/env -S deno run --allow-net="localhost" --unsafely-ignore-certificate-errors="localhost"
 
-// let transport = new HttpTransport("https://localhost:4433/rpc");
+import { HttpTransport } from "./transport.ts";
+import Example from "./lib/Example.ts";
 
-// async function main() {
+let transport = new HttpTransport("https://localhost:4433/rpc");
+let example = new Example(transport);
 
-// }
+async function main() {
+    let data = await example.get_data();
+    await example.validate(data);
+}
 
-// main().catch(println)
+main().catch(console.error)

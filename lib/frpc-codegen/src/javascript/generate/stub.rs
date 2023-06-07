@@ -15,14 +15,14 @@ pub fn main(f: &mut impl Write, type_def: &TypeDef) -> Result {
          }| {
             let ident = path.replace("::", "_");
 
-            write!(f, "{ident}(")?;
+            write!(f, "async {ident}(")?;
             for (num, ty) in args.iter().enumerate() {
                 write!(f, "_{num}: {}, ", fmt_js_ty(ty))?;
             }
             writeln!(f, ") {{")?;
 
-            writeln!(f, "const fn = this.rpc.unary()")?;
-            writeln!(f, "const d = new use.BufWriter(fn);")?;
+            writeln!(f, "let fn = this.rpc.unary();")?;
+            writeln!(f, "let d = new use.BufWriter(fn);")?;
             writeln!(f, "d.u16({index});")?;
 
             for (num, arg) in args.iter().enumerate() {
@@ -34,14 +34,16 @@ pub fn main(f: &mut impl Write, type_def: &TypeDef) -> Result {
                 };
             }
             writeln!(f, "d.flush();")?;
-
+            writeln!(f, "let _d = await fn.call();")?;
             if !retn.is_empty_tuple() {
-                writeln!(f, "return fn.call().then(buf => new use.Decoder(buf))")?;
+                writeln!(f, "{{")?;
+                writeln!(f, "let d = new use.Decoder(_d);")?;
                 let res = match retn {
                     Ty::CustomType(path) => format!("struct.{}", to_camel_case(path, ':')),
-                    ty => format!("d => {}()", fmt_ty(ty, "struct")),
+                    ty => fmt_ty(ty, "struct").to_string(),
                 };
-                writeln!(f, ".then({res});")?;
+                writeln!(f, "return {res}()")?;
+                writeln!(f, "}}")?;
             }
             writeln!(f, "}}")
         },

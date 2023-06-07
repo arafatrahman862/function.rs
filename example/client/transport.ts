@@ -1,6 +1,6 @@
-import { use } from "./lib/databuf.lib.ts";
+import { RpcTransport } from "./lib/databuf.lib.ts";
 
-export class HttpTransport implements use.RpcTransport {
+export class HttpTransport implements RpcTransport {
     constructor(public url: URL | RequestInfo) { }
     unary() {
         let url = this.url;
@@ -12,7 +12,6 @@ export class HttpTransport implements use.RpcTransport {
             flush() { },
             async call() {
                 let body = concat_uint8(chunks);
-                // console.log(body);
                 let res = await fetch(url, { method: "POST", body });
                 if (!res.ok) {
                     throw new Error("Bad request");

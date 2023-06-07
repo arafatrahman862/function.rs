@@ -22,18 +22,14 @@ impl TransportConfig {
         }
     }
 
-    pub async fn service<Func, State, Ret>(
+    pub async fn service<Func, State>(
         &self,
         executor: Func,
         state: State,
         mut req: Request,
         mut res: Response,
     ) where
-        Func: for<'data, 'w> AsyncFnOnce<
-            (State, u16, &'data [u8], &'w mut RpcResponder),
-            Output = Ret,
-        >,
-        Ret: std::fmt::Debug,
+        Func: for<'data, 'w> AsyncFnOnce<(State, u16, &'data [u8], &'w mut RpcResponder)>,
     {
         match req.headers.get("content-length") {
             Some(len) => {
@@ -57,9 +53,8 @@ impl TransportConfig {
                 let data = &buf[2..];
 
                 if let Ok(sender) = res.send_stream() {
-                    let mut writer = RpcResponder { inner: sender };
-                    let _s = executor.call_once((state, id, data, &mut writer)).await;
-                    println!("{:?}", _s);
+                    let mut writer = RpcResponder(sender);
+                    executor.call_once((state, id, data, &mut writer)).await;
                 }
             }
             None => {
@@ -69,15 +64,16 @@ impl TransportConfig {
     }
 }
 
-pub struct RpcResponder {
-    inner: Responder,
-}
+pub struct RpcResponder(Responder);
 
 #[async_trait::async_trait]
 impl frpc::Transport for RpcResponder {
     async fn send_unary_response(&mut self, bytes: Box<[u8]>) -> std::io::Result<()> {
-        let _ = self.inner.write_bytes(bytes.into(), true).await;
-        //     .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err));
+        if bytes.is_empty() {
+            let _ = self.0.inner.send_data(bytes::Bytes::new(), true);
+        } else {
+            let _ = self.0.write_bytes(bytes.into(), true).await;
+        }
         Ok(())
     }
 }

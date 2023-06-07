@@ -95,6 +95,7 @@ pub fn new(input: TokenStream) -> TokenStream {
         Data::Union(_) => unreachable!(),
     });
 
+    let kind = Ident::new(kind, proc_macro2::Span::call_site());
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     TokenStream::from(quote! {
