@@ -3,8 +3,8 @@ use super::*;
 pub fn main(f: &mut impl Write, provider: &CodeGen) -> Result {
     writeln!(f, "let extern = {{")?;
 
-    for path in provider.input_paths.iter() {
-        let ident = to_camel_case(path, ':');
+    for path in &provider.input_paths {
+        let ident = object_ident_from(path);
         writeln!(f, "{ident}(d: use.BufWriter, z: {ident}) {{")?;
 
         match &provider.type_def.costom_types[path] {

@@ -183,11 +183,7 @@ impl ToTokens for Declare {
                         #import_funcs
                         let mut __costom_types = ::frpc::__private::frpc_message::CostomTypes::default();
                         let funcs = ::std::vec::Vec::from([#func_types]);
-                        Self {
-                            name: ::std::string::String::from(#name),
-                            costom_types: __costom_types,
-                            funcs
-                        }
+                        Self::new(#name, __costom_types, funcs)
                     }
                 }
 

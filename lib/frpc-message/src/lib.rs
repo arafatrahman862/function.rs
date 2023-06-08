@@ -2,7 +2,9 @@ mod basic;
 mod collection;
 mod wrapper;
 
-use databuf::config::num::LEB128;
+use std::collections::btree_map;
+use std::collections::BTreeMap;
+
 #[cfg(feature = "decode")]
 use databuf::Decode;
 #[cfg(feature = "encode")]
@@ -21,7 +23,7 @@ pub trait Message {
 #[cfg_attr(feature = "encode", derive(Encode))]
 pub struct Func {
     pub index: u16,
-    pub path: String,
+    pub path: Ident,
     pub args: Vec<Ty>,
     pub retn: Ty,
 }
@@ -33,20 +35,28 @@ pub struct Func {
 #[cfg_attr(feature = "decode", derive(Decode))]
 #[cfg_attr(feature = "encode", derive(Encode))]
 pub struct TypeDef {
-    pub name: String,
+    pub name: Ident,
     pub costom_types: CostomTypes,
     pub funcs: Vec<Func>,
 }
 
 impl TypeDef {
+    pub fn new(name: &str, costom_types: CostomTypes, funcs: Vec<Func>) -> Self {
+        Self {
+            name: Ident(name.to_string()),
+            costom_types,
+            funcs,
+        }
+    }
+
     #[cfg(feature = "decode")]
     pub fn try_from(bytes: impl AsRef<[u8]>) -> databuf::Result<Self> {
-        Self::from_bytes::<LEB128>(bytes.as_ref())
+        Self::from_bytes::<{ databuf::config::num::LEB128 }>(bytes.as_ref())
     }
 
     #[cfg(feature = "encode")]
     pub fn as_bytes(&self) -> Vec<u8> {
-        Encode::to_bytes::<LEB128>(&self)
+        Encode::to_bytes::<{ databuf::config::num::LEB128 }>(&self)
     }
 }
 
@@ -116,7 +126,32 @@ impl Ty {
     }
 }
 
-pub type CostomTypes = std::collections::BTreeMap<String, CustomTypeKind>;
+#[derive(Default)]
+#[cfg_attr(feature = "hash", derive(Hash))]
+#[cfg_attr(feature = "clone", derive(Clone))]
+#[cfg_attr(feature = "debug", derive(Debug))]
+#[cfg_attr(feature = "decode", derive(Decode))]
+#[cfg_attr(feature = "encode", derive(Encode))]
+pub struct CostomTypes(BTreeMap<String, CustomTypeKind>);
+
+impl CostomTypes {
+    pub fn register(&mut self, name: String, f: fn(&mut Self) -> CustomTypeKind) -> Ty {
+        if let btree_map::Entry::Vacant(entry) = self.0.entry(name.clone()) {
+            entry.insert(CustomTypeKind::default());
+            let costom_type_kind = f(self);
+            self.0.insert(name.clone(), costom_type_kind);
+        }
+        Ty::CustomType(name)
+    }
+}
+
+impl std::ops::Deref for CostomTypes {
+    type Target = BTreeMap<String, CustomTypeKind>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 impl Default for CustomTypeKind {
     fn default() -> Self {
@@ -157,7 +192,7 @@ pub struct CustomType<Field> {
 #[cfg_attr(feature = "encode", derive(Encode))]
 pub struct UnitField {
     pub doc: String,
-    pub name: String,
+    pub name: Ident,
     pub value: isize,
 }
 
@@ -168,7 +203,7 @@ pub struct UnitField {
 #[cfg_attr(feature = "encode", derive(Encode))]
 pub struct EnumField {
     pub doc: String,
-    pub name: String,
+    pub name: Ident,
     pub kind: EnumKind,
 }
 
@@ -190,7 +225,7 @@ pub enum EnumKind {
 #[cfg_attr(feature = "encode", derive(Encode))]
 pub struct StructField {
     pub doc: String,
-    pub name: String,
+    pub name: Ident,
     pub ty: Ty,
 }
 
@@ -204,17 +239,85 @@ pub struct TupleField {
     pub ty: Ty,
 }
 
-//   -------------------------------------------------------------
+// ---------------------------------------------------------------
 
-#[doc(hidden)]
-pub mod _utils {
-    pub fn s<T>(value: T) -> String
-    where
-        String: From<T>,
-    {
-        String::from(value)
+#[derive(Default, Hash, Clone)]
+#[cfg_attr(feature = "decode", derive(Decode))]
+#[cfg_attr(feature = "encode", derive(Encode))]
+pub struct Ident(pub String);
+
+impl std::ops::Deref for Ident {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0.trim_start_matches("r#")
     }
-    pub fn c<T: Clone>(value: &T) -> T {
-        Clone::clone(value)
+}
+
+impl Ident {
+    pub fn is_raw_str_literal(&self) -> bool {
+        self.0.starts_with("r#")
+    }
+}
+
+impl std::fmt::Display for Ident {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.trim_start_matches("r#").fmt(f)
+    }
+}
+
+impl std::fmt::Debug for Ident {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.trim_start_matches("r#").fmt(f)
+    }
+}
+
+// ---------------------------------------------------------------
+
+impl<Field> CustomType<Field> {
+    pub fn new(doc: &str, fields: Vec<Field>) -> Self {
+        Self {
+            doc: doc.to_string(),
+            fields,
+        }
+    }
+}
+
+impl UnitField {
+    pub fn new(doc: &str, name: &str, value: isize) -> Self {
+        Self {
+            doc: doc.to_string(),
+            name: Ident(name.to_string()),
+            value,
+        }
+    }
+}
+
+impl EnumField {
+    pub fn new(doc: &str, name: &str, kind: EnumKind) -> Self {
+        Self {
+            doc: doc.to_string(),
+            name: Ident(name.to_string()),
+            kind,
+        }
+    }
+}
+
+impl StructField {
+    pub fn new(doc: &str, name: &str, ty: Ty) -> Self {
+        Self {
+            doc: doc.to_string(),
+            name: Ident(name.to_string()),
+            ty,
+        }
+    }
+}
+
+impl TupleField {
+    pub fn new(doc: &str, ty: Ty) -> Self {
+        Self {
+            doc: doc.to_string(),
+            ty,
+        }
     }
 }

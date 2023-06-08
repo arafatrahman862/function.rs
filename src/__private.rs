@@ -6,7 +6,7 @@ pub fn fn_ty<Func, Args, Ret>(
     _: &Func,
     costom_types: &mut CostomTypes,
     index: u16,
-    path: impl Into<String>,
+    path: &str,
 ) -> frpc_message::Func
 where
     Func: std_lib::FnOnce<Args>,
@@ -17,7 +17,7 @@ where
     let Ty::Tuple(args) = Args::ty(costom_types) else { unreachable!() };
     frpc_message::Func {
         index,
-        path: path.into(),
+        path: frpc_message::Ident(path.to_string()),
         args,
         retn: Ret::ty(costom_types),
     }

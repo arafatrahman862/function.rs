@@ -4,7 +4,7 @@ pub mod decoder;
 pub mod encoder;
 pub mod stub;
 
-use crate::{fmt, utils::to_camel_case, Fmt};
+use crate::{fmt, utils::object_ident_from, Fmt};
 use frpc_message::*;
 use std::fmt::{Result, Write};
 
@@ -78,7 +78,7 @@ fn fmt_ty<'a>(ty: &'a Ty, scope: &'a str) -> fmt!(type 'a) {
             fmt_ty(&ty.0, scope),
             fmt_ty(&ty.1, scope)
         ),
-        Ty::CustomType(path) => write!(f, "{scope}.{}.bind(0, d)", to_camel_case(path, ':')),
+        Ty::CustomType(path) => write!(f, "{scope}.{}.bind(0, d)", object_ident_from(path)),
     })
 }
 

@@ -1,21 +1,21 @@
-use crate::utils::{join, to_camel_case, write_doc_comments};
+use crate::utils::{join, object_ident_from, write_doc_comments};
 use frpc_message::*;
 use std::fmt::{Display, Result, Write};
 
-pub fn generate(w: &mut impl Write, type_def: &TypeDef) -> Result {
-    for Func {
-        index: _,
-        path,
-        args,
-        retn,
-    } in &type_def.funcs
-    {
-        let name = to_camel_case(path, ':');
-        let args = join(args.iter().map(fmt_js_ty), ", ");
-        writeln!(w, "function {name}({args}): {}", fmt_js_ty(retn))?;
-    }
-    Ok(())
-}
+// pub fn generate(w: &mut impl Write, type_def: &TypeDef) -> Result {
+//     for Func {
+//         index: _,
+//         path,
+//         args,
+//         retn,
+//     } in &type_def.funcs
+//     {
+//         let name = object_ident_from(path);
+//         let args = join(args.iter().map(fmt_js_ty), ", ");
+//         writeln!(w, "function {name}({args}): {}", fmt_js_ty(retn))?;
+//     }
+//     Ok(())
+// }
 
 pub fn gen_type(f: &mut impl Write, ident: String, kind: &CustomTypeKind) -> Result {
     match kind {
@@ -37,6 +37,7 @@ pub fn gen_type(f: &mut impl Write, ident: String, kind: &CustomTypeKind) -> Res
                 .fields
                 .iter()
                 .map(|f| (&f.doc, &f.name, fmt_js_ty(&f.ty)));
+
             write_map(f, ":", fields)?;
         }
         CustomTypeKind::Tuple(data) => {
@@ -122,6 +123,6 @@ pub fn fmt_js_ty(ty: &Ty) -> String {
                 format!("[{}]", join(tys.iter().map(fmt_js_ty), ", "))
             }
         }
-        Ty::CustomType(path) => to_camel_case(path, ':'),
+        Ty::CustomType(path) => object_ident_from(path),
     }
 }

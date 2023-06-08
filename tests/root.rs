@@ -1,5 +1,5 @@
 #![allow(warnings)]
-mod validate_data;
+mod validate;
 
 use frpc_transport::http2::{
     http::{HeaderValue, Method},
@@ -7,13 +7,13 @@ use frpc_transport::http2::{
 };
 use std::{fs, io::Result, ops::ControlFlow};
 
-use validate_data::ValidateData;
+use validate::ValidateTest;
 
 static RPC: TransportConfig = TransportConfig::new();
 
 #[test]
 fn codegen() {
-    frpc_codegen_client::init(ValidateData);
+    frpc_codegen_client::init(ValidateTest);
 }
 
 #[tokio::test]

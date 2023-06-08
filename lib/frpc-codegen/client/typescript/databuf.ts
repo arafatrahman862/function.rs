@@ -26,6 +26,10 @@ export function assertEq<T>(actual: T, expected: T) {
 	}
 }
 
+export function enumErr(ident: string, num: number) {
+	return new Error(`unknown ${num} discriminator of ${ident}`)
+}
+
 function bytes_slice(buf: any, start = 0, end = buf.byteLength) {
 	return new Uint8Array(buf.buffer, buf.byteOffset + start, end - start)
 }

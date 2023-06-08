@@ -65,11 +65,7 @@ pub fn new(input: TokenStream) -> TokenStream {
                             None => value + 1,
                         };
                         quote_each_token! {tokens
-                            ___m::UnitField {
-                                doc: s(#doc),
-                                name: s(#name),
-                                value: #value
-                            },
+                            ___m::UnitField::new(#doc, #name, #value),
                         }
                     }
                 }
@@ -81,11 +77,7 @@ pub fn new(input: TokenStream) -> TokenStream {
                             Fields::Unit => quote::quote_token!(Unit tokens),
                         });
                         quote_each_token! {tokens
-                            ___m::EnumField {
-                                doc: s(#doc),
-                                name: s(#name),
-                                kind: ___m::EnumKind::#kind
-                            },
+                            ___m::EnumField::new(#doc, #name, ___m::EnumKind::#kind),
                         }
                     }
                 }
@@ -101,19 +93,12 @@ pub fn new(input: TokenStream) -> TokenStream {
     TokenStream::from(quote! {
         const _: () = {
             use ::frpc::__private::frpc_message as ___m;
-            use ___m::_utils::{ s, c };
             impl #impl_generics ___m::Message for #ident #ty_generics #where_clause {
-                fn ty(__costom_types: &mut ___m::CostomTypes) -> ___m::Ty {
-                    let name = ::std::format!(#name, ::std::module_path!());
-                    if let ::std::collections::btree_map::Entry::Vacant(entry) = __costom_types.entry(c(&name)) {
-                        entry.insert(::std::default::Default::default());
-                        let costom_type = ___m::CustomType {
-                            doc: s(#doc),
-                            fields: ::std::vec![#body]
-                        };
-                        __costom_types.insert(c(&name), ___m::CustomTypeKind::#kind(costom_type));
-                    }
-                    ___m::Ty::CustomType (name)
+                fn ty(__c: &mut ___m::CostomTypes) -> ___m::Ty {
+                    __c.register(
+                        ::std::format!(#name, ::std::module_path!()),
+                        |__c| ___m::CustomTypeKind::#kind(___m::CustomType::new(#doc, ::std::vec![#body]))
+                    )
                 }
             }
         };
@@ -125,10 +110,7 @@ fn to_tuple(fields: &FieldsUnnamed, mut tokens: &mut proc_macro2::TokenStream) {
         let doc = get_comments_from(&field.attrs);
         let ty = &field.ty;
         quote_each_token! {tokens
-            ___m::TupleField {
-                doc: s(#doc),
-                ty: <#ty as ___m::Message>::ty(__costom_types)
-            },
+            ___m::TupleField::new(#doc, <#ty as ___m::Message>::ty(__c)),
         }
     }
 }
@@ -142,11 +124,7 @@ fn to_object(fields: &FieldsNamed, mut tokens: &mut proc_macro2::TokenStream) {
         };
         let ty = &field.ty;
         quote_each_token! {tokens
-            ___m::StructField {
-                doc: s(#doc),
-                name: s(#name),
-                ty: <#ty as ___m::Message>::ty(__costom_types)
-            },
+            ___m::StructField::new(#doc, #name, <#ty as ___m::Message>::ty(__c)),
         }
     }
 }

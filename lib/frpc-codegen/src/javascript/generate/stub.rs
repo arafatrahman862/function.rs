@@ -28,7 +28,7 @@ pub fn main(f: &mut impl Write, type_def: &TypeDef) -> Result {
             for (num, arg) in args.iter().enumerate() {
                 match arg {
                     Ty::CustomType(path) => {
-                        writeln!(f, "extern.{}(d, _{num});", to_camel_case(path, ':'))?
+                        writeln!(f, "extern.{}(d, _{num});", object_ident_from(path))?
                     }
                     ty => writeln!(f, "{}(_{num});", fmt_ty(ty, "extern"))?,
                 };
@@ -39,7 +39,7 @@ pub fn main(f: &mut impl Write, type_def: &TypeDef) -> Result {
                 writeln!(f, "{{")?;
                 writeln!(f, "let d = new use.Decoder(_d);")?;
                 let res = match retn {
-                    Ty::CustomType(path) => format!("struct.{}(d)", to_camel_case(path, ':')),
+                    Ty::CustomType(path) => format!("struct.{}(d)", object_ident_from(path)),
                     ty => format!("{}()", fmt_ty(ty, "struct")),
                 };
                 writeln!(f, "return {res}")?;
