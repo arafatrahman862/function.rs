@@ -72,8 +72,18 @@ pub fn new(input: TokenStream) -> TokenStream {
                 "Enum" => {
                     for (doc, name, v) in variants {
                         let kind = ToToken(|mut tokens| match &v.fields {
-                            Fields::Named(fields) => to_object(fields, tokens),
-                            Fields::Unnamed(fields) => to_tuple(fields, tokens),
+                            Fields::Named(fields) => {
+                                let body = ToToken(|tokens| to_object(fields, tokens));
+                                quote_each_token! {tokens
+                                    Struct(::std::vec![#body])
+                                }
+                            }
+                            Fields::Unnamed(fields) => {
+                                let body = ToToken(|tokens| to_tuple(fields, tokens));
+                                quote_each_token! {tokens
+                                    Tuple(::std::vec![#body])
+                                }
+                            }
                             Fields::Unit => quote::quote_token!(Unit tokens),
                         });
                         quote_each_token! {tokens

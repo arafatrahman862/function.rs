@@ -13,7 +13,7 @@ impl From<TypeDef> for CodeWriter {
 }
 
 impl CodeWriter {
-    pub fn generate_typescript_binding(&self, config: config::typescript::Config) -> Result {
+    pub fn generate_typescript_binding(&self, config: &config::typescript::Config) -> Result {
         fs::create_dir_all(&config.out_dir)?;
 
         let prelude = include_bytes!("../client/typescript/databuf.ts");

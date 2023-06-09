@@ -3,7 +3,7 @@
 import { HttpTransport } from "../../lib/frpc-codegen/client/typescript/http.transport.ts";
 import Lib from "../../target/rpc/ValidateTest.ts";
 
-let lib = new Lib(new HttpTransport("https://localhost:4433/rpc"));
+let lib = new Lib(new HttpTransport("https://localhost:4433/rpc/validate"));
 
 async function main() {
     let data = await lib.get_data();

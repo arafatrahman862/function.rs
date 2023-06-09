@@ -9,7 +9,7 @@ pub fn main(f: &mut impl Write, type_def: &TypeDef) -> Result {
     type_def.funcs.iter().try_for_each(
         |Func {
              index,
-             path,
+             ident: path,
              args,
              retn,
          }| {

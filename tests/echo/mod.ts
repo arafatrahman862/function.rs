@@ -1,13 +1,13 @@
-#!/usr/bin/env -S deno run --allow-net="localhost" --unsafely-ignore-certificate-errors="localhost"
+#!/usr/bin/env -S deno run --allow-net=localhost --unsafely-ignore-certificate-errors=localhost
 
 import { HttpTransport } from "../../lib/frpc-codegen/client/typescript/http.transport.ts";
-import Lib from "../../target/rpc/EchoTest.ts";
+import Lib, { Echo_Log as Log } from "../../target/rpc/EchoTest.ts";
 
-let lib = new Lib(new HttpTransport("https://localhost:4433/rpc"));
+let lib = new Lib(new HttpTransport("https://localhost:4433/rpc/echo"));
 
-async function main() {
-    await lib.log(true);
-    // let data = await lib.log
-}
+await lib.log(Log.Enable);
 
-main().catch(console.error)
+var f = await lib.echo_f32(5);
+var f = await lib.echo_f32(5);
+console.log(f);
+console.clear();

@@ -1,20 +1,11 @@
+use databuf::Decode;
 use frpc::declare;
+use frpc_macros::Message;
 use std::sync::Arc;
 use std::{
     fmt::Debug,
     sync::atomic::{AtomicBool, Ordering},
 };
-
-#[derive(Debug, Default)]
-pub struct Context {
-    log_lvl: AtomicBool,
-}
-
-type State = frpc::State<Arc<Context>>;
-
-async fn log(state: State, set: bool) {
-    state.log_lvl.store(set, Ordering::Relaxed);
-}
 
 fn println(value: impl Debug) {
     println!("{:#?}", value);
@@ -36,6 +27,28 @@ macro_rules! def {
             }
         }
     };
+}
+
+#[derive(Debug, Default)]
+pub struct Context {
+    log_lvl: AtomicBool,
+}
+
+type State = frpc::State<Arc<Context>>;
+
+#[derive(Message, Decode, Debug)]
+enum Log {
+    Disable,
+    Enable,
+    Message(String),
+}
+
+async fn log(state: State, log: Log) {
+    match log {
+        Log::Enable => state.log_lvl.store(true, Ordering::Relaxed),
+        Log::Disable => state.log_lvl.store(false, Ordering::Relaxed),
+        Log::Message(data) => println!("{data}"),
+    }
 }
 
 def! {

@@ -23,7 +23,7 @@ pub trait Message {
 #[cfg_attr(feature = "encode", derive(Encode))]
 pub struct Func {
     pub index: u16,
-    pub path: Ident,
+    pub ident: Ident,
     pub args: Vec<Ty>,
     pub retn: Ty,
 }

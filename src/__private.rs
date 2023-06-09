@@ -6,7 +6,7 @@ pub fn fn_ty<Func, Args, Ret>(
     _: &Func,
     costom_types: &mut CostomTypes,
     index: u16,
-    path: &str,
+    ident: &str,
 ) -> frpc_message::Func
 where
     Func: std_lib::FnOnce<Args>,
@@ -22,7 +22,7 @@ where
     }
     frpc_message::Func {
         index,
-        path: frpc_message::Ident(path.to_string()),
+        ident: frpc_message::Ident(ident.to_string()),
         args,
         retn: Ret::ty(costom_types),
     }

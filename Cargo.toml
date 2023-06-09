@@ -27,3 +27,7 @@ frpc-codegen-client = { path = "lib/frpc-codegen-client" }
 
 [profile.dev.package."frpc-codegen-client"]
 opt-level = 3
+
+[[test]]
+name = "rpc"
+harness = false
