@@ -14,7 +14,12 @@ where
     Args: Message,
     Ret: Message,
 {
-    let Ty::Tuple(args) = Args::ty(costom_types) else { unreachable!() };
+    let Ty::Tuple(mut args) = Args::ty(costom_types) else { unreachable!() };
+    if let Some(ty) = args.first() {
+        if ty.is_empty_tuple() {
+            args.remove(0);
+        }
+    }
     frpc_message::Func {
         index,
         path: frpc_message::Ident(path.to_string()),

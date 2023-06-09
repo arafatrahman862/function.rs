@@ -1,5 +1,19 @@
-export type Option<T> = { type: "Some", value: T } | { type: "None" };
+export type Option<T> = { value: T } | { value: null };
 export type Result<T, E> = { type: "Ok", value: T } | { type: "Err", value: E };
+
+export function Some<T>(value: T): Option<T> {
+	return { value }
+}
+export function None<T>(): Option<T> {
+	return { value: null }
+}
+
+export function Ok<T, E>(value: T): Result<T, E> {
+	return { type: "Ok", value }
+}
+export function Err<T, E>(value: E): Result<T, E> {
+	return { type: "Err", value }
+}
 
 export type Num<T extends "I" | "U", Size extends NumSize<T>> = Size extends 16 | 32 ? number : bigint;
 
@@ -93,18 +107,18 @@ export class Decoder {
 	option<T>(v: Decode<T>): () => Option<T> {
 		return () => {
 			if (this.bool()) {
-				return { type: "Some", value: v.call(this) }
+				return Some(v.call(this))
 			}
-			return { type: "None" }
+			return None()
 		}
 	}
 
 	result<T, E>(ok: Decode<T>, err: Decode<E>): () => Result<T, E> {
 		return () => {
 			if (this.bool()) {
-				return { type: "Ok", value: ok.call(this) }
+				return Ok(ok.call(this))
 			}
-			return { type: "Err", value: err.call(this) }
+			return Err(err.call(this))
 		}
 	}
 
@@ -251,11 +265,11 @@ export class BufWriter implements Write {
 
 	option<T>(v: Encode<T>) {
 		return (data: Option<T>) => {
-			if (data.type === "None") {
-				this.u8(0);
-			} else {
+			if (data.value) {
 				this.u8(1);
 				v.call(this, data.value)
+			} else {
+				this.u8(0);
 			}
 		}
 	}
