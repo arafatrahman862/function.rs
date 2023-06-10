@@ -226,7 +226,7 @@ export class BufWriter implements Write {
 	}
 
 	u8(num: number) {
-		if (num > 0)
+		if (num < 0 && num > 255)
 			throw new Error("");
 
 		this.#unsafe_write(1, () => this.#view.setUint8(this.#written, num));

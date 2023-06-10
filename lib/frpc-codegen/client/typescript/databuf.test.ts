@@ -111,7 +111,7 @@ Deno.test("Serde test: common type", () => {
     const bool = true;
 
     const some = { type: "Some" as const, value: "some" };
-    const none: Option<string> = { type: "None" };
+    const none: Option<string> = { value: null };
 
     type Vec2d = [number, number];
     const ok: Result<Vec2d, string> = { type: "Ok", value: [4, 2] };
