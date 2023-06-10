@@ -152,14 +152,15 @@ fn parse_int(expr: &Expr) -> isize {
 fn get_comments_from(attrs: &Vec<Attribute>) -> String {
     let mut string = String::new();
     for attr in attrs {
-        let segments = &attr.path().segments;
-        if let (AttrStyle::Outer, 1, "doc") = (
-            attr.style,
-            segments.len(),
-            segments[0].ident.to_string().as_ref(),
-        ) {
-            // string += tokens.to_string().trim_start_matches('=').trim_start().trim_matches('"');
-            string += "\n";
+        if let Meta::NameValue(MetaNameValue { path, value, .. }) = &attr.meta {
+            if path.is_ident("doc") {
+                if let Expr::Lit(expr) = value {
+                    if let Lit::Str(data) = &expr.lit {
+                        string += &data.value();
+                        string += "\n"
+                    }
+                }
+            }
         }
     }
     string

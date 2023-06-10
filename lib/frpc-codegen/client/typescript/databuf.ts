@@ -225,7 +225,12 @@ export class BufWriter implements Write {
 		this.#inner.flush();
 	}
 
-	u8(num: number) { this.#unsafe_write(1, () => this.#view.setUint8(this.#written, num)); }
+	u8(num: number) {
+		if (num > 0)
+			throw new Error("");
+
+		this.#unsafe_write(1, () => this.#view.setUint8(this.#written, num));
+	}
 	i8(num: number) { this.#unsafe_write(1, () => this.#view.setInt8(this.#written, num)); }
 	f32(num: number) { this.#unsafe_write(4, () => this.#view.setFloat32(this.#written, num, true)); }
 	f64(num: number) { this.#unsafe_write(8, () => this.#view.setFloat64(this.#written, num, true)); }

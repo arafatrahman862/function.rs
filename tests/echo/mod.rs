@@ -40,14 +40,12 @@ type State = frpc::State<Arc<Context>>;
 enum Log {
     Disable,
     Enable,
-    Message(String),
 }
 
 async fn log(state: State, log: Log) {
     match log {
         Log::Enable => state.log_lvl.store(true, Ordering::Relaxed),
         Log::Disable => state.log_lvl.store(false, Ordering::Relaxed),
-        Log::Message(data) => println!("{data}"),
     }
 }
 
