@@ -58,14 +58,20 @@ fn fmt_ty<'a>(ty: &'a Ty, scope: &'a str) -> fmt!(type 'a) {
                 write!(f, ")")
             }
         }
-        Ty::Array { len, ty } => match **ty {
-            Ty::u8 => write!(f, "d.u8_arr({len})"),
-            Ty::i8 => write!(f, "d.i8_arr({len})"),
-            Ty::f32 => write!(f, "d.f32_arr({len})"),
-            Ty::f64 => write!(f, "d.f64_arr({len})"),
-            ref ty => write!(f, "d.arr({}, {len})", fmt_ty(ty, scope)),
+        Ty::Array { len, ty } => match ty.as_ref() {
+            Ty::u8 => write!(f, "d.fixed_buf('u8', {len})"),
+            Ty::i8 => write!(f, "d.fixed_buf('i8', {len})"),
+            Ty::f32 => write!(f, "d.fixed_buf('f32', {len})"),
+            Ty::f64 => write!(f, "d.fixed_buf('f64', {len})"),
+            ty => write!(f, "d.fixed_arr({}, {len})", fmt_ty(ty, scope)),
         },
-        Ty::Set { ty, .. } => write!(f, "d.vec({})", fmt_ty(ty, scope)),
+        Ty::Set { ty, .. } => match ty.as_ref() {
+            Ty::u8 => write!(f, "d.buf('u8')"),
+            Ty::i8 => write!(f, "d.buf('i8')"),
+            Ty::f32 => write!(f, "d.buf('f32')"),
+            Ty::f64 => write!(f, "d.buf('f64')"),
+            ty => write!(f, "d.arr({})", fmt_ty(&ty, scope)),
+        },
         Ty::Map { ty, .. } => write!(
             f,
             "d.map({}, {})",

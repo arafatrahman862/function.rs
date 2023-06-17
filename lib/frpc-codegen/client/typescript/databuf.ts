@@ -44,17 +44,21 @@ export function enumErr(ident: string, num: number) {
 	return new Error(`unknown ${num} discriminator of ${ident}`)
 }
 
-function bytes_slice(buf: any, start = 0, end = buf.byteLength) {
-	return new Uint8Array(buf.buffer, buf.byteOffset + start, end - start)
-}
+type Buf<T extends "u8" | "i8" | "f32" | "f64"> =
+	T extends "u8" ? Uint8Array :
+	T extends "i8" ? Int8Array :
+	T extends "f32" ? Float32Array :
+	T extends "f64" ? Float64Array :
+	never;
 
 export type Decode<T> = (this: Decoder) => T;
 export class Decoder {
-	#offset = 0;
 	#view: DataView;
+	#offset: number;
 
-	constructor(slice: Uint8Array) {
-		this.#view = new DataView(slice.buffer, slice.byteOffset, slice.byteLength);
+	constructor(slice: ArrayBufferLike, offset = 0) {
+		this.#view = new DataView(slice);
+		this.#offset = offset
 	}
 
 	get offset() { return this.#offset }
@@ -62,15 +66,15 @@ export class Decoder {
 	#unsafe_read<T>(amt: number, cb: () => T): T {
 		let new_offset = this.#offset + amt;
 		if (new_offset > this.#view.byteLength) {
-			throw new Error("Insufficient bytes")
+			throw new Error("insufficient bytes")
 		}
 		let num = cb.call(this);
 		this.#offset = new_offset;
 		return num
 	}
 
-	#read_slice(len: number) {
-		return this.#unsafe_read(len, () => bytes_slice(this.#view, this.#offset, this.#offset + len))
+	#read_bytes(len: number) {
+		return this.#unsafe_read(len, () => new Uint8Array(this.#view.buffer, this.#offset, len))
 	}
 
 	u8() { return this.#unsafe_read(1, () => this.#view.getUint8(this.#offset)) }
@@ -97,7 +101,7 @@ export class Decoder {
 	bool() { return !!this.u8() }
 	str() {
 		let len = this.len_u30();
-		let buf = this.#read_slice(len);
+		let buf = this.#read_bytes(len);
 		return new TextDecoder().decode(buf);
 	}
 
@@ -120,8 +124,28 @@ export class Decoder {
 			return Err(err.call(this))
 		}
 	}
+	// -----------------------------------------
 
-	arr<T>(v: Decode<T>, len: number) {
+	fixed_buf<T extends "u8" | "i8" | "f32" | "f64">(type: T, len: number) {
+		return () => {
+			let byteLength = len * (type == "u8" || type == "i8" ? 1 : type == "f32" ? 4 : 8);
+			return this.#unsafe_read(byteLength, () => {
+				switch (type) {
+					case "u8": return new Uint8Array(this.#view.buffer, this.offset, len) as Buf<T>
+					case "i8": return new Int8Array(this.#view.buffer, this.offset, len) as Buf<T>
+					default:
+						let buf = this.#view.buffer.slice(this.offset, this.offset + byteLength);
+						return (type == "f32" ? new Float32Array(buf) : new Float64Array(buf)) as Buf<T>
+				}
+			})
+		}
+	}
+
+	buf<T extends "u8" | "i8" | "f32" | "f64">(type: T) {
+		return () => this.fixed_buf(type, this.len_u30())()
+	}
+
+	fixed_arr<T>(v: Decode<T>, len: number) {
 		return () => {
 			let values: T[] = [];
 			for (let i = 0; i < len; i++) {
@@ -131,12 +155,11 @@ export class Decoder {
 		}
 	}
 
-	vec<T>(v: Decode<T>) {
-		return () => {
-			let len = this.len_u30();
-			return this.arr(v, len)()
-		}
+	arr<T>(v: Decode<T>) {
+		return () => this.fixed_arr(v, this.len_u30())()
 	}
+
+	// -----------------------------------------
 
 	map<K, V>(k: Decode<K>, v: Decode<V>) {
 		return () => {
@@ -293,6 +316,25 @@ export class BufWriter implements Write {
 		}
 	}
 
+	// -------------------------------------------
+
+	fixed_buf<T extends "u8" | "i8" | "f32" | "f64">(type: T, len: number) {
+		return (buf: Buf<T>) => {
+			if (buf.length != len) {
+				throw new Error(`Expected ${type} buffer length: ${len}, but got ${buf.length}`);
+			}
+			this.write(new Uint8Array(buf.buffer, buf.byteOffset))
+		}
+	}
+
+	buf<T extends "u8" | "i8" | "f32" | "f64">(_type: T) {
+		return (buf: Buf<T>) => {
+			this.len_u30(buf.length);
+			this.write(new Uint8Array(buf.buffer, buf.byteOffset))
+		}
+	}
+
+
 	arr<T>(v: Encode<T>) {
 		return (values: Array<T>) => {
 			for (const value of values)
@@ -301,7 +343,7 @@ export class BufWriter implements Write {
 	}
 
 	vec<T>(v: Encode<T>) {
-		return (values: T[]) => {
+		return (values: Array<T>) => {
 			this.len_u30(values.length);
 			this.arr(v)(values)
 		}

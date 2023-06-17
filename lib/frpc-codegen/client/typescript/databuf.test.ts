@@ -103,11 +103,10 @@ Deno.test("Serde test: string, bytes", () => {
     const decoder = new Decoder(new Uint8Array(writer.bytes));
 
     assertEquals(decoder.str(), "Hello, World!")
-    assertEquals(decoder.vec(decoder.u8)(), [42, 24])
+    assertEquals(decoder.arr(decoder.u8)(), [42, 24])
 })
 
 Deno.test("Serde test: common type", () => {
-    const char = '4';
     const bool = true;
 
     const some = { type: "Some" as const, value: "some" };
@@ -120,7 +119,6 @@ Deno.test("Serde test: common type", () => {
     const writer = new DefaultWriter();
     const encoder = new BufWriter(writer);
 
-    encoder.char(char)
     encoder.bool(bool)
 
     encoder.option(encoder.str)(some)
@@ -132,14 +130,13 @@ Deno.test("Serde test: common type", () => {
     encoder.flush()
     const decoder = new Decoder(new Uint8Array(writer.bytes));
 
-    assertEquals(decoder.char(), char)
     assertEquals(decoder.bool(), bool)
 
     assertEquals(decoder.option(decoder.str)(), some)
     assertEquals(decoder.option(decoder.str)(), none)
 
-    assertEquals(decoder.result(decoder.arr(decoder.u8, 2), decoder.str)(), ok);
-    assertEquals(decoder.result(decoder.str, decoder.arr(decoder.u8, 2))(), err);
+    assertEquals(decoder.result(decoder.fixed_arr(decoder.u8, 2), decoder.str)(), ok);
+    assertEquals(decoder.result(decoder.str, decoder.fixed_arr(decoder.u8, 2))(), err);
 })
 
 Deno.test("Serde test: Complex type", () => {
@@ -164,7 +161,7 @@ Deno.test("Serde test: Complex type", () => {
     e.flush()
     const d = new Decoder(new Uint8Array(writer.bytes));
 
-    const decode = d.result(d.map(d.u8, d.option(d.str)), d.vec(d.str));
+    const decode = d.result(d.map(d.u8, d.option(d.str)), d.arr(d.str));
     assertEquals(decode(), ok);
     assertEquals(decode(), err);
 })
