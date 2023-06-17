@@ -1,5 +1,5 @@
 use super::*;
-use crate::javascript::interface::fmt_js_ty;
+use crate::typescript::interface::fmt_js_ty;
 
 pub fn main(f: &mut impl Write, type_def: &TypeDef) -> Result {
     writeln!(f, "export default class Self {{")?;

@@ -4,7 +4,7 @@ macro_rules! impl_for {
     [$($ty:tt),*] => {$(impl Message for $ty { fn ty(_: &mut CostomTypes) -> Ty { Ty::$ty } })*};
 }
 
-impl_for!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, bool, char, String);
+impl_for!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, bool, /* char, */ String);
 
 impl Message for usize {
     fn ty(_: &mut CostomTypes) -> Ty {

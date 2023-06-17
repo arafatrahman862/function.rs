@@ -84,8 +84,8 @@ pub enum Ty {
     f64,
 
     bool,
-    char,
 
+    // char,
     String,
 
     Option(Box<Ty>),

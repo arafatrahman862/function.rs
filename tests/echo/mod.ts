@@ -40,17 +40,17 @@ assertEquals(MAX_U32, await lib.echo_u32(MAX_U32));
 assertEquals(MAX_U64, await lib.echo_u64(MAX_U64));
 assertEquals(MAX_U128, await lib.echo_u128(MAX_U128));
 
-assertRejects(() => lib.echo_u8(-1));
-assertRejects(() => lib.echo_u16(-1));
-assertRejects(() => lib.echo_u32(-1));
-assertRejects(() => lib.echo_u64(-1n));
-assertRejects(() => lib.echo_u128(-1n));
+await assertRejects(() => lib.echo_u8(-1));
+await assertRejects(() => lib.echo_u16(-1));
+await assertRejects(() => lib.echo_u32(-1));
+await assertRejects(() => lib.echo_u64(-1n));
+await assertRejects(() => lib.echo_u128(-1n));
 
-assertRejects(() => lib.echo_u8(MAX_U8 + 1));
-assertRejects(() => lib.echo_u16(MAX_U16 + 1));
-assertRejects(() => lib.echo_u32(MAX_U32 + 1));
-assertRejects(() => lib.echo_u64(MAX_U64 + 1n));
-assertRejects(() => lib.echo_u128(MAX_U128 + 1n));
+await assertRejects(() => lib.echo_u8(MAX_U8 + 1));
+await assertRejects(() => lib.echo_u16(MAX_U16 + 1));
+await assertRejects(() => lib.echo_u32(MAX_U32 + 1));
+await assertRejects(() => lib.echo_u64(MAX_U64 + 1n));
+await assertRejects(() => lib.echo_u128(MAX_U128 + 1n));
 
 // -------------------------------------------------------
 
@@ -66,17 +66,43 @@ assertEquals(MAX_I32, await lib.echo_i32(MAX_I32));
 assertEquals(MAX_I64, await lib.echo_i64(MAX_I64));
 assertEquals(MAX_I128, await lib.echo_i128(MAX_I128));
 
-assertRejects(() => lib.echo_i8(MIN_I8 - 1));
-assertRejects(() => lib.echo_i16(MIN_I16 - 1));
-assertRejects(() => lib.echo_i32(MIN_I32 - 1));
-assertRejects(() => lib.echo_i64(MIN_I64 - 1n));
-assertRejects(() => lib.echo_i128(MIN_I128 - 1n));
+await assertRejects(() => lib.echo_i8(MIN_I8 - 1));
+await assertRejects(() => lib.echo_i16(MIN_I16 - 1));
+await assertRejects(() => lib.echo_i32(MIN_I32 - 1));
+await assertRejects(() => lib.echo_i64(MIN_I64 - 1n));
+await assertRejects(() => lib.echo_i128(MIN_I128 - 1n));
 
-assertRejects(() => lib.echo_i8(MAX_I8 + 1));
-assertRejects(() => lib.echo_i16(MAX_I16 + 1));
-assertRejects(() => lib.echo_i32(MAX_I32 + 1));
-assertRejects(() => lib.echo_i64(MAX_I64 + 1n));
-assertRejects(() => lib.echo_i128(MAX_I128 + 1n));
+await assertRejects(() => lib.echo_i8(MAX_I8 + 1));
+await assertRejects(() => lib.echo_i16(MAX_I16 + 1));
+await assertRejects(() => lib.echo_i32(MAX_I32 + 1));
+await assertRejects(() => lib.echo_i64(MAX_I64 + 1n));
+await assertRejects(() => lib.echo_i128(MAX_I128 + 1n));
 
 // -------------------------------------------------------
 
+let option = { value: null };
+assertEquals(option, await lib.echo_option(option));
+
+let option1 = { value: { value: null } };
+assertEquals(option1, await lib.echo_option(option1));
+
+let option2 = { value: { value: "data" } };
+assertEquals(option2, await lib.echo_option(option2));
+
+// -------------------------------------------------------
+
+let ok = { type: "Ok" as const, value: "Output" };
+assertEquals(ok, await lib.echo_result(ok));
+
+let err = { type: "Err" as const, value: "Error" };
+assertEquals(err, await lib.echo_result(err));
+
+// -------------------------------------------------------
+
+assertEquals(true, await lib.echo_bool(true));
+assertEquals(false, await lib.echo_bool(false));
+assertEquals("Hello World!", await lib.echo_str("Hello World!"));
+
+// -------------------------------------------------------
+
+// assertEquals("Hello World!", await lib.echo_bytes("Hello World!"));

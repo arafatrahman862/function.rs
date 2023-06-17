@@ -37,7 +37,7 @@ fn fmt_ty<'a>(ty: &'a Ty, scope: &'a str) -> fmt!(type 'a) {
 
         Ty::bool => write!(f, "d.bool"),
 
-        Ty::char => write!(f, "d.char"),
+        // Ty::char => write!(f, "d.char"),
         Ty::String => write!(f, "d.str"),
 
         Ty::Option(ty) => write!(f, "d.option({})", fmt_ty(ty, scope)),
@@ -60,13 +60,7 @@ fn fmt_ty<'a>(ty: &'a Ty, scope: &'a str) -> fmt!(type 'a) {
         }
         Ty::Array { len, ty } => match **ty {
             Ty::u8 => write!(f, "d.u8_arr({len})"),
-            Ty::u16 => write!(f, "d.u16_arr({len})"),
-            Ty::u32 => write!(f, "d.u32_arr({len})"),
-            Ty::u64 => write!(f, "d.u64_arr({len})"),
             Ty::i8 => write!(f, "d.i8_arr({len})"),
-            Ty::i16 => write!(f, "d.i16_arr({len})"),
-            Ty::i32 => write!(f, "d.i32_arr({len})"),
-            Ty::i64 => write!(f, "d.i64_arr({len})"),
             Ty::f32 => write!(f, "d.f32_arr({len})"),
             Ty::f64 => write!(f, "d.f64_arr({len})"),
             ref ty => write!(f, "d.arr({}, {len})", fmt_ty(ty, scope)),

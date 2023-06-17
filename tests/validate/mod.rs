@@ -3,30 +3,19 @@
 use databuf::{Decode, Encode};
 use frpc_macros::Message;
 
-type DataType<'a> = (
-    ((), ((), ())),
-    (Option<Option<&'a str>>, Option<Option<String>>),
-    r#class,
-    r#enum,
-);
+type DataType = (((), ((), ())), r#class, r#enum);
 
-fn data() -> DataType<'static> {
+async fn r#get_data() -> DataType {
     (
         // Empty typles
         ((), ((), ())),
-        // Option
-        (Some(Some("Some Data")), Some(None)),
         r#class { r#new: () },
         r#enum::r#type,
     )
 }
 
-async fn r#get_data() -> DataType<'static> {
-    data()
-}
-
-async fn validate<'a>(_data: DataType<'a>) {
-    println!("Result: {}", _data == data());
+async fn validate(_data: DataType) {
+    assert!(_data == get_data().await);
 }
 
 #[derive(Message, Encode, Decode, PartialEq)]

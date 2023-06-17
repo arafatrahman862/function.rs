@@ -95,7 +95,6 @@ export class Decoder {
 	}
 
 	bool() { return !!this.u8() }
-	char() { return String.fromCharCode(this.num("U", 32)()); }
 	str() {
 		let len = this.len_u30();
 		let buf = this.#read_slice(len);
@@ -184,6 +183,11 @@ export class Decoder {
 
 type Encode<T> = (this: BufWriter, value: T) => void;
 
+function checkOverflow<T>(num: T, min: T, max: T) {
+	if (num < min || num > max)
+		throw new Error(`Expected min: ${min}, max: ${max}, but got: ${num}`);
+}
+
 export class BufWriter implements Write {
 	#written = 0;
 	#inner: Write;
@@ -226,12 +230,13 @@ export class BufWriter implements Write {
 	}
 
 	u8(num: number) {
-		if (num < 0 && num > 255)
-			throw new Error("");
-
+		checkOverflow(num, 0, 255);
 		this.#unsafe_write(1, () => this.#view.setUint8(this.#written, num));
 	}
-	i8(num: number) { this.#unsafe_write(1, () => this.#view.setInt8(this.#written, num)); }
+	i8(num: number) {
+		checkOverflow(num, -128, 127);
+		this.#unsafe_write(1, () => this.#view.setInt8(this.#written, num));
+	}
 	f32(num: number) { this.#unsafe_write(4, () => this.#view.setFloat32(this.#written, num, true)); }
 	f64(num: number) { this.#unsafe_write(8, () => this.#view.setFloat64(this.#written, num, true)); }
 
@@ -239,15 +244,14 @@ export class BufWriter implements Write {
 
 	num<T extends "I" | "U", Size extends NumSize<T>>(type: T, size: Size) {
 		let bits = BigInt(size);
-		let max = (1n << bits) - 1n;
 		return (num: Num<T, Size>) => {
 			let int = BigInt(num);
-			if (type == "I") {
+			if (type == "U") checkOverflow(int, 0n, (1n << bits) - 1n);
+			else {
+				let min = -(1n << bits - 1n);
+				checkOverflow(int, min, -min - 1n);
 				// Map integer with ZigZag Code
 				int = (int << 1n) ^ (int >> bits - 1n)
-			}
-			if (int > max) {
-				throw new Error(`Max value: ${max}, But got: ${int}`)
 			}
 			while (int > 0b111_1111n) {
 				this.u8(Number((int & 0xffn) | 0x80n));
@@ -258,8 +262,6 @@ export class BufWriter implements Write {
 	}
 
 	bool(bool: boolean) { this.u8(+bool) }
-	char(char: string) { this.num("U", 32)(char.charCodeAt(0)) }
-
 	str(value: string) {
 		const bytes = new TextEncoder().encode(value);
 		this.len_u30(bytes.byteLength);

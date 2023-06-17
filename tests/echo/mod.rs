@@ -7,7 +7,7 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
-fn println(value: impl Debug) {
+fn println(value: &impl Debug) {
     println!("{:#?}", value);
 }
 
@@ -15,7 +15,7 @@ macro_rules! def {
     [$($id: literal fn $name:ident -> $ty: ty)*] => {
         $(
             async fn $name(state: State, value: $ty) -> $ty {
-                if state.log_lvl.load(Ordering::Acquire) { println(value); }
+                if state.log_lvl.load(Ordering::Acquire) { println(&value); }
                 value
             }
         )*
@@ -69,4 +69,14 @@ def! {
     // Flote Number
     13 fn echo_f32 -> f32
     14 fn echo_f64 -> f64
+
+    // other
+    15 fn echo_option -> Option<Option<&str>>
+    16 fn echo_result -> Result<String, String>
+
+    // -----------------
+
+    17 fn echo_str -> &str
+    18 fn echo_bool -> bool
+    19 fn echo_bytes -> Vec<u8>
 }

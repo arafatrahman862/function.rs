@@ -93,19 +93,12 @@ pub fn fmt_js_ty(ty: &Ty) -> String {
         }
         Ty::u64 | Ty::i64 | Ty::u128 | Ty::i128 => "bigint".into(),
         Ty::bool => "boolean".into(),
-        Ty::char | Ty::String => "string".into(),
+        // Ty::char |
+        Ty::String => "string".into(),
 
         Ty::Array { ty, .. } | Ty::Set { ty, .. } => match **ty {
             Ty::u8 => "Uint8Array",
-            Ty::u16 => "Uint16Array",
-            Ty::u32 => "Uint32Array",
-            Ty::u64 => "BigUint64Array",
-
             Ty::i8 => "Int8Array",
-            Ty::i16 => "Int16Array",
-            Ty::i32 => "Int32Array",
-            Ty::i64 => "BigInt64Array",
-
             Ty::f32 => "Float32Array",
             Ty::f64 => "Float64Array",
             _ => return format!("Array<{}>", fmt_js_ty(ty)),

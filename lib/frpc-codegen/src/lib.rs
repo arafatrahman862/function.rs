@@ -1,7 +1,7 @@
 use std_lib::fmt::{fmt, Fmt};
 
-pub mod javascript;
 mod path;
+pub mod typescript;
 pub mod utils;
 
 use frpc_message::TypeDef;
