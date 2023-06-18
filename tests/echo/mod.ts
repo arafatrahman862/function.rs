@@ -105,4 +105,25 @@ assertEquals("Hello World!", await lib.echo_str("Hello World!"));
 
 // -------------------------------------------------------
 
-// assertEquals("Hello World!", await lib.echo_bytes("Hello World!"));
+let map = new Map([["2", 2], ["1", 1], ["3", 3]]);
+assertEquals(map, await lib.echo_map(map));
+assertEquals(
+    [["1", 1], ["2", 2], ["3", 3]],
+    [...(await lib.echo_sorted_map(map)).entries()]
+);
+
+// -------------------------------------------------------
+
+let bufs = {
+    vec_2d: Float32Array.from([1.2, 2.3]),
+    vec_3d: Float64Array.from([3.4, 4.5, 5.6]),
+    floats: Float32Array.from([42]),
+    long_floats: Float64Array.from([42]),
+    sorted_nums: Int8Array.from([2, 0, 1, -1]),
+    big_nums: [42n, BigInt(Number.MAX_SAFE_INTEGER) * 2n],
+    bytes: Uint8Array.from([1, 2, 3]),
+}
+
+let echo_bufs = await lib.echo_bufs(bufs);
+bufs.sorted_nums = Int8Array.from([-1, 0, 1, 2]);
+assertEquals(bufs, echo_bufs);

@@ -1,8 +1,10 @@
-use databuf::Decode;
+use databuf::{Decode, Encode};
 use frpc::declare;
 use frpc_macros::Message;
+use std::collections::BTreeSet;
 use std::sync::Arc;
 use std::{
+    collections::{BTreeMap, HashMap},
     fmt::Debug,
     sync::atomic::{AtomicBool, Ordering},
 };
@@ -49,6 +51,19 @@ async fn log(state: State, log: Log) {
     }
 }
 
+#[derive(Debug, Encode, Decode, Message)]
+struct Bufs {
+    vec_2d: [f32; 2],
+    vec_3d: [f64; 3],
+
+    floats: Vec<f32>,
+    long_floats: Vec<f64>,
+
+    big_nums: Vec<i64>,
+    sorted_nums: BTreeSet<i8>,
+    bytes: Vec<u8>,
+}
+
 def! {
     // Number
     1 fn echo_u8 -> u8
@@ -78,5 +93,11 @@ def! {
 
     17 fn echo_str -> &str
     18 fn echo_bool -> bool
-    19 fn echo_bytes -> Vec<u8>
+
+    // -----------------
+
+    19 fn echo_map -> HashMap<&str, f64>
+    20 fn echo_sorted_map -> BTreeMap<&str, f64>
+
+    21 fn echo_bufs -> Bufs
 }

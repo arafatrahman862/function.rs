@@ -97,7 +97,7 @@ Deno.test("Serde test: string, bytes", () => {
     const encoder = new BufWriter(writer);
 
     encoder.str("Hello, World!")
-    encoder.vec(encoder.u8)([42, 24])
+    encoder.arr(encoder.u8)([42, 24])
 
     encoder.flush()
     const decoder = new Decoder(new Uint8Array(writer.bytes));
@@ -124,8 +124,8 @@ Deno.test("Serde test: common type", () => {
     encoder.option(encoder.str)(some)
     encoder.option(encoder.str)(none)
 
-    encoder.result(encoder.arr(encoder.u8), encoder.str)(ok);
-    encoder.result(encoder.str, encoder.arr(encoder.u8))(err);
+    encoder.result(encoder.fixed_arr(encoder.u8), encoder.str)(ok);
+    encoder.result(encoder.str, encoder.fixed_arr(encoder.u8))(err);
 
     encoder.flush()
     const decoder = new Decoder(new Uint8Array(writer.bytes));
@@ -154,7 +154,7 @@ Deno.test("Serde test: Complex type", () => {
     const writer = new DefaultWriter();
     const e = new BufWriter(writer);
 
-    const encode = e.result(e.map(e.u8, e.option(e.str)), e.vec(e.str))
+    const encode = e.result(e.map(e.u8, e.option(e.str)), e.arr(e.str))
     encode(ok)
     encode(err)
 

@@ -37,7 +37,7 @@ pub fn main(f: &mut impl Write, type_def: &TypeDef) -> Result {
             writeln!(f, "let _d = await fn.call();")?;
             if !retn.is_empty_tuple() {
                 writeln!(f, "{{")?;
-                writeln!(f, "let d = new use.Decoder(_d);")?;
+                writeln!(f, "let d = new use.Decoder(_d.buffer);")?;
                 let res = match retn {
                     Ty::CustomType(path) => format!("struct.{}(d)", object_ident_from(path)),
                     ty => format!("{}()", fmt_ty(ty, "struct")),

@@ -321,7 +321,7 @@ export class BufWriter implements Write {
 	fixed_buf<T extends "u8" | "i8" | "f32" | "f64">(type: T, len: number) {
 		return (buf: Buf<T>) => {
 			if (buf.length != len) {
-				throw new Error(`Expected ${type} buffer length: ${len}, but got ${buf.length}`);
+				throw new Error(`Data<${type}>: [${buf}]\nError: expected buffer length: ${len}, but got ${buf.length}`);
 			}
 			this.write(new Uint8Array(buf.buffer, buf.byteOffset))
 		}
@@ -335,17 +335,17 @@ export class BufWriter implements Write {
 	}
 
 
-	arr<T>(v: Encode<T>) {
+	fixed_arr<T>(v: Encode<T>) {
 		return (values: Array<T>) => {
 			for (const value of values)
 				v.call(this, value);
 		}
 	}
 
-	vec<T>(v: Encode<T>) {
+	arr<T>(v: Encode<T>) {
 		return (values: Array<T>) => {
 			this.len_u30(values.length);
-			this.arr(v)(values)
+			this.fixed_arr(v)(values)
 		}
 	}
 
