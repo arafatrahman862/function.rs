@@ -1,5 +1,5 @@
 [workspace]
-members = ["lib/*"]
+members = ["libs/*"]
 
 [package]
 name = "frpc"
@@ -16,14 +16,14 @@ description = "RPC framework"
 async-trait = "0.1"
 databuf = "0.3"
 
-std-lib = { path = "lib/std-lib" }
-frpc-macros = { version = "0.0.1", path = "lib/frpc-macros" }
-frpc-message = { version = "0.0.1", path = "lib/frpc-message", features = ["encode"] }
+std-lib = { path = "libs/std-lib" }
+frpc-macros = { version = "0.0.1", path = "libs/frpc-macros" }
+frpc-message = { version = "0.0.1", path = "libs/frpc-message", features = ["encode"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-frpc-transport = { path = "lib/frpc-transport" }
-frpc-codegen-client = { path = "lib/frpc-codegen-client" }
+frpc-transport = { path = "libs/frpc-transport" }
+frpc-codegen-client = { path = "libs/frpc-codegen-client" }
 
 [profile.dev.package."frpc-codegen-client"]
 opt-level = 3

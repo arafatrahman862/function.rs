@@ -1,7 +1,7 @@
 #!/usr/bin/env -S deno run --allow-net=localhost --unsafely-ignore-certificate-errors=localhost
 
 import { assertEquals, assertRejects } from "https://deno.land/std@0.175.0/testing/asserts.ts";
-import { HttpTransport } from "../../lib/frpc-codegen/client/typescript/http.transport.ts";
+import { HttpTransport } from "../../libs/frpc-codegen/client/typescript/http.transport.ts";
 import Lib, { Echo_Log as Log } from "../../target/rpc/EchoTest.ts";
 
 let lib = new Lib(new HttpTransport("https://localhost:4433/rpc/echo"));
