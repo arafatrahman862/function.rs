@@ -56,6 +56,10 @@ export class Decoder {
 	#view: DataView;
 	#offset: number;
 
+	static from(bytes: Uint8Array) {
+		return new Decoder(bytes.buffer, bytes.byteOffset);
+	}
+
 	constructor(slice: ArrayBufferLike, offset = 0) {
 		this.#view = new DataView(slice);
 		this.#offset = offset

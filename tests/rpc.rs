@@ -1,4 +1,4 @@
-//! Run: cargo test --package frpc --test root -- --nocapture
+//! cargo test --test rpc
 
 mod echo;
 mod validate;
@@ -38,6 +38,17 @@ fn run_clients() -> Result<()> {
             "--allow-net=localhost",
             "--unsafely-ignore-certificate-errors=localhost",
             "./tests/echo/mod.ts",
+        ])
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .output()?;
+
+    Command::new("deno")
+        .args([
+            "run",
+            "--allow-net=localhost",
+            "--unsafely-ignore-certificate-errors=localhost",
+            "./tests/validate/mod.ts",
         ])
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())

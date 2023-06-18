@@ -13,8 +13,6 @@ mod state;
 #[cfg(debug_assertions)]
 pub mod __private;
 
-use databuf;
-
 pub use frpc_macros::declare;
 #[cfg(debug_assertions)]
 pub use frpc_macros::Message;

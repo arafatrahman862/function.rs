@@ -35,7 +35,7 @@ Deno.test("Serde test: var int", () => {
         0, 63, 64, 64, 127, 255, 128, 64, 0, 191, 255, 255, 192, 64, 0, 0, 255, 255, 255, 255
     ])
 
-    const decoder = new Decoder(new Uint8Array(writer.bytes));
+    const decoder = Decoder.from(new Uint8Array(writer.bytes));
     assertEquals(decoder.len_u15(), 0)
     assertEquals(decoder.len_u15(), 127)
     assertEquals(decoder.len_u15(), 128)
@@ -79,7 +79,7 @@ Deno.test("Serde test: LEB128", () => {
     encoder.num("I", 64)(I64_MIN);
     encoder.flush();
 
-    const decoder = new Decoder(new Uint8Array(writer.bytes));
+    const decoder = Decoder.from(new Uint8Array(writer.bytes));
     assertEquals(decoder.num("U", 16)(), 0)
     assertEquals(decoder.num("U", 16)(), U16_MAX)
     assertEquals(decoder.num("U", 32)(), U32_MAX)
@@ -100,7 +100,7 @@ Deno.test("Serde test: string, bytes", () => {
     encoder.arr(encoder.u8)([42, 24])
 
     encoder.flush()
-    const decoder = new Decoder(new Uint8Array(writer.bytes));
+    const decoder = Decoder.from(new Uint8Array(writer.bytes));
 
     assertEquals(decoder.str(), "Hello, World!")
     assertEquals(decoder.arr(decoder.u8)(), [42, 24])
@@ -109,7 +109,7 @@ Deno.test("Serde test: string, bytes", () => {
 Deno.test("Serde test: common type", () => {
     const bool = true;
 
-    const some = { type: "Some" as const, value: "some" };
+    const some = { value: "some" };
     const none: Option<string> = { value: null };
 
     type Vec2d = [number, number];
@@ -128,7 +128,7 @@ Deno.test("Serde test: common type", () => {
     encoder.result(encoder.str, encoder.fixed_arr(encoder.u8))(err);
 
     encoder.flush()
-    const decoder = new Decoder(new Uint8Array(writer.bytes));
+    const decoder = Decoder.from(new Uint8Array(writer.bytes));
 
     assertEquals(decoder.bool(), bool)
 
@@ -140,14 +140,13 @@ Deno.test("Serde test: common type", () => {
 })
 
 Deno.test("Serde test: Complex type", () => {
-    const value = new Map();
-    value.set(0, null)
-    value.set(1, "some")
+    const value: Map<number, Option<string>> = new Map();
+    value.set(0, { value: null })
+    value.set(1, { value: "some" })
 
-    type ResultTy = Result<Map<number, Option<string>>, Array<string>>;
-    const ok: ResultTy = { type: "Ok", value };
-    const err: ResultTy = {
-        type: "Err",
+    const ok = { type: "Ok" as const, value };
+    const err = {
+        type: "Err" as const,
         value: ["Error: 1", "Error: 2"]
     };
 
@@ -159,7 +158,7 @@ Deno.test("Serde test: Complex type", () => {
     encode(err)
 
     e.flush()
-    const d = new Decoder(new Uint8Array(writer.bytes));
+    const d = Decoder.from(new Uint8Array(writer.bytes));
 
     const decode = d.result(d.map(d.u8, d.option(d.str)), d.arr(d.str));
     assertEquals(decode(), ok);

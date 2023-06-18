@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use super::*;
 
 pub struct CodeWriter {
@@ -16,12 +18,19 @@ impl CodeWriter {
     pub fn generate_typescript_binding(&self, config: &config::typescript::Config) -> Result {
         fs::create_dir_all(&config.out_dir)?;
 
-        let prelude = include_bytes!("../client/typescript/databuf.ts");
         let prelude_path = config.out_dir.join("databuf.lib.ts");
         if !prelude_path.exists() {
-            fs::write(prelude_path, prelude)?;
-        }
+            let typescript_modules = Path::new(std::file!())
+                .parent()
+                .unwrap()
+                .join("../client/typescript/");
 
+            fs::copy(typescript_modules.join("databuf.ts"), prelude_path)?;
+            fs::copy(
+                typescript_modules.join("http.transport.ts"),
+                config.out_dir.join("http.transport.ts"),
+            )?;
+        }
         let ext = match config.preserve_import_extension {
             true => ".ts",
             false => "",
