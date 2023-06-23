@@ -1,18 +1,18 @@
 use super::*;
 
-// impl Message for std::convert::Infallible {
+// impl TypeId for std::convert::Infallible {
 //     fn ty() -> Ty {
 //         Ty::Never
 //     }
 // }
 
-impl<T: Message> Message for &T {
+impl<T: TypeId> TypeId for &T {
     fn ty(c: &mut CostomTypes) -> Ty {
         T::ty(c)
     }
 }
 
-impl<T: Message> Message for Box<T> {
+impl<T: TypeId> TypeId for Box<T> {
     fn ty(c: &mut CostomTypes) -> Ty {
         T::ty(c)
     }
@@ -20,9 +20,9 @@ impl<T: Message> Message for Box<T> {
 
 macro_rules! impl_for_typles {
     [$(($($ty: ident)*))*]  => ($(
-        impl<$($ty),*> Message for ($($ty,)*)
+        impl<$($ty),*> TypeId for ($($ty,)*)
         where
-            $($ty: Message),*
+            $($ty: TypeId),*
         {
             fn ty(_c: &mut CostomTypes) -> Ty {
                 Ty::Tuple(vec![$($ty::ty(_c)),*])

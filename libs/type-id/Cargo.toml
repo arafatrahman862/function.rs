@@ -1,0 +1,16 @@
+[package]
+name = "type-id"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = []
+
+hash = []
+clone = []
+debug = []
+encode = []
+decode = []
+
+[dependencies]
+databuf = "0.3"

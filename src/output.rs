@@ -20,6 +20,17 @@ where
 
 /// It implemented by different types representing various output formats.
 #[async_trait]
+#[cfg(debug_assertions)]
+pub trait Output: crate::private::Sealed + crate::__private::FnOutputType {
+    /// It produces the output data and sends it over the specified transport.
+    async fn produce<T>(self, _: &mut T) -> io::Result<()>
+    where
+        T: Transport + Unpin + Send;
+}
+
+/// It implemented by different types representing various output formats.
+#[async_trait]
+#[cfg(not(debug_assertions))]
 pub trait Output: crate::private::Sealed {
     /// It produces the output data and sends it over the specified transport.
     async fn produce<T>(self, _: &mut T) -> io::Result<()>

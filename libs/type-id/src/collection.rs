@@ -27,7 +27,7 @@ pub enum MapVariant {
 
 macro_rules! impl_ty_class {
     [Set for $name: tt <$($ty_arg: ty),*> where $($ty: tt)*] => {
-        impl<$($ty)*> Message for $name<$($ty_arg),*> {
+        impl<$($ty)*> TypeId for $name<$($ty_arg),*> {
             fn ty(costom_types: &mut CostomTypes) -> Ty {
                 Ty::Set {
                     variant: SetVariant::$name,
@@ -37,7 +37,7 @@ macro_rules! impl_ty_class {
         }
     };
     [Map for $name: tt <$($ty_arg: ty),*> where $($ty: tt)*] => {
-        impl<$($ty)*> Message for $name<$($ty_arg),*> {
+        impl<$($ty)*> TypeId for $name<$($ty_arg),*> {
             fn ty(costom_types: &mut CostomTypes) -> Ty {
                 Ty::Map {
                     variant: MapVariant::$name,
@@ -48,16 +48,16 @@ macro_rules! impl_ty_class {
     };
 }
 
-impl_ty_class!(Set for Vec<T>             where T: Message);
-impl_ty_class!(Set for VecDeque<T>        where T: Message);
-impl_ty_class!(Set for LinkedList<T>      where T: Message);
-impl_ty_class!(Set for BTreeSet<T>        where T: Message + Ord);
-impl_ty_class!(Set for BinaryHeap<T>      where T: Message + Ord);
-impl_ty_class!(Set for HashSet<T>         where T: Message + Eq + Hash);
-impl_ty_class!(Map for BTreeMap<K, V>     where K: Message + Ord, V: Message);
-impl_ty_class!(Map for HashMap<K, V>      where K: Message + Eq + Hash, V: Message);
+impl_ty_class!(Set for Vec<T>             where T: TypeId);
+impl_ty_class!(Set for VecDeque<T>        where T: TypeId);
+impl_ty_class!(Set for LinkedList<T>      where T: TypeId);
+impl_ty_class!(Set for BTreeSet<T>        where T: TypeId + Ord);
+impl_ty_class!(Set for BinaryHeap<T>      where T: TypeId + Ord);
+impl_ty_class!(Set for HashSet<T>         where T: TypeId + Eq + Hash);
+impl_ty_class!(Map for BTreeMap<K, V>     where K: TypeId + Ord, V: TypeId);
+impl_ty_class!(Map for HashMap<K, V>      where K: TypeId + Eq + Hash, V: TypeId);
 
-impl<T: Message> Message for &[T] {
+impl<T: TypeId> TypeId for &[T] {
     fn ty(costom_types: &mut CostomTypes) -> Ty {
         Ty::Set {
             variant: SetVariant::Vec,

@@ -11,7 +11,7 @@ pub fn main(f: &mut impl Write, type_def: &TypeDef) -> Result {
              index,
              ident: path,
              args,
-             retn,
+             output,
          }| {
             let ident = path.replace("::", "_");
 
@@ -35,15 +35,22 @@ pub fn main(f: &mut impl Write, type_def: &TypeDef) -> Result {
             }
             writeln!(f, "d.flush();")?;
             writeln!(f, "let _d = await fn.call();")?;
-            if !retn.is_empty_tuple() {
-                writeln!(f, "{{")?;
-                writeln!(f, "let d = new use.Decoder(_d.buffer);")?;
-                let res = match retn {
-                    Ty::CustomType(path) => format!("struct.{}(d)", object_ident_from(path)),
-                    ty => format!("{}()", fmt_ty(ty, "struct")),
-                };
-                writeln!(f, "return {res}")?;
-                writeln!(f, "}}")?;
+            match output {
+                FuncOutput::Unary(retn) => {
+                    if !retn.is_empty_tuple() {
+                        writeln!(f, "{{")?;
+                        writeln!(f, "let d = new use.Decoder(_d.buffer);")?;
+                        let res = match retn {
+                            Ty::CustomType(path) => {
+                                format!("struct.{}(d)", object_ident_from(path))
+                            }
+                            ty => format!("{}()", fmt_ty(ty, "struct")),
+                        };
+                        writeln!(f, "return {res}")?;
+                        writeln!(f, "}}")?;
+                    }
+                }
+                FuncOutput::ServerStream { .. } => todo!(),
             }
             writeln!(f, "}}")
         },

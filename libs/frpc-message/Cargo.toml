@@ -6,11 +6,11 @@ edition = "2021"
 [features]
 default = []
 
-hash = []
-clone = []
-debug = []
-encode = []
-decode = []
+hash = ["type-id/hash"]
+debug = ["type-id/debug"]
+clone = ["type-id/clone"]
+encode = ["type-id/encode"]
+decode = ["type-id/decode"]
 
 [dependencies]
-databuf = "0.3"
+type-id = { path = "../type-id", version = "0.1" }

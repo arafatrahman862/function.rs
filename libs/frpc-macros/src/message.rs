@@ -103,7 +103,7 @@ pub fn new(input: TokenStream) -> TokenStream {
     TokenStream::from(quote! {
         const _: () = {
             use ::frpc::__private::frpc_message as ___m;
-            impl #impl_generics ___m::Message for #ident #ty_generics #where_clause {
+            impl #impl_generics ___m::TypeId for #ident #ty_generics #where_clause {
                 fn ty(__c: &mut ___m::CostomTypes) -> ___m::Ty {
                     __c.register(
                         ::std::format!(#name, ::std::module_path!()),
@@ -120,7 +120,7 @@ fn to_tuple(fields: &FieldsUnnamed, mut tokens: &mut proc_macro2::TokenStream) {
         let doc = get_comments_from(&field.attrs);
         let ty = &field.ty;
         quote_each_token! {tokens
-            ___m::TupleField::new(#doc, <#ty as ___m::Message>::ty(__c)),
+            ___m::TupleField::new(#doc, <#ty as ___m::TypeId>::ty(__c)),
         }
     }
 }
@@ -134,7 +134,7 @@ fn to_object(fields: &FieldsNamed, mut tokens: &mut proc_macro2::TokenStream) {
         };
         let ty = &field.ty;
         quote_each_token! {tokens
-            ___m::StructField::new(#doc, #name, <#ty as ___m::Message>::ty(__c)),
+            ___m::StructField::new(#doc, #name, <#ty as ___m::TypeId>::ty(__c)),
         }
     }
 }
