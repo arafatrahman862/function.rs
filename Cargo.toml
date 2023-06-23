@@ -19,6 +19,7 @@ databuf = "0.3"
 std-lib = { path = "libs/std-lib" }
 frpc-macros = { version = "0.0.1", path = "libs/frpc-macros" }
 frpc-message = { version = "0.0.1", path = "libs/frpc-message", features = ["encode"] }
+async-gen = "0.2"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
