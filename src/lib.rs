@@ -13,12 +13,15 @@ mod state;
 #[cfg(debug_assertions)]
 pub mod __private;
 
-pub use frpc_macros::declare;
-pub use frpc_macros::Message;
-
-use input::Input;
+use async_gen::GeneratorState;
+use databuf::Encode;
+pub use frpc_macros::{declare, Message};
 pub use output::*;
 pub use state::State;
+use std::{
+    pin::Pin,
+    task::{Context, Poll},
+};
 
 #[doc(hidden)]
 pub const DATABUF_CONFIG: u8 = databuf::config::num::LEB128 | databuf::config::len::BEU30;
@@ -31,11 +34,38 @@ pub async fn run<'de, Args, Ret, State>(
     w: &mut (impl crate::output::Transport + Unpin + Send),
 ) -> databuf::Result<()>
 where
-    Args: Input<'de, State>,
+    Args: input::Input<'de, State>,
     Ret: Output,
 {
     let args = Args::decode(state, reader)?;
     let output = func.call_once(args);
     Ret::produce(output, w).await?;
     Ok(())
+}
+
+#[allow(missing_docs)]
+pub trait AsyncGenerator {
+    type Yield: Encode + frpc_message::TypeId;
+    type Return: Encode + frpc_message::TypeId;
+
+    fn poll_resume(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<GeneratorState<Self::Yield, Self::Return>>;
+}
+
+impl<G> AsyncGenerator for G
+where
+    G: async_gen::AsyncGenerator,
+    G::Yield: Encode + frpc_message::TypeId,
+    G::Return: Encode + frpc_message::TypeId,
+{
+    type Yield = G::Yield;
+    type Return = G::Return;
+    fn poll_resume(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<GeneratorState<Self::Yield, Self::Return>> {
+        G::poll_resume(self, cx)
+    }
 }
