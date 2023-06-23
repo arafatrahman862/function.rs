@@ -1,12 +1,7 @@
 #![doc(hidden)]
-use std::future::Future;
-
+use crate::private::FnOutputType;
 pub use frpc_message;
-use frpc_message::{CostomTypes, FuncOutput, Ty, TypeId};
-
-pub trait FnOutputType {
-    fn fn_output_ty(_: &mut CostomTypes) -> FuncOutput;
-}
+use frpc_message::{CostomTypes, Ty, TypeId};
 
 pub fn fn_ty<Func, Args>(
     _: &Func,
@@ -36,16 +31,5 @@ where
 impl<T> TypeId for crate::State<T> {
     fn ty(_: &mut CostomTypes) -> frpc_message::Ty {
         Ty::Tuple(vec![])
-    }
-}
-
-// ---------------------------------------------------------------
-
-impl<Fut, T> FnOutputType for Fut
-where
-    Fut: Future<Output = T>,
-{
-    fn fn_output_ty(_: &mut CostomTypes) -> FuncOutput {
-        todo!()
     }
 }

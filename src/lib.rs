@@ -14,10 +14,7 @@ mod state;
 pub mod __private;
 
 pub use frpc_macros::declare;
-#[cfg(debug_assertions)]
 pub use frpc_macros::Message;
-#[cfg(not(debug_assertions))]
-pub use frpc_macros::Noop as Message;
 
 use input::Input;
 pub use output::*;

@@ -1,5 +1,16 @@
+use frpc_message::{CostomTypes, FuncOutput, TypeId};
 use std::future::Future;
 
-pub trait Sealed {} // Users in other crates cannot name this trait.
+pub trait FnOutputType {
+    fn fn_output_ty(_: &mut CostomTypes) -> FuncOutput;
+}
 
-impl<Fut, T: databuf::Encode> Sealed for Fut where Fut: Future<Output = T> {}
+impl<Fut> FnOutputType for Fut
+where
+    Fut: Future,
+    Fut::Output: TypeId,
+{
+    fn fn_output_ty(c: &mut CostomTypes) -> FuncOutput {
+        FuncOutput::Unary(<Fut::Output as TypeId>::ty(c))
+    }
+}
