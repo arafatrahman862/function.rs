@@ -3,7 +3,7 @@
 
 mod input;
 mod output;
-mod private;
+mod output_type;
 mod state;
 // mod service;
 
@@ -28,11 +28,11 @@ use std::{
 pub const DATABUF_CONFIG: u8 = databuf::config::num::LEB128 | databuf::config::len::BEU30;
 
 #[doc(hidden)]
-pub async fn run<'de, Args, Ret, State>(
+pub async fn run<'de, State, Args, Ret>(
     func: impl std_lib::FnOnce<Args, Output = Ret>,
     state: State,
     reader: &mut &'de [u8],
-    w: &mut (impl crate::output::Transport + Unpin + Send),
+    transport: &mut (impl crate::output::Transport + Send),
 ) -> databuf::Result<()>
 where
     Args: input::Input<'de, State>,
@@ -40,11 +40,12 @@ where
 {
     let args = Args::decode(state, reader)?;
     let output = func.call_once(args);
-    Ret::produce(output, w).await?;
+    Ret::produce(output, transport).await?;
     Ok(())
 }
 
 pub struct SSE<G>(pub G);
+pub struct Return<T>(pub T);
 
 #[macro_export]
 macro_rules! sse {

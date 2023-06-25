@@ -2,11 +2,17 @@ use super::*;
 use frpc_message::{CostomTypes, FuncOutput, TypeId};
 use std::future::Future;
 
-pub trait FnOutputType {
+pub trait OutputType {
     fn fn_output_ty(_: &mut CostomTypes) -> FuncOutput;
 }
 
-impl<Fut> FnOutputType for Fut
+impl<T: TypeId> OutputType for Return<T> {
+    fn fn_output_ty(c: &mut CostomTypes) -> FuncOutput {
+        FuncOutput::Unary(T::ty(c))
+    }
+}
+
+impl<Fut> OutputType for Fut
 where
     Fut: Future,
     Fut::Output: TypeId,
@@ -16,7 +22,7 @@ where
     }
 }
 
-impl<G> FnOutputType for SSE<G>
+impl<G> OutputType for SSE<G>
 where
     G: AsyncGenerator,
 {

@@ -1,5 +1,5 @@
 #![doc(hidden)]
-use crate::private::FnOutputType;
+use crate::output_type::OutputType;
 pub use frpc_message;
 use frpc_message::{CostomTypes, Ty, TypeId};
 
@@ -12,7 +12,7 @@ pub fn fn_ty<Func, Args>(
 where
     Func: std_lib::FnOnce<Args>,
     Args: TypeId,
-    Func::Output: FnOutputType,
+    Func::Output: OutputType,
 {
     let Ty::Tuple(mut args) = Args::ty(costom_types) else { unreachable!() };
     if let Some(ty) = args.first() {
@@ -24,7 +24,7 @@ where
         index,
         ident: frpc_message::Ident(ident.to_string()),
         args,
-        output: <Func::Output as FnOutputType>::fn_output_ty(costom_types),
+        output: <Func::Output as OutputType>::fn_output_ty(costom_types),
     }
 }
 
