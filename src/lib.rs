@@ -1,23 +1,24 @@
 #![doc = include_str!("../README.md")]
-#![warn(missing_docs)]
+// #![warn(missing_docs)]
 
 mod input;
 mod output;
 mod private;
 mod state;
-
 // mod service;
-// pub use service::Service;
 
 #[doc(hidden)]
 #[cfg(debug_assertions)]
 pub mod __private;
+#[doc(hidden)]
+pub use async_gen;
 
 use async_gen::GeneratorState;
 use databuf::Encode;
 pub use frpc_macros::{declare, Message};
 pub use output::*;
 pub use state::State;
+// pub use service::Service;
 use std::{
     pin::Pin,
     task::{Context, Poll},
@@ -41,6 +42,15 @@ where
     let output = func.call_once(args);
     Ret::produce(output, w).await?;
     Ok(())
+}
+
+pub struct SSE<G>(pub G);
+
+#[macro_export]
+macro_rules! sse {
+    ($($tt:tt)*) => {
+        $crate::SSE($crate::async_gen::__private::gen_inner!([$crate::async_gen] $($tt)*))
+    }
 }
 
 #[allow(missing_docs)]

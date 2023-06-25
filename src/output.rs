@@ -1,9 +1,11 @@
+use super::*;
 use async_gen::GeneratorState;
 use async_trait::async_trait;
 use databuf::Encode;
 use std::{
     future::{poll_fn, Future},
     io,
+    pin::pin,
 };
 
 use crate::AsyncGenerator;
@@ -11,19 +13,24 @@ use crate::AsyncGenerator;
 /// It defines the behavior for sending responses over a transport channel.
 #[async_trait]
 pub trait Transport {
+    #[allow(missing_docs)]
+
     /// Sends a response in a unary request.
-    async fn send_unary_response(&mut self, _: Box<[u8]>) -> std::io::Result<()>;
+    async fn send_unary_response(&mut self, _: Box<[u8]>) -> io::Result<()>;
+
+    #[allow(missing_docs)]
+    fn create_server_stream(&mut self) {}
 }
 
-#[async_trait]
-impl<T> Transport for T
-where
-    T: std::io::Write + Send,
-{
-    async fn send_unary_response(&mut self, buf: Box<[u8]>) -> std::io::Result<()> {
-        self.write_all(&buf)
-    }
-}
+// #[async_trait]
+// impl<T> Transport for T
+// where
+//     T: std::io::Write + Send,
+// {
+//     async fn send_unary_response(&mut self, buf: Box<[u8]>) -> io::Result<()> {
+//         self.write_all(&buf)
+//     }
+// }
 
 /// It implemented by different types representing various output formats.
 #[async_trait]
@@ -34,9 +41,6 @@ pub trait Output: crate::private::FnOutputType {
         T: Transport + Unpin + Send;
 }
 
-#[allow(missing_docs)]
-pub struct SSE<G>(pub G);
-
 // ---------------------------------------------------------
 
 #[async_trait]
@@ -44,11 +48,11 @@ impl<G> Output for SSE<G>
 where
     G: AsyncGenerator + Send,
 {
-    async fn produce<W>(self, _: &mut W) -> io::Result<()>
+    async fn produce<T>(self, _: &mut T) -> io::Result<()>
     where
-        W: Transport + Unpin + Send,
+        T: Transport + Unpin + Send,
     {
-        let mut gen = std::pin::pin!(self.0);
+        let mut gen = pin!(self.0);
         loop {
             match poll_fn(|cx| AsyncGenerator::poll_resume(gen.as_mut(), cx)).await {
                 GeneratorState::Yielded(val) => {
@@ -59,7 +63,6 @@ where
                 GeneratorState::Complete(val) => {
                     let mut buf = vec![1];
                     Encode::encode::<{ crate::DATABUF_CONFIG }>(&val, &mut buf)?;
-                    todo!();
                     break Ok(());
                 }
             }
@@ -73,9 +76,9 @@ where
     Fut: Future + Send,
     Fut::Output: Encode + frpc_message::TypeId,
 {
-    async fn produce<W>(self, transport: &mut W) -> io::Result<()>
+    async fn produce<T>(self, transport: &mut T) -> io::Result<()>
     where
-        W: Transport + Unpin + Send,
+        T: Transport + Unpin + Send,
     {
         let mut buf = Vec::new();
         Encode::encode::<{ crate::DATABUF_CONFIG }>(&self.await, &mut buf)?;
