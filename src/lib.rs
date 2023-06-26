@@ -10,17 +10,22 @@ mod state;
 #[doc(hidden)]
 #[cfg(debug_assertions)]
 pub mod __private;
-#[doc(hidden)]
 pub use async_gen;
 
-use async_gen::GeneratorState;
-use databuf::Encode;
 pub use frpc_macros::{declare, Message};
 pub use output::*;
 pub use state::State;
 // pub use service::Service;
+
+use async_gen::GeneratorState;
+use async_trait::async_trait;
+use databuf::Encode;
+use frpc_message::TypeId;
+
 use std::{
-    pin::Pin,
+    future::{poll_fn, Future},
+    io,
+    pin::{pin, Pin},
     task::{Context, Poll},
 };
 
@@ -32,16 +37,15 @@ pub async fn run<'de, State, Args, Ret>(
     func: impl std_lib::FnOnce<Args, Output = Ret>,
     state: State,
     reader: &mut &'de [u8],
-    transport: &mut (impl crate::output::Transport + Send),
-) -> databuf::Result<()>
-where
+    transport: &mut (impl Transport + Send),
+) where
     Args: input::Input<'de, State>,
     Ret: Output,
 {
-    let args = Args::decode(state, reader)?;
-    let output = func.call_once(args);
-    Ret::produce(output, transport).await?;
-    Ok(())
+    let args = Args::decode(state, reader);
+    todo!()
+    // let output = func.call_once(args);
+    // Ret::produce(output, transport).await;
 }
 
 pub struct SSE<G>(pub G);
@@ -68,11 +72,12 @@ pub trait AsyncGenerator {
 impl<G> AsyncGenerator for G
 where
     G: async_gen::AsyncGenerator,
-    G::Yield: Encode + frpc_message::TypeId,
-    G::Return: Encode + frpc_message::TypeId,
+    G::Yield: Encode + TypeId,
+    G::Return: Encode + TypeId,
 {
     type Yield = G::Yield;
     type Return = G::Return;
+
     fn poll_resume(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,

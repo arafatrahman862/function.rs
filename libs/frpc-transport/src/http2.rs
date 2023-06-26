@@ -68,12 +68,20 @@ pub struct RpcResponder(Responder);
 
 #[async_trait::async_trait]
 impl frpc::Transport for RpcResponder {
-    async fn send_unary_response(&mut self, bytes: Box<[u8]>) -> std::io::Result<()> {
-        if bytes.is_empty() {
-            let _ = self.0.inner.send_data(bytes::Bytes::new(), true);
-        } else {
-            let _ = self.0.write_bytes(bytes.into(), true).await;
-        }
-        Ok(())
-    }
+    // async fn send_unary_response(&mut self, bytes: Box<[u8]>) {
+    //     if bytes.is_empty() {
+    //         let _ = self.0.inner.send_data(bytes::Bytes::new(), true);
+    //     } else {
+    //         let _ = self.0.write_bytes(bytes.into(), true).await;
+    //     }
+    // }
+
+    // async fn unary_response_sync<W: std::io::Write + 'life1>(
+    //     &mut self,
+    //     func: impl FnOnce(&mut W) -> std::io::Result<()> + Send,
+    // ) {
+    //     let mut buf = vec![];
+    //     // func(&mut buf);
+    //     todo!()
+    // }
 }

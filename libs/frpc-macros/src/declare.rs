@@ -188,15 +188,16 @@ impl ToTokens for Declare {
                 }
 
                 impl #ident {
-                    pub async fn execute<W>(state: #state, id: u16, data: &[u8], w: &mut W) -> ::std::result::Result<(), ::std::boxed::Box<dyn ::std::error::Error + ::std::marker::Send + ::std::marker::Sync>>
+                    pub async fn execute<W>(state: #state, id: u16, data: &[u8], w: &mut W) -> bool
                     where
                         W: ::frpc::Transport + Unpin + Send,
                     {
                         let mut reader = data;
                         match id {
                             #funcs
-                            _ => ::std::result::Result::Err(::std::convert::From::from("unknown id"))
+                            _ => return false
                         }
+                        return true;
                     }
                 }
             );
