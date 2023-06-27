@@ -25,27 +25,25 @@ use frpc_message::TypeId;
 use std::{
     future::{poll_fn, Future},
     io,
-    pin::{pin, Pin},
+    pin::Pin,
     task::{Context, Poll},
 };
 
 #[doc(hidden)]
 pub const DATABUF_CONFIG: u8 = databuf::config::num::LEB128 | databuf::config::len::BEU30;
 
+#[allow(warnings)]
 #[doc(hidden)]
-pub async fn run<'de, State, Args, Ret>(
+pub async fn run<'de, State, Args: input::Input<'de, State>, Ret>(
     func: impl std_lib::FnOnce<Args, Output = Ret>,
     state: State,
     reader: &mut &'de [u8],
     transport: &mut (impl Transport + Send),
-) where
-    Args: input::Input<'de, State>,
-    Ret: Output,
-{
+) {
     let args = Args::decode(state, reader);
-    todo!()
     // let output = func.call_once(args);
     // Ret::produce(output, transport).await;
+    todo!()
 }
 
 pub struct SSE<G>(pub G);
