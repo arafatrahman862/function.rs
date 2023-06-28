@@ -1,6 +1,6 @@
-mod async_fn_once;
+mod async_fn_trait;
 pub mod fmt;
-mod fn_once;
+mod fn_trait;
 
-pub use async_fn_once::AsyncFnOnce;
-pub use fn_once::FnOnce;
+pub use async_fn_trait::*;
+pub use fn_trait::*;

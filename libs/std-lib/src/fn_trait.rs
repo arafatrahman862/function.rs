@@ -3,14 +3,40 @@ pub trait FnOnce<Args> {
     fn call_once(self, args: Args) -> Self::Output;
 }
 
+pub trait FnMut<Args>: FnOnce<Args> {
+    fn call_mut(&mut self, args: Args) -> Self::Output;
+}
+
+pub trait Fn<Args>: FnMut<Args> {
+    fn call(&self, args: Args) -> Self::Output;
+}
+
 macro_rules! impl_for_typles {
     [$(($($i: tt: $ty: ident)*))*]  => ($(
         impl<Func, Ret, $($ty,)*> FnOnce<($($ty,)*)> for Func
         where
-            Func: core::ops::FnOnce($($ty),*) -> Ret
+        Func: core::ops::FnOnce($($ty),*) -> Ret
         {
             type Output = Ret;
             #[inline] fn call_once(self, _args: ($($ty,)*)) -> Self::Output {
+                self($(_args.$i),*)
+            }
+        }
+
+        impl<Func, Ret, $($ty,)*> FnMut<($($ty,)*)> for Func
+        where
+            Func: core::ops::FnMut($($ty),*) -> Ret,
+        {
+            #[inline] fn call_mut(&mut self, _args: ($($ty,)*)) -> Self::Output {
+                self($(_args.$i),*)
+            }
+        }
+
+        impl<Func, Ret, $($ty,)*> Fn<($($ty,)*)> for Func
+        where
+            Func: core::ops::Fn($($ty),*) -> Ret,
+        {
+            #[inline] fn call(&self, _args: ($($ty,)*)) -> Self::Output {
                 self($(_args.$i),*)
             }
         }

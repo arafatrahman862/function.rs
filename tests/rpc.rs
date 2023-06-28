@@ -1,5 +1,4 @@
 //! cargo test --test rpc
-
 mod echo;
 mod validate;
 
@@ -12,56 +11,25 @@ use std::{
     fs,
     io::Result,
     ops::ControlFlow,
-    process::{Command, Stdio},
+    process::{Command, Output, Stdio},
     sync::Arc,
 };
 use tokio::task;
-
-// ------------------------------------------------------------
 
 use echo::{Context, EchoTest};
 use validate::ValidateTest;
 
 static RPC: TransportConfig = TransportConfig::new();
 
-fn codegen() {
-    let time = std::time::Instant::now();
-    frpc_codegen_client::init(EchoTest);
-    frpc_codegen_client::init(ValidateTest);
-    println!("Codegen finished in {:?}\n", time.elapsed());
-}
-
-fn run_clients() -> Result<()> {
-    Command::new("deno")
-        .args([
-            "run",
-            "--allow-net=localhost",
-            "--unsafely-ignore-certificate-errors=localhost",
-            "./tests/echo/mod.ts",
-        ])
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .output()?;
-
-    Command::new("deno")
-        .args([
-            "run",
-            "--allow-net=localhost",
-            "--unsafely-ignore-certificate-errors=localhost",
-            "./tests/validate/mod.ts",
-        ])
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .output()?;
-
-    Ok(())
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
     let args: HashSet<_> = std::env::args().skip(1).collect();
 
-    codegen();
+    let time = std::time::Instant::now();
+    frpc_codegen_client::init(EchoTest);
+    frpc_codegen_client::init(ValidateTest);
+    println!("Codegen finished in {:?}\n", time.elapsed());
+
     if args.contains("codegen") {
         return Ok(());
     }
@@ -81,10 +49,12 @@ async fn main() -> Result<()> {
 
                 match (&req.method, req.uri.path()) {
                     (&Method::POST, "/rpc/validate") => {
-                        RPC.service(ValidateTest::execute, (), req, res).await
+                        // RPC.service(ValidateTest::execute, (), &mut req, &mut res)
+                        // .await
                     }
                     (&Method::POST, "/rpc/echo") => {
-                        RPC.service(EchoTest::execute, state, req, res).await
+                        // RPC.service(EchoTest::execute, state, &mut req, &mut res)
+                        //     .await
                     }
                     _ => {}
                 }
@@ -103,4 +73,23 @@ async fn main() -> Result<()> {
         }
     }
     Ok(recv_close_signal.await)
+}
+
+fn run_clients() -> Result<()> {
+    run_js("./tests/echo/mod.ts")?;
+    run_js("./tests/validate/mod.ts")?;
+    Ok(())
+}
+
+fn run_js(path: &str) -> Result<Output> {
+    Command::new("deno")
+        .args([
+            "run",
+            "--allow-net=localhost",
+            "--unsafely-ignore-certificate-errors=localhost",
+            path,
+        ])
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .output()
 }

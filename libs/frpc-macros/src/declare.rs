@@ -166,7 +166,7 @@ impl ToTokens for Declare {
             let funcs = ToToken(|mut tokens| {
                 for Func { name, id, .. } in funcs {
                     quote_each_token!(tokens
-                        #id => ::frpc::run(#name, state, &mut reader, w).await,
+                        #id => Some(Output::produce(#name, state, cursor, transport)),
                     );
                 }
             });
@@ -188,16 +188,19 @@ impl ToTokens for Declare {
                 }
 
                 impl #ident {
-                    pub async fn execute<W>(state: #state, id: u16, data: &[u8], w: &mut W) -> bool
-                    where
-                        W: ::frpc::Transport + Unpin + Send,
+                    pub fn execute<'fut, TR: ::frpc::Transport + ::std::marker::Send>(
+                        state: #state,
+                        id: u16,
+                        cursor: &'fut mut &[u8],
+                        transport: &'fut mut TR,
+                    ) -> ::std::option::Option<::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ()> + ::std::marker::Send + 'fut>>>
                     {
-                        let mut reader = data;
+                        use ::std::option::Option::{Some, None};
+                        use ::frpc::Output;
                         match id {
                             #funcs
-                            _ => return false
+                            _ => None
                         }
-                        return true;
                     }
                 }
             );

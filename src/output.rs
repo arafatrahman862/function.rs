@@ -1,80 +1,67 @@
 use super::*;
+use async_gen::futures_core::future::BoxFuture;
 
 /// It defines the behavior for sending responses over a transport channel.
 #[async_trait]
 pub trait Transport {
     async fn server_stream(
         &mut self,
-        mut poll: impl for<'cx, 'c, 'buf> FnMut(
-                &'cx mut Context<'c>,
+        mut poll: impl for<'cx, 'waker, 'buf> FnMut(
+                &'cx mut Context<'waker>,
                 &'buf mut Vec<u8>,
             ) -> Poll<io::Result<bool>>
             + Send,
-    ) {
-        let mut buf = vec![];
-        while let Ok(_) = poll_fn(|cx| poll(cx, &mut buf)).await {
-            // ...
-        }
-        // ...
-    }
+    );
 
     async fn unary(
         &mut self,
-        mut poll: impl for<'cx, 'c, 'buf> FnMut(
-                &'cx mut Context<'c>,
+        mut poll: impl for<'cx, 'waker, 'buf> FnMut(
+                &'cx mut Context<'waker>,
                 &'buf mut Vec<u8>,
             ) -> Poll<io::Result<()>>
             + Send,
-    ) {
-        let mut buf = vec![];
-        let _ = poll_fn(|cx| poll(cx, &mut buf)).await;
-    }
+    );
 
     async fn unary_sync(
         &mut self,
         cb: impl for<'buf> FnOnce(&'buf mut Vec<u8>) -> io::Result<()> + Send,
-    ) {
-        let mut buf = vec![];
-        let _ = cb(&mut buf);
-        todo!()
-    }
+    );
 }
 
-// -------------------------------------------------------------------------------
-
-/// It implemented by different types representing various output formats.
-#[async_trait]
 pub trait Output: crate::output_type::OutputType {
-    /// It produces the output data and sends it over the specified transport.
-    async fn produce<'de, State, Args>(
-        func: impl std_lib::FnOnce<Args, Output = Self> + Send,
+    fn produce<'fut, 'cursor, 'data, 'transport, State, Args>(
+        func: impl std_lib::FnOnce<Args, Output = Self> + Send + 'fut,
         state: State,
-        reader: &mut &'de [u8],
-        transport: &mut (impl Transport + Send),
-    ) where
-        State: Send,
-        Args: input::Input<'de, State> + Send;
+        cursor: &'cursor mut &'data [u8],
+        transport: &'transport mut (impl Transport + Send),
+    ) -> BoxFuture<'fut, ()>
+    where
+        'cursor: 'fut,
+        'transport: 'fut,
+
+        Self: 'fut,
+        State: 'fut + Send,
+        Args: 'fut + input::Input<'data, State> + Send;
 }
 
 impl<T> Output for Return<T>
 where
     T: Send + Encode + TypeId,
 {
-    fn produce<'de, 'reader, 'transport, 'fut, State, Args>(
-        func: impl 'fut + std_lib::FnOnce<Args, Output = Self> + Send,
+    fn produce<'fut, 'cursor, 'data, 'transport, State, Args>(
+        func: impl std_lib::FnOnce<Args, Output = Self> + Send + 'fut,
         state: State,
-        reader: &'reader mut &'de [u8],
-        transport: &'transport mut (impl 'fut + Transport + Send),
-    ) -> Pin<Box<dyn Future<Output = ()> + Send + 'fut>>
+        cursor: &'cursor mut &'data [u8],
+        transport: &'transport mut (impl Transport + Send),
+    ) -> BoxFuture<'fut, ()>
     where
-        'de: 'fut,
-        'reader: 'fut,
+        'cursor: 'fut,
         'transport: 'fut,
         Self: 'fut,
         State: 'fut + Send,
-        Args: 'fut + input::Input<'de, State>,
+        Args: 'fut + input::Input<'data, State>,
     {
-        transport.unary_sync(|buf| match Args::decode(state, reader) {
+        transport.unary_sync(|buf| match Args::decode(state, cursor) {
             Ok(args) => {
                 let this = func.call_once(args);
                 Encode::encode::<{ crate::DATABUF_CONFIG }>(&this.0, buf)
@@ -122,30 +109,30 @@ where
 /// A solution is to wrap this function with `Box`.
 /// But `transport.unary(..)` internally uses `Box` to wrap the future.
 /// So let's take advantage of it.
-enum FutState<'reader, 'de, Func, State, Args, Fut>
+enum FutState<'cursor, 'data, Func, State, Args, Fut>
 where
     Func: std_lib::FnOnce<Args, Output = Fut>,
 {
     Init {
         func: Func,
         state: State,
-        reader: &'reader mut &'de [u8],
+        cursor: &'cursor mut &'data [u8],
         _args: std::marker::PhantomData<Args>,
     },
     Poll(Fut),
     Done,
 }
 
-impl<'reader, 'de, Func, State, Args, Fut> FutState<'reader, 'de, Func, State, Args, Fut>
+impl<'cursor, 'data, Func, State, Args, Fut> FutState<'cursor, 'data, Func, State, Args, Fut>
 where
     Func: std_lib::FnOnce<Args, Output = Fut>,
-    Args: input::Input<'de, State>,
+    Args: input::Input<'data, State>,
 {
-    fn new(func: Func, state: State, reader: &'reader mut &'de [u8]) -> Self {
+    fn new(func: Func, state: State, cursor: &'cursor mut &'data [u8]) -> Self {
         FutState::Init {
             func,
             state,
-            reader,
+            cursor,
             _args: std::marker::PhantomData,
         }
     }
@@ -156,10 +143,10 @@ where
                 FutState::Init { .. } => match std::mem::replace(self, FutState::Done) {
                     FutState::Init {
                         state,
-                        reader,
+                        cursor,
                         func,
                         ..
-                    } => match Args::decode(state, reader) {
+                    } => match Args::decode(state, cursor) {
                         // This is the only place where we move this future.
                         // From now on we promise we will never move it again!
                         Ok(args) => *self = FutState::Poll(func.call_once(args)),
@@ -184,21 +171,20 @@ where
     Fut: Future + Send,
     Fut::Output: Encode + TypeId,
 {
-    fn produce<'de, 'reader, 'transport, 'fut, State, Args>(
-        func: impl 'fut + std_lib::FnOnce<Args, Output = Self> + Send,
+    fn produce<'fut, 'cursor, 'data, 'transport, State, Args>(
+        func: impl std_lib::FnOnce<Args, Output = Self> + Send + 'fut,
         state: State,
-        reader: &'reader mut &'de [u8],
-        transport: &'transport mut (impl 'fut + Transport + Send),
-    ) -> Pin<Box<dyn Future<Output = ()> + Send + 'fut>>
+        cursor: &'cursor mut &'data [u8],
+        transport: &'transport mut (impl Transport + Send),
+    ) -> BoxFuture<'fut, ()>
     where
-        'de: 'fut,
-        'reader: 'fut,
+        'cursor: 'fut,
         'transport: 'fut,
         Self: 'fut,
         State: 'fut + Send,
-        Args: 'fut + input::Input<'de, State> + Send,
+        Args: 'fut + input::Input<'data, State> + Send,
     {
-        let mut fut_state = FutState::new(func, state, reader);
+        let mut fut_state = FutState::new(func, state, cursor);
         transport.unary(move |cx, buf| {
             fut_state.poll(|fut| {
                 unsafe { Pin::new_unchecked(fut) }
@@ -213,21 +199,20 @@ impl<G> Output for SSE<G>
 where
     G: AsyncGenerator + Send,
 {
-    fn produce<'de, 'reader, 'transport, 'fut, State, Args>(
-        func: impl 'fut + std_lib::FnOnce<Args, Output = Self> + Send,
+    fn produce<'fut, 'cursor, 'data, 'transport, State, Args>(
+        func: impl std_lib::FnOnce<Args, Output = Self> + Send + 'fut,
         state: State,
-        reader: &'reader mut &'de [u8],
-        transport: &'transport mut (impl 'fut + Transport + Send),
-    ) -> Pin<Box<dyn Future<Output = ()> + Send + 'fut>>
+        cursor: &'cursor mut &'data [u8],
+        transport: &'transport mut (impl Transport + Send),
+    ) -> BoxFuture<'fut, ()>
     where
-        'de: 'fut,
-        'reader: 'fut,
+        'cursor: 'fut,
         'transport: 'fut,
         Self: 'fut,
         State: 'fut + Send,
-        Args: 'fut + input::Input<'de, State> + Send,
+        Args: 'fut + input::Input<'data, State> + Send,
     {
-        let mut fut_state = FutState::new(func, state, reader);
+        let mut fut_state = FutState::new(func, state, cursor);
         transport.server_stream(move |cx, buf| {
             fut_state.poll(|this| {
                 unsafe { Pin::new_unchecked(&mut this.0) }

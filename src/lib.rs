@@ -23,7 +23,7 @@ use databuf::Encode;
 use frpc_message::TypeId;
 
 use std::{
-    future::{poll_fn, Future},
+    future::Future,
     io,
     pin::Pin,
     task::{Context, Poll},
@@ -31,20 +31,6 @@ use std::{
 
 #[doc(hidden)]
 pub const DATABUF_CONFIG: u8 = databuf::config::num::LEB128 | databuf::config::len::BEU30;
-
-#[allow(warnings)]
-#[doc(hidden)]
-pub async fn run<'de, State, Args: input::Input<'de, State>, Ret>(
-    func: impl std_lib::FnOnce<Args, Output = Ret>,
-    state: State,
-    reader: &mut &'de [u8],
-    transport: &mut (impl Transport + Send),
-) {
-    let args = Args::decode(state, reader);
-    // let output = func.call_once(args);
-    // Ret::produce(output, transport).await;
-    todo!()
-}
 
 pub struct SSE<G>(pub G);
 pub struct Return<T>(pub T);
@@ -56,7 +42,6 @@ macro_rules! sse {
     }
 }
 
-#[allow(missing_docs)]
 pub trait AsyncGenerator {
     type Yield: Encode + frpc_message::TypeId;
     type Return: Encode + frpc_message::TypeId;

@@ -1,31 +1,31 @@
-pub type BoxedFmt<'lt> = Fmt<Box<dyn Fn(&mut std::fmt::Formatter) -> std::fmt::Result + 'lt>>;
+pub type BoxedFmt<'lt> = Fmt<Box<dyn Fn(&mut core::fmt::Formatter) -> core::fmt::Result + 'lt>>;
 
 pub struct Fmt<F>(pub F)
 where
-    F: Fn(&mut std::fmt::Formatter) -> std::fmt::Result;
+    F: Fn(&mut core::fmt::Formatter) -> core::fmt::Result;
 
-impl<F> std::fmt::Display for Fmt<F>
+impl<F> core::fmt::Display for Fmt<F>
 where
-    F: Fn(&mut std::fmt::Formatter) -> std::fmt::Result,
+    F: Fn(&mut core::fmt::Formatter) -> core::fmt::Result,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         (self.0)(f)
     }
 }
 
-impl<F> std::fmt::Debug for Fmt<F>
+impl<F> core::fmt::Debug for Fmt<F>
 where
-    F: Fn(&mut std::fmt::Formatter) -> std::fmt::Result,
+    F: Fn(&mut core::fmt::Formatter) -> core::fmt::Result,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         (self.0)(f)
     }
 }
 
 #[macro_export]
 macro_rules! fmt {
-    (type $lt: lifetime) => { $crate::fmt::Fmt<impl Fn(&mut std::fmt::Formatter) -> std::fmt::Result + $lt> };
-    (type) => { $crate::fmt::Fmt<impl Fn(&mut std::fmt::Formatter) -> std::fmt::Result> };
+    (type $lt: lifetime) => { $crate::fmt::Fmt<impl Fn(&mut core::fmt::Formatter) -> core::fmt::Result + $lt> };
+    (type) => { $crate::fmt::Fmt<impl Fn(&mut core::fmt::Formatter) -> core::fmt::Result> };
 }
 
 pub use fmt;
