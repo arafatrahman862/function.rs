@@ -2,10 +2,7 @@
 mod echo;
 mod validate;
 
-use frpc_transport::http2::{
-    http::{HeaderValue, Method},
-    Server, TransportConfig,
-};
+use frpc_transport::http2::{http::HeaderValue, Config, Ctx, Server};
 use std::{
     collections::HashSet,
     fs,
@@ -19,7 +16,7 @@ use tokio::task;
 use echo::{Context, EchoTest};
 use validate::ValidateTest;
 
-static RPC: TransportConfig = TransportConfig::new();
+static CONF: Config = Config::new();
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -43,21 +40,16 @@ async fn main() -> Result<()> {
         .unwrap()
         .serve_with_graceful_shutdown(
             |_| async { ControlFlow::Continue(Some(Arc::new(Context::default()))) },
-            |_conn, state, req, mut res| async move {
+            |_conn, state, mut req, mut res| async move {
                 res.headers
                     .append("access-control-allow-origin", HeaderValue::from_static("*"));
 
-                match (&req.method, req.uri.path()) {
-                    (&Method::POST, "/rpc/validate") => {
-                        // RPC.service(ValidateTest::execute, (), &mut req, &mut res)
-                        // .await
-                    }
-                    (&Method::POST, "/rpc/echo") => {
-                        // RPC.service(EchoTest::execute, state, &mut req, &mut res)
-                        //     .await
-                    }
-                    _ => {}
-                }
+                let mut ctx = Ctx::new(&mut req, &mut res);
+                let _ = match ctx.req.uri.path() {
+                    "/rpc/validate" => ctx.serve(&CONF, (), ValidateTest::execute).await,
+                    "/rpc/echo" => ctx.serve(&CONF, state, EchoTest::execute).await,
+                    _ => return,
+                };
             },
             |_| async {},
         );

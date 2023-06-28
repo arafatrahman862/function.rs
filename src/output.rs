@@ -1,16 +1,13 @@
 use super::*;
 use async_gen::futures_core::future::BoxFuture;
+use std::marker::PhantomData;
 
 /// It defines the behavior for sending responses over a transport channel.
 #[async_trait]
 pub trait Transport {
-    async fn server_stream(
+    async fn unary_sync(
         &mut self,
-        mut poll: impl for<'cx, 'waker, 'buf> FnMut(
-                &'cx mut Context<'waker>,
-                &'buf mut Vec<u8>,
-            ) -> Poll<io::Result<bool>>
-            + Send,
+        cb: impl for<'buf> FnOnce(&'buf mut Vec<u8>) -> io::Result<()> + Send,
     );
 
     async fn unary(
@@ -22,9 +19,13 @@ pub trait Transport {
             + Send,
     );
 
-    async fn unary_sync(
+    async fn server_stream(
         &mut self,
-        cb: impl for<'buf> FnOnce(&'buf mut Vec<u8>) -> io::Result<()> + Send,
+        mut poll: impl for<'cx, 'waker, 'buf> FnMut(
+                &'cx mut Context<'waker>,
+                &'buf mut Vec<u8>,
+            ) -> Poll<io::Result<bool>>
+            + Send,
     );
 }
 
@@ -71,7 +72,7 @@ where
     }
 }
 
-/// # What is wrong with this code ???
+/// # What is wrong with this code ?
 ///
 /// ```rust
 /// let mut state = match Args::decode(state, reader) {
@@ -88,7 +89,7 @@ where
 /// })
 /// ```
 ///
-/// I am blindly assuming is that, Beacouse `Args::decode(...)` is outside,
+/// I am assuming is that, Beacouse `Args::decode(...)` is outside,
 /// The future is created outside on the stack, And then move into `transport.unary(|..| {})` closure.
 /// So if Future is large then `Output::produce()` function also become large.
 ///
@@ -109,6 +110,9 @@ where
 /// A solution is to wrap this function with `Box`.
 /// But `transport.unary(..)` internally uses `Box` to wrap the future.
 /// So let's take advantage of it.
+///
+/// Another adventage is that is will make function arguments parsing lazy,
+/// If transport layer has any error, Which in result the future will never get polled.
 enum FutState<'cursor, 'data, Func, State, Args, Fut>
 where
     Func: std_lib::FnOnce<Args, Output = Fut>,
@@ -133,7 +137,7 @@ where
             func,
             state,
             cursor,
-            _args: std::marker::PhantomData,
+            _args: PhantomData,
         }
     }
 

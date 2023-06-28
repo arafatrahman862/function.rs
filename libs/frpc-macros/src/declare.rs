@@ -159,7 +159,7 @@ impl ToTokens for Declare {
                 for Func { name, id, .. } in funcs {
                     let path = name.to_string();
                     quote_each_token!(tokens
-                        ::frpc::__private::fn_ty(&#name, &mut __costom_types, #id,  #path),
+                        ::frpc::__private::fn_sig(&#name, &mut __costom_types, #id,  #path),
                     );
                 }
             });
