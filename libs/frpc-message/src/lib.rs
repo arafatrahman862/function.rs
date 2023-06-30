@@ -1,3 +1,4 @@
+pub use type_id;
 pub use type_id::*;
 
 #[cfg_attr(feature = "hash", derive(Hash))]

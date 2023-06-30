@@ -1,0 +1,8 @@
+[package]
+name = "type-id-derive-impl"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+syn = "2.0"
+quote = "1.0"

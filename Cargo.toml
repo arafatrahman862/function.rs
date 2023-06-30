@@ -15,8 +15,8 @@ description = "RPC framework"
 [dependencies]
 databuf = "0.3"
 async-gen = "0.2"
-
 std-lib = { version = "0.1", path = "libs/std-lib" }
+
 frpc-macros = { version = "0.1", path = "libs/frpc-macros" }
 frpc-message = { version = "0.1", path = "libs/frpc-message" }
 frpc-transport-core = { version = "0.1", path = "libs/frpc-transport-core" }
