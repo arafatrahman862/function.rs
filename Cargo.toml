@@ -13,7 +13,6 @@ keywords = ["rpc"]
 description = "RPC framework"
 
 [dependencies]
-async-trait = "0.1"
 databuf = "0.3"
 async-gen = "0.2"
 

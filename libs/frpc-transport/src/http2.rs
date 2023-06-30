@@ -1,11 +1,12 @@
 #![allow(warnings)]
-use async_trait::async_trait;
+use frpc::Transport;
 use h2x::http::StatusCode;
 pub use h2x::*;
 use std::{
     fmt::Debug,
     future::poll_fn,
-    io, mem,
+    io::Result,
+    mem,
     task::{Context, Poll},
 };
 type BoxFuture<'a, T> = std::pin::Pin<Box<dyn std::future::Future<Output = T> + Send + 'a>>;
@@ -48,7 +49,7 @@ impl<'req, 'res> Ctx<'req, 'res> {
             &'fut mut &[u8],
             &'fut mut RpcResponder<'this>,
         ) -> Option<BoxFuture<'fut, ()>>,
-    ) -> Result<(), StatusCode> {
+    ) -> std::result::Result<(), StatusCode> {
         match self.req.headers.get("content-length") {
             Some(len) => {
                 let Ok(Ok(len)) = len.to_str().map(str::parse::<u32>) else { return Err(StatusCode::BAD_REQUEST) };
@@ -85,15 +86,12 @@ impl<'req, 'res> Ctx<'req, 'res> {
 
 pub struct RpcResponder<'a>(&'a mut Response);
 
-#[async_trait]
-impl frpc::Transport for RpcResponder<'_> {
-    fn unary_sync<'this, 'fut>(
-        &'this mut self,
-        cb: impl for<'buf> FnOnce(&'buf mut Vec<u8>) -> io::Result<()> + Send + 'fut,
-    ) -> BoxFuture<'fut, ()>
+impl Transport for RpcResponder<'_> {
+    fn unary_sync<'this, 'fut, CB>(&'this mut self, cb: CB) -> BoxFuture<'fut, ()>
     where
         'this: 'fut,
         Self: 'fut,
+        CB: for<'buf> FnOnce(&'buf mut Vec<u8>) -> Result<()> + Send + 'fut,
     {
         let mut cb = Some(cb);
         self.unary(move |_, buf| {
@@ -104,60 +102,62 @@ impl frpc::Transport for RpcResponder<'_> {
         })
     }
 
-    async fn unary(
-        &mut self,
-        mut poll: impl for<'cx, 'waker, 'buf> FnMut(
-                &'cx mut Context<'waker>,
-                &'buf mut Vec<u8>,
-            ) -> Poll<io::Result<()>>
-            + Send,
-    ) {
-        let mut response = http::Response::new(());
-        *response.headers_mut() = mem::replace(&mut self.0.headers, Default::default());
-        let mut buf = vec![];
-        match poll_fn(|cx| poll(cx, &mut buf)).await {
-            Ok(_) => {
-                let is_empty = buf.is_empty();
-                if let Ok(stream) = self.0.sender.send_response(response, is_empty) {
-                    if !is_empty {
-                        h2x::Responder { inner: stream }
-                            .write_bytes(buf.into(), true)
-                            .await;
+    fn unary<'this, 'fut, P>(&'this mut self, mut poll: P) -> BoxFuture<'fut, ()>
+    where
+        'this: 'fut,
+        Self: 'fut,
+        P: Send + 'fut,
+        P: for<'cx, 'w, 'buf> FnMut(&'cx mut Context<'w>, &'buf mut Vec<u8>) -> Poll<Result<()>>,
+    {
+        Box::pin(async move {
+            let mut response = http::Response::new(());
+            *response.headers_mut() = mem::replace(&mut self.0.headers, Default::default());
+            let mut buf = vec![];
+            match poll_fn(|cx| poll(cx, &mut buf)).await {
+                Ok(_) => {
+                    let is_empty = buf.is_empty();
+                    if let Ok(stream) = self.0.sender.send_response(response, is_empty) {
+                        if !is_empty {
+                            h2x::Responder { inner: stream }
+                                .write_bytes(buf.into(), true)
+                                .await;
+                        }
                     }
                 }
-            }
-            Err(_parse_err) => {
-                // dbg!(_parse_err);
-                *response.status_mut() = StatusCode::NOT_ACCEPTABLE;
-                let _ = self.0.sender.send_response(response, true);
-            }
-        }
-    }
-
-    async fn server_stream(
-        &mut self,
-        mut poll: impl for<'cx, 'waker, 'buf> FnMut(
-                &'cx mut Context<'waker>,
-                &'buf mut Vec<u8>,
-            ) -> Poll<io::Result<bool>>
-            + Send,
-    ) {
-        let mut response = http::Response::new(());
-        *response.headers_mut() = mem::replace(&mut self.0.headers, Default::default());
-        let mut buf = vec![0; 4];
-        loop {
-            match poll_fn(|cx| poll(cx, &mut buf)).await {
-                Ok(done) => match done {
-                    true => {}
-                    false => {}
-                },
                 Err(_parse_err) => {
                     // dbg!(_parse_err);
                     *response.status_mut() = StatusCode::NOT_ACCEPTABLE;
                     let _ = self.0.sender.send_response(response, true);
-                    break;
                 }
             }
-        }
+        })
+    }
+
+    fn server_stream<'this, 'fut, P>(&'this mut self, mut poll: P) -> BoxFuture<'fut, ()>
+    where
+        'this: 'fut,
+        Self: 'fut,
+        P: Send + 'fut,
+        P: for<'cx, 'w, 'buf> FnMut(&'cx mut Context<'w>, &'buf mut Vec<u8>) -> Poll<Result<bool>>,
+    {
+        Box::pin(async move {
+            let mut response = http::Response::new(());
+            *response.headers_mut() = mem::replace(&mut self.0.headers, Default::default());
+            let mut buf = vec![0; 4];
+            loop {
+                match poll_fn(|cx| poll(cx, &mut buf)).await {
+                    Ok(done) => match done {
+                        true => {}
+                        false => {}
+                    },
+                    Err(_parse_err) => {
+                        // dbg!(_parse_err);
+                        *response.status_mut() = StatusCode::NOT_ACCEPTABLE;
+                        let _ = self.0.sender.send_response(response, true);
+                        break;
+                    }
+                }
+            }
+        })
     }
 }

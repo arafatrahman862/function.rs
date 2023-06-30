@@ -18,7 +18,6 @@ pub use state::State;
 // pub use service::Service;
 
 use async_gen::GeneratorState;
-use async_trait::async_trait;
 use databuf::Encode;
 use frpc_message::TypeId;
 

@@ -1,32 +1,28 @@
 use super::*;
 use async_gen::futures_core::future::BoxFuture;
-use std::marker::PhantomData;
+use std::{io::Result, marker::PhantomData};
 
 /// It defines the behavior for sending responses over a transport channel.
-#[async_trait]
 pub trait Transport {
-    async fn unary_sync(
-        &mut self,
-        cb: impl for<'buf> FnOnce(&'buf mut Vec<u8>) -> io::Result<()> + Send,
-    );
+    fn unary_sync<'this, 'fut, CB>(&'this mut self, cb: CB) -> BoxFuture<'fut, ()>
+    where
+        'this: 'fut,
+        Self: 'fut,
+        CB: for<'buf> FnOnce(&'buf mut Vec<u8>) -> Result<()> + Send + 'fut;
 
-    async fn unary(
-        &mut self,
-        mut poll: impl for<'cx, 'waker, 'buf> FnMut(
-                &'cx mut Context<'waker>,
-                &'buf mut Vec<u8>,
-            ) -> Poll<io::Result<()>>
-            + Send,
-    );
+    fn unary<'this, 'fut, P>(&'this mut self, poll: P) -> BoxFuture<'fut, ()>
+    where
+        'this: 'fut,
+        Self: 'fut,
+        P: Send + 'fut,
+        P: for<'cx, 'w, 'buf> FnMut(&'cx mut Context<'w>, &'buf mut Vec<u8>) -> Poll<Result<()>>;
 
-    async fn server_stream(
-        &mut self,
-        mut poll: impl for<'cx, 'waker, 'buf> FnMut(
-                &'cx mut Context<'waker>,
-                &'buf mut Vec<u8>,
-            ) -> Poll<io::Result<bool>>
-            + Send,
-    );
+    fn server_stream<'this, 'fut, P>(&'this mut self, poll: P) -> BoxFuture<'fut, ()>
+    where
+        'this: 'fut,
+        Self: 'fut,
+        P: Send + 'fut,
+        P: for<'cx, 'w, 'buf> FnMut(&'cx mut Context<'w>, &'buf mut Vec<u8>) -> Poll<Result<bool>>;
 }
 
 pub trait Output: crate::output_type::OutputType {
@@ -58,6 +54,7 @@ where
     where
         'cursor: 'fut,
         'transport: 'fut,
+
         Self: 'fut,
         State: 'fut + Send,
         Args: 'fut + input::Input<'data, State>,
@@ -141,7 +138,7 @@ where
         }
     }
 
-    fn poll<T>(&mut self, cb: impl FnOnce(&mut Fut) -> Poll<io::Result<T>>) -> Poll<io::Result<T>> {
+    fn poll<T>(&mut self, cb: impl FnOnce(&mut Fut) -> Poll<Result<T>>) -> Poll<Result<T>> {
         loop {
             match self {
                 FutState::Init { .. } => match std::mem::replace(self, FutState::Done) {
@@ -184,6 +181,7 @@ where
     where
         'cursor: 'fut,
         'transport: 'fut,
+
         Self: 'fut,
         State: 'fut + Send,
         Args: 'fut + input::Input<'data, State> + Send,
@@ -212,6 +210,7 @@ where
     where
         'cursor: 'fut,
         'transport: 'fut,
+
         Self: 'fut,
         State: 'fut + Send,
         Args: 'fut + input::Input<'data, State> + Send,
