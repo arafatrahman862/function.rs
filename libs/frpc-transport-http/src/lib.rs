@@ -1,5 +1,5 @@
 #![allow(warnings)]
-use frpc::Transport;
+use frpc_transport_core::{BoxFuture, Transport};
 use h2x::http::StatusCode;
 pub use h2x::*;
 use std::{
@@ -9,7 +9,6 @@ use std::{
     mem,
     task::{Context, Poll},
 };
-type BoxFuture<'a, T> = std::pin::Pin<Box<dyn std::future::Future<Output = T> + Send + 'a>>;
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -22,6 +21,7 @@ impl Config {
         }
     }
 }
+
 impl Default for Config {
     fn default() -> Self {
         Self::new()

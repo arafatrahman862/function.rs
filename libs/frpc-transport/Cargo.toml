@@ -1,9 +1,0 @@
-[package]
-name = "frpc-transport"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-frpc = { path = "../../" }
-h2x = "0.3.1"
-tokio = { version = "1", features = ["io-util", "net", "rt-multi-thread", "macros"] }

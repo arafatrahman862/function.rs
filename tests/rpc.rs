@@ -2,7 +2,7 @@
 mod echo;
 mod validate;
 
-use frpc_transport::http2::{http::HeaderValue, Config, Ctx, Server};
+use frpc_transport_http::{http::HeaderValue, Config, Ctx, Server};
 use std::{
     collections::HashSet,
     fs,

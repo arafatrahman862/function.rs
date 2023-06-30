@@ -19,10 +19,11 @@ async-gen = "0.2"
 std-lib = { path = "libs/std-lib" }
 frpc-macros = { version = "0.0.1", path = "libs/frpc-macros" }
 frpc-message = { version = "0.0.1", path = "libs/frpc-message", features = ["encode"] }
+frpc-transport-core = { version = "0.1", path = "libs/frpc-transport-core" }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-frpc-transport = { path = "libs/frpc-transport" }
+frpc-transport-http = { path = "libs/frpc-transport-http" }
 frpc-codegen-client = { path = "libs/frpc-codegen-client" }
 
 [profile.dev.package."frpc-codegen-client"]
