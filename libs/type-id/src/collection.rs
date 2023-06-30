@@ -4,8 +4,7 @@ use std::{collections::*, hash::Hash};
 #[cfg_attr(feature = "clone", derive(Clone))]
 #[cfg_attr(feature = "hash", derive(Hash))]
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(feature = "decode", derive(Decode))]
-#[cfg_attr(feature = "encode", derive(Encode))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum SetVariant {
     BTreeSet,
     HashSet,
@@ -18,8 +17,7 @@ pub enum SetVariant {
 #[cfg_attr(feature = "clone", derive(Clone))]
 #[cfg_attr(feature = "hash", derive(Hash))]
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(feature = "decode", derive(Decode))]
-#[cfg_attr(feature = "encode", derive(Encode))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MapVariant {
     HashMap,
     BTreeMap,

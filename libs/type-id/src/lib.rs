@@ -5,10 +5,10 @@ mod wrapper;
 use std::collections::btree_map;
 use std::collections::BTreeMap;
 
-#[cfg(feature = "decode")]
-use databuf::Decode;
-#[cfg(feature = "encode")]
-use databuf::Encode;
+#[cfg(feature = "serde")]
+use serde::Deserialize;
+#[cfg(feature = "serde")]
+use serde::Serialize;
 
 pub use collection::{MapVariant, SetVariant};
 
@@ -20,8 +20,7 @@ pub trait TypeId {
 #[cfg_attr(feature = "hash", derive(Hash))]
 #[cfg_attr(feature = "clone", derive(Clone))]
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(feature = "decode", derive(Decode))]
-#[cfg_attr(feature = "encode", derive(Encode))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Ty {
     // Never, // debug
     u8,
@@ -86,8 +85,7 @@ impl Ty {
 #[cfg_attr(feature = "hash", derive(Hash))]
 #[cfg_attr(feature = "clone", derive(Clone))]
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(feature = "decode", derive(Decode))]
-#[cfg_attr(feature = "encode", derive(Encode))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct CostomTypes(BTreeMap<String, CustomTypeKind>);
 
 impl CostomTypes {
@@ -121,8 +119,7 @@ impl Default for CustomTypeKind {
 #[cfg_attr(feature = "hash", derive(Hash))]
 #[cfg_attr(feature = "clone", derive(Clone))]
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(feature = "decode", derive(Decode))]
-#[cfg_attr(feature = "encode", derive(Encode))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum CustomTypeKind {
     Unit(CustomType<UnitField>),
     Enum(CustomType<EnumField>),
@@ -133,8 +130,7 @@ pub enum CustomTypeKind {
 #[cfg_attr(feature = "hash", derive(Hash))]
 #[cfg_attr(feature = "clone", derive(Clone))]
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(feature = "decode", derive(Decode))]
-#[cfg_attr(feature = "encode", derive(Encode))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 /// Any user defined type like: `struct`, `enum`
 pub struct CustomType<Field> {
     pub doc: String,
@@ -144,8 +140,7 @@ pub struct CustomType<Field> {
 #[cfg_attr(feature = "hash", derive(Hash))]
 #[cfg_attr(feature = "clone", derive(Clone))]
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(feature = "decode", derive(Decode))]
-#[cfg_attr(feature = "encode", derive(Encode))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct UnitField {
     pub doc: String,
     pub name: Ident,
@@ -155,8 +150,7 @@ pub struct UnitField {
 #[cfg_attr(feature = "hash", derive(Hash))]
 #[cfg_attr(feature = "clone", derive(Clone))]
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(feature = "decode", derive(Decode))]
-#[cfg_attr(feature = "encode", derive(Encode))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct EnumField {
     pub doc: String,
     pub name: Ident,
@@ -166,8 +160,7 @@ pub struct EnumField {
 #[cfg_attr(feature = "hash", derive(Hash))]
 #[cfg_attr(feature = "clone", derive(Clone))]
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(feature = "decode", derive(Decode))]
-#[cfg_attr(feature = "encode", derive(Encode))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EnumKind {
     Unit,
     Struct(Vec<StructField>),
@@ -177,8 +170,7 @@ pub enum EnumKind {
 #[cfg_attr(feature = "hash", derive(Hash))]
 #[cfg_attr(feature = "clone", derive(Clone))]
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(feature = "decode", derive(Decode))]
-#[cfg_attr(feature = "encode", derive(Encode))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct StructField {
     pub doc: String,
     pub name: Ident,
@@ -188,8 +180,7 @@ pub struct StructField {
 #[cfg_attr(feature = "hash", derive(Hash))]
 #[cfg_attr(feature = "clone", derive(Clone))]
 #[cfg_attr(feature = "debug", derive(Debug))]
-#[cfg_attr(feature = "decode", derive(Decode))]
-#[cfg_attr(feature = "encode", derive(Encode))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct TupleField {
     pub doc: String,
     pub ty: Ty,
@@ -198,8 +189,7 @@ pub struct TupleField {
 // ---------------------------------------------------------------
 
 #[derive(Default, Hash, Clone)]
-#[cfg_attr(feature = "decode", derive(Decode))]
-#[cfg_attr(feature = "encode", derive(Encode))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Ident(pub String);
 
 impl std::ops::Deref for Ident {

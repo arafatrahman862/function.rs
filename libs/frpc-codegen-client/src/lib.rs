@@ -4,12 +4,9 @@ pub mod config;
 use config::Config;
 use frpc_codegen::CodeGen;
 use frpc_message::TypeDef;
-
-use std::{fmt::Write, fs};
+use std::{fmt::Write, fs, sync::OnceLock};
 
 type Result<T = (), E = Box<dyn std::error::Error>> = std::result::Result<T, E>;
-
-use std::sync::OnceLock;
 
 static CONFIG: OnceLock<Config> = OnceLock::new();
 

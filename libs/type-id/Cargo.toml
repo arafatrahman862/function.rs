@@ -6,11 +6,11 @@ edition = "2021"
 [features]
 default = []
 
+full = ["debug", "clone", "hash", "serde"]
 hash = []
 clone = []
 debug = []
-encode = []
-decode = []
+serde = ["dep:serde"]
 
 [dependencies]
-databuf = "0.3"
+serde = { version = "1", features = ["serde_derive"], default-features = false, optional = true }

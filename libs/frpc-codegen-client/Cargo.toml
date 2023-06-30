@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-crate-type = ["dylib"]
+# crate-type = ["dylib"]
 
 [dependencies]
-toml = "0.7.4"
-serde = { version = "1.0.163", features = ["derive"] }
+toml = "0.7"
+serde = { version = "1", features = ["derive"] }
 
-frpc-codegen = { path = "../frpc-codegen" }
-frpc-message = { path = "../frpc-message", features = ["encode", "decode"] }
+frpc-codegen = { version = "0.1", path = "../frpc-codegen" }
+frpc-message = { version = "0.1",path = "../frpc-message" }

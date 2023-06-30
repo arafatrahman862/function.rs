@@ -3,7 +3,7 @@ members = ["libs/*"]
 
 [package]
 name = "frpc"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2021"
 
 license = "Apache-2.0"
@@ -16,9 +16,9 @@ description = "RPC framework"
 databuf = "0.3"
 async-gen = "0.2"
 
-std-lib = { path = "libs/std-lib" }
-frpc-macros = { version = "0.0.1", path = "libs/frpc-macros" }
-frpc-message = { version = "0.0.1", path = "libs/frpc-message", features = ["encode"] }
+std-lib = { version = "0.1", path = "libs/std-lib" }
+frpc-macros = { version = "0.1", path = "libs/frpc-macros" }
+frpc-message = { version = "0.1", path = "libs/frpc-message" }
 frpc-transport-core = { version = "0.1", path = "libs/frpc-transport-core" }
 
 [dev-dependencies]

@@ -1,6 +1,6 @@
 [package]
 name = "frpc-message"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2021"
 
 [features]
@@ -9,8 +9,7 @@ default = []
 hash = ["type-id/hash"]
 debug = ["type-id/debug"]
 clone = ["type-id/clone"]
-encode = ["type-id/encode"]
-decode = ["type-id/decode"]
+serde = ["type-id/serde"]
 
 [dependencies]
 type-id = { path = "../type-id", version = "0.1" }
