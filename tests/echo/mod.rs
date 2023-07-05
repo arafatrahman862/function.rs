@@ -1,6 +1,5 @@
-use databuf::{Decode, Encode};
 use frpc::declare;
-use frpc_macros::Message;
+use frpc_macros::{Input, Message};
 use std::collections::BTreeSet;
 use std::sync::Arc;
 use std::{
@@ -38,7 +37,7 @@ pub struct Context {
 
 type State = frpc::State<Arc<Context>>;
 
-#[derive(Message, Decode, Debug)]
+#[derive(Input, Debug)]
 enum Log {
     Disable,
     Enable,
@@ -51,7 +50,7 @@ async fn log(state: State, log: Log) {
     }
 }
 
-#[derive(Debug, Encode, Decode, Message)]
+#[derive(Debug, Message)]
 struct Bufs {
     vec_2d: [f32; 2],
     vec_3d: [f64; 3],

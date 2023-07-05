@@ -12,7 +12,8 @@ mod state;
 pub mod __private;
 pub use async_gen;
 
-pub use frpc_macros::{declare, Message};
+pub use databuf;
+pub use frpc_macros::*;
 pub use frpc_transport_core::Transport;
 pub use output::*;
 pub use state::State;

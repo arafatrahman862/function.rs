@@ -1,6 +1,5 @@
 #![allow(non_camel_case_types)]
 
-use databuf::{Decode, Encode};
 use frpc_macros::Message;
 
 type DataType = (((), ((), ())), r#class, r#enum);
@@ -18,12 +17,12 @@ async fn validate(_data: DataType) {
     assert!(_data == get_data().await);
 }
 
-#[derive(Message, Encode, Decode, PartialEq)]
+#[derive(Message, PartialEq)]
 struct r#class {
     r#new: (),
 }
 
-#[derive(Message, Encode, Decode, PartialEq)]
+#[derive(Message, PartialEq)]
 enum r#enum {
     r#type,
 }

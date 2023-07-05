@@ -13,7 +13,7 @@ keywords = ["rpc"]
 description = "RPC framework"
 
 [dependencies]
-databuf = "0.3"
+databuf = "0.4"
 async-gen = "0.2"
 std-lib = { version = "0.1", path = "libs/std-lib" }
 
